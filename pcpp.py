@@ -8,7 +8,7 @@
 # - C99 correct elimination of comments
 # - __DATE__, __TIME__, __FILE__, __LINE__
 # - #define macro replacement
-#   - correctly expands recursively, but each macro only ever expanded once
+#   - correctly expands recursively, and each macro only ever expanded once
 #     as per C99 rules
 # - #undef macro
 # - #include "path", <path> and PATH
@@ -102,7 +102,7 @@ class string_view(object):
 
     def __radd__(self, other):
         if isinstance(other, str) or isinstance(other, string_view):
-            return str(self) + other
+            return other + str(self)
         raise ValueError, "Cannot add string_view to type %s" % repr(other)
 
     def __repr__(self):
@@ -216,6 +216,30 @@ def expand_macros(contents, macros):
         contents += part
     return contents
 
+class Timing(object):
+    """Keeps timings"""
+    def __init__(self):
+        self.accumulated = 0.0
+        self.calls = 0
+        self.min = 1<<30
+        self.max = 0
+        self.lastclock = None
+    def start(self):
+        self.lastclock = time.clock()
+    def stop(self):
+        diff = time.clock() - self.lastclock
+        self.accumulated += diff
+        self.calls += 1
+        if diff < self.min:
+            self.min = diff
+        if diff > self.max:
+            self.max = diff
+    def __repr__(self):
+        if self.calls == 0:
+            return "never executed"
+        return "%f secs (%d calls, avrg %f/call, min %f, max %f)" \
+                % (self.accumulated, self.calls, self.accumulated/self.calls, self.min, self.max)
+
 class MacroObject(object):
     """Token replacing macro"""
     def __init__(self, name, contents=''):
@@ -225,8 +249,11 @@ class MacroObject(object):
         return '#define '+self.name()+' '+self.contents()
     def __cmp__(self, other):
         return -1 if self.name()<other.name() else 0 if self.name()==other.name() else 1
+    def __hash__(self):
+        return hash(self.name())
 
 class Line(object):
+    """A line from an original source file"""
     def __init__(self, line, filepath, lineno):
         result = tailwhitespace.match(line)
         if result is not None:
@@ -236,7 +263,15 @@ class Line(object):
         self.filepath = filepath
         self.lineno = lineno
 
+class ConditionalLine(Line):
+    """A line containing an #if, #ifdef or #ifndef"""
+    def __init__(self, line):
+        Line.__init__(self, line.line, line.filepath, line.lineno)
+
 class Preprocessor(object):
+    """Instantiate one of these to preprocess some text!"""
+    systemmacros = [ '__FILE__', '__LINE__', '__DATE__', '__TIME__' ]
+    
     def include_not_found(self, system_include, curdir, includepath):
         """Handler called when a #include is not found from the current directory.
            Return None to have the include passed through into the output"""
@@ -266,13 +301,13 @@ class Preprocessor(object):
         self.__lineoverride = 0
         self.__datetime = datetime.datetime.now()
         self.__cmds = {k[4:]:getattr(self, k) for k in dir(self) if k.startswith('cmd_')}
+        self.__ifstack = []
 
-        self.time_cmds = {k[4:]:0.0 for k in dir(self) if k.startswith('cmd_')}
-        self.time_reading_files = 0.0
-        self.time_adding_raw_lines = 0.0
-        self.time_executing = 0.0
-        self.time_expanding_macros = 0.0
-        self.time_handling_errors = 0.0
+        self.time_cmds = {k[4:]:Timing() for k in dir(self) if k.startswith('cmd_')}
+        self.time_reading_files = Timing()
+        self.time_adding_raw_lines = Timing()
+        self.time_executing = Timing()
+        self.time_expanding_macros = Timing()
         self.return_code = 0
 
         # Set up the magic macro objects
@@ -305,7 +340,8 @@ class Preprocessor(object):
             macroname = result.group(1)
             macrocontents = ''
         if macroname in self.__macros_dict:
-            self.__macros_dict[macroname].contents = lambda: macrocontents
+            if macroname not in self.systemmacros:
+                self.__macros_dict[macroname].contents = lambda: macrocontents
         else:
             m = MacroObject(macroname, macrocontents)
             self.__macros_sorted.append(m)
@@ -340,10 +376,10 @@ class Preprocessor(object):
         if newpath is not None:
             newpath = os.path.normpath(newpath).replace('\\', '/')
         if os.path.exists(newpath):
-            begin = time.clock()
+            self.time_reading_files.start()
             with open(newpath, 'rt') as ih:
                 rawlines = ih.readlines()
-                self.time_reading_files += time.clock() - begin
+                self.time_reading_files.stop()
                 self.add_raw_lines(rawlines, newpath, self.__lines.index(self.__currentline)+1)
             return True
         return False
@@ -388,7 +424,7 @@ class Preprocessor(object):
         """Adds additional raw lines to the internal store identified using path.
            Line continuations are fused and comments eliminated at this stage
            leaving the internal store of lines ready for preprocessing."""
-        begin = time.clock()
+        self.time_adding_raw_lines.start()
         lines = []
         for idx in xrange(0, len(rawlines)):
             lines.append(Line(rawlines[idx], path, idx + 1))
@@ -463,8 +499,7 @@ class Preprocessor(object):
             self.__lines.extend(lines)
         else:
             self.__lines = self.__lines[:index] + lines + self.__lines[index:]
-        end = time.clock()
-        self.time_adding_raw_lines += end-begin
+        self.time_adding_raw_lines.stop()
 
     def get_lines(self, lineno = True):
         """Returns internal store of lines ready for writing to output.
@@ -488,15 +523,16 @@ class Preprocessor(object):
            macros and calculations as execution proceeds"""
         lineidx = 0
         while lineidx < len(self.__lines):
-            begin = time.clock()
             self.__currentline = self.__lines[lineidx]
             try:
                 # Is this line a preprocessor command line?
                 result = preprocessor_command.match(self.__currentline.line)
                 if result is not None:
+                    self.time_executing.start()
                     try:
                         cmd = result.group(1)
                         if cmd in self.__cmds:
+                            self.time_cmds[cmd].start()
                             if self.__cmds[cmd](result.group(2)):
                                 # Munch this line
                                 del self.__lines[lineidx]
@@ -505,15 +541,17 @@ class Preprocessor(object):
                             self.cmd_warning("#"+result.group(1)+" not understood by this implementation")
                     finally:
                         if cmd in self.time_cmds:
-                            self.time_cmds[cmd] += time.clock() - begin
-                        self.time_executing += time.clock() - begin
+                            self.time_cmds[cmd].stop()
+                        self.time_executing.stop()
                 else:
-                    # Expand any macros in this line
-                    self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
-                    self.time_expanding_macros += time.clock() - begin
+                    try:
+                        self.time_expanding_macros.start()
+                        # Expand any macros in this line
+                        self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
+                    finally:
+                        self.time_expanding_macros.stop()
             except Exception as e:
                 self.cmd_error(traceback.format_exc())
-                self.time_handling_errors += time.clock() - begin
             lineidx += 1
         self.__currentline = None
         #for macro in self.__macros_sorted:
@@ -540,7 +578,6 @@ if __name__ == "__main__":
     print("  Decommenting and adding raw lines took", p.time_adding_raw_lines)
     print("  Executing preprocessor commands took", p.time_executing)
     print("  Expanding macros in lines took", p.time_expanding_macros)
-    print("  Handling errors took", p.time_handling_errors)
     print("\n  Individual commands:")
     for cmd, time in p.time_cmds.iteritems():
         print("    #"+cmd+":", time)
