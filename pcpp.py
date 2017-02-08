@@ -42,7 +42,7 @@
 # - #define macro(...) expr
 
 from __future__ import print_function
-import sys, os, re, datetime, traceback
+import sys, os, re, datetime, traceback, time
 
 preprocessor_command       = re.compile(r"\s*#\s*([a-z]+)\s*(.*)")
 preprocessor_continuation  = re.compile(r"\s*#\s*([a-z]+)\s*(.*)\s*\\")
@@ -180,8 +180,9 @@ class Preprocessor(object):
     def __time(self):
         return self.__datetime.strftime('"%H:%M:%S"')
 
-    def __init__(self, passthru_undefined = False):
+    def __init__(self, passthru_undefined = False, quiet = False):
         self.__passthru_undefined = passthru_undefined
+        self.__quiet = quiet
         self.__macro_objects = []  # List of MacroObject instances, sorted by length of name descending
         self.__lines = []          # List of Line instances each representing a line in a given file
         self.__currentline = None
@@ -234,7 +235,8 @@ class Preprocessor(object):
 
     def cmd_error(self, contents):
         """As if #error contents"""
-        print(self.__currentline.filepath+":"+str(self.__currentline.lineno)+":: error: "+contents, file=sys.stderr)
+        if not self.__quiet:
+            print(self.__currentline.filepath+":"+str(self.__currentline.lineno)+":: error: "+contents, file=sys.stderr)
         self.return_code += 1
         return not self.__passthru_undefined
 
@@ -292,7 +294,8 @@ class Preprocessor(object):
 
     def cmd_warning(self, contents):
         """As if #warning contents"""
-        print(self.__currentline.filepath+":"+str(self.__currentline.lineno)+":: warning: "+contents, file=sys.stderr)
+        if not self.__quiet:
+            print(self.__currentline.filepath+":"+str(self.__currentline.lineno)+":: warning: "+contents, file=sys.stderr)
         return not self.__passthru_undefined
 
 
@@ -418,8 +421,9 @@ if __name__ == "__main__":
     #if len(sys.argv)<3:
     #    print("Usage: "+sys.argv[0]+" outputpath [-Iincludepath...] [-Dmacro...] header1 [header2...]", file=sys.stderr)
     #    sys.exit(1)
+    start = time.time()
     path='test/test-c/n_std.c'
-    p = Preprocessor()
+    p = Preprocessor(quiet=True)
     p.cmd_define('__STDC__ 1')
     p.cmd_define('__STDC_VERSION__ 199901L')
     with open(path, 'rt') as ih:
@@ -427,5 +431,7 @@ if __name__ == "__main__":
     p.preprocess()
     with open('test/n_std.i', 'w') as oh:
         oh.writelines(p.get_lines())
+    end = time.time()
+    print("Preprocessed", path, "in ", end-start, "seconds")
     sys.exit(p.return_code)
         
