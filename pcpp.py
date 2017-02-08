@@ -44,6 +44,7 @@
 from __future__ import print_function
 import sys, os, re, datetime, traceback, time
 
+tailwhitespace             = re.compile(r".*(\s+)")
 preprocessor_command       = re.compile(r"\s*#\s*([a-z]+)\s*(.*)")
 preprocessor_continuation  = re.compile(r"\s*#\s*([a-z]+)\s*(.*)\s*\\")
 preprocessor_stringliteral = re.compile(r"(.*)\"(\\.|[^\"])*\"(.*)")
@@ -61,14 +62,77 @@ def is_preprocessor_punctuator(c):
     result = preprocessor_punctuator.match(c)
     return result is not None
 
+class string_view(object):
+    """A string like view onto some other string"""
+    def __init__(self, s, start=0, end=-1):
+        self.__string = s
+        self.__start = start
+        self.__end = len(s) if end == -1 else end
+        if self.__start >= self.__end or self.__start >= len(s):
+            self.__start = 0
+            self.__end = 0;
+
+    def __len__(self):
+        return self.__end - self.__start
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            start = key.start
+            end = key.end
+            start += self.__end if start < 0 else self.__start
+            end += self.__end if end < 0 else self.__start
+            return string_view(self.__string, start, end) if key.step == 1 else self.__string[start:end:step]
+        elif isinstance(key, int):
+            key += self.__end if key < 0 else self.__start
+            return self.__string[key]
+        else:
+            raise TypeError, "Invalid key type"
+
+    def __getslice__(self, start, end):
+        if end == 2147483647:
+            end = self.__end - self.__start
+        start += self.__end if start < 0 else self.__start
+        end += self.__end if end < 0 else self.__start
+        return string_view(self.__string, start, end)
+
+    def __add__(self, other):
+        if isinstance(other, str) or isinstance(other, string_view):
+            return str(self) + other
+        raise ValueError, "Cannot add string_view to type %s" % repr(other)
+
+    def __radd__(self, other):
+        if isinstance(other, str) or isinstance(other, string_view):
+            return str(self) + other
+        raise ValueError, "Cannot add string_view to type %s" % repr(other)
+
+    def __repr__(self):
+        return self.__string[self.__start:self.__end]
+        
+    def __str__(self):
+        return self.__string[self.__start:self.__end]
+
+    def __contains__(self, item):
+        if isinstance(item, str):
+            return -1 != self.__string.find(item, self.__start, self.__end)
+        raise ValueError, "Cannot find type %s in a string_view" % repr(other)        
+        
+    def find(self, sub, start=0, end=-1):
+        return self.__string.find(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
+
+    def rfind(self, sub, start=0, end=-1):
+        return self.__string.rfind(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
+
 def tokenise_stringliterals(line):
-    """Split string literals in line, literals always end up at odd indices in returned list"""
+    """Split string literals in line, literals always end up at odd indices in returned list.
+       NOTE we return string views of input line, NOT copies"""
+    line_view = string_view(line)
     out = []
+    idx = 0
     while 1:
-        dq = line.find('"')
-        sq = line.find("'")
+        dq = line.find('"', idx)
+        sq = line.find("'", idx)
         if dq == -1 and sq == -1:
-            out.append(line)
+            out.append(line_view[idx:])
             return out
         if dq != -1 and sq != -1:
             if dq < sq:
@@ -82,11 +146,11 @@ def tokenise_stringliterals(line):
                 if end == -1:
                     end = len(line)
                     break
-                if line[end-1]!='\\':
+                if line_view[end-1]!='\\':
                     break
-            out.append(line[:dq])
-            out.append(line[dq:end+1])
-            line = line[end+1:]
+            out.append(line_view[idx:dq])
+            out.append(line_view[dq:end+1])
+            idx = end+1
         if sq != -1:
             end = sq
             while 1:
@@ -94,11 +158,11 @@ def tokenise_stringliterals(line):
                 if end == -1:
                     end = len(line)
                     break
-                if line[end-1]!='\\':
+                if line_view[end-1]!='\\':
                     break
-            out.append(line[:sq])
-            out.append(line[sq:end+1])
-            line = line[end+1:]
+            out.append(line_view[idx:sq])
+            out.append(line_view[sq:end+1])
+            idx = end+1
 
 def expand_macros(contents, macros):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
@@ -115,13 +179,15 @@ def expand_macros(contents, macros):
                 break
         if need_to_expand:
             changed = True
-            macro_objects = macros[:]  # Sorted shortest to longest
+            macros_expanded = {}
             while 1:
                 expanded = False
                 # Search this part for macros to expand, expanding from end to start
-                for midx in xrange(len(macro_objects)-1, -1, -1):
-                    macro = macro_objects[midx]
+                for midx in xrange(len(macros)-1, -1, -1):
+                    macro = macros[midx]
                     macroname = macro.name()
+                    if macroname in macros_expanded:
+                        continue
                     macronamelen = len(macroname)
                     #print("Searching for macro", macro.name())
                     pls_remove = False
@@ -138,14 +204,19 @@ def expand_macros(contents, macros):
                             pls_remove = True
                     if pls_remove:
                         parts[partidx] = thispart
-                        del macro_objects[midx]  # Prevent being reexpanded again
+                        macros_expanded[macroname] = None
                         expanded = True
                 if not expanded:
                     break
         partidx += 2
-    return ''.join(parts) if changed else contents
+    if not changed:
+        return contents
+    contents = ''
+    for part in parts:
+        contents += part
+    return contents
 
-class MacroObject:
+class MacroObject(object):
     """Token replacing macro"""
     def __init__(self, name, contents=''):
         self.name = lambda: name
@@ -155,9 +226,13 @@ class MacroObject:
     def __cmp__(self, other):
         return -1 if self.name()<other.name() else 0 if self.name()==other.name() else 1
 
-class Line:
+class Line(object):
     def __init__(self, line, filepath, lineno):
-        self.line = line.rstrip()
+        result = tailwhitespace.match(line)
+        if result is not None:
+            self.line = line[:result.start(1)]
+        else:
+            self.line = line
         self.filepath = filepath
         self.lineno = lineno
 
@@ -183,7 +258,8 @@ class Preprocessor(object):
     def __init__(self, passthru_undefined = False, quiet = False):
         self.__passthru_undefined = passthru_undefined
         self.__quiet = quiet
-        self.__macro_objects = []  # List of MacroObject instances, sorted by length of name descending
+        self.__macros_sorted = []  # List of MacroObject instances, sorted by length of name descending
+        self.__macros_dict = {}    # Map of same MacroObject instances by macro name
         self.__lines = []          # List of Line instances each representing a line in a given file
         self.__currentline = None
         self.__fileoverride = None
@@ -191,17 +267,23 @@ class Preprocessor(object):
         self.__datetime = datetime.datetime.now()
         self.__cmds = {k[4:]:getattr(self, k) for k in dir(self) if k.startswith('cmd_')}
 
+        self.time_cmds = {k[4:]:0.0 for k in dir(self) if k.startswith('cmd_')}
+        self.time_reading_files = 0.0
+        self.time_adding_raw_lines = 0.0
+        self.time_executing = 0.0
+        self.time_expanding_macros = 0.0
+        self.time_handling_errors = 0.0
         self.return_code = 0
 
         # Set up the magic macro objects
-        self.__macro_objects.append(MacroObject('__FILE__'))
-        self.__macro_objects[-1].contents = self.__file
-        self.__macro_objects.append(MacroObject('__LINE__'))
-        self.__macro_objects[-1].contents = self.__line
-        self.__macro_objects.append(MacroObject('__DATE__'))
-        self.__macro_objects[-1].contents = self.__date
-        self.__macro_objects.append(MacroObject('__TIME__'))
-        self.__macro_objects[-1].contents = self.__time
+        self.cmd_define('__FILE__ x')
+        self.cmd_define('__LINE__ x')
+        self.cmd_define('__DATE__ x')
+        self.cmd_define('__TIME__ x')
+        self.__macros_dict['__FILE__'].contents = self.__file
+        self.__macros_dict['__LINE__'].contents = self.__line
+        self.__macros_dict['__DATE__'].contents = self.__date
+        self.__macros_dict['__TIME__'].contents = self.__time
 
     def cmd_define(self, contents):
         """As if #define contents"""
@@ -213,24 +295,23 @@ class Preprocessor(object):
         # Is it a #define name object?
         result = preprocessor_macro_object.match(contents)
         if result is not None:
-            try:
-                self.__macro_objects[self.__macro_objects.index(MacroObject(result.group(1)))].contents = lambda: result.group(2)
-            except ValueError:
-                self.__macro_objects.append(MacroObject(result.group(1), result.group(2)))
-                need_sort = True
+            macroname = result.group(1)
+            macrocontents = result.group(2)
         else:
             # Is it a #define name?
             result = preprocessor_macro_name.match(contents)
             if result is None:
                 raise RuntimeError('cmd_define("'+contents+'") does not match a #define')
-            try:
-                self.__macro_objects[self.__macro_objects.index(MacroObject(result.group(1)))].contents = lambda: ''
-            except ValueError:
-                self.__macro_objects.append(MacroObject(result.group(1)))
-                need_sort = True
-        if need_sort:
-            self.__macro_objects.sort(key=lambda x: len(x.name()))
-        #print(self.__macro_objects)
+            macroname = result.group(1)
+            macrocontents = ''
+        if macroname in self.__macros_dict:
+            self.__macros_dict[macroname].contents = lambda: macrocontents
+        else:
+            m = MacroObject(macroname, macrocontents)
+            self.__macros_sorted.append(m)
+            self.__macros_sorted.sort(key=lambda x: len(x.name()))
+            self.__macros_dict[macroname] = m
+        #print(self.__macros_sorted)
         return not self.__passthru_undefined
 
     def cmd_error(self, contents):
@@ -242,12 +323,12 @@ class Preprocessor(object):
 
     def cmd_include(self, contents):
         """As if #include contents, returns True if successfully included"""
-        contents = expand_macros(contents, self.__macro_objects).lstrip().rstrip()
+        contents = expand_macros(contents, self.__macros_sorted).lstrip().rstrip()
         self.__fileoverride = None
         self.__lineoverride = 0
         result = preprocessor_include.match(contents)
         if result is None:
-            raise RuntimeError('cmd_include("'+contents+'") does not match a #include')
+            newpath = contents
         else:
             newpath = result.group(1)
         curdir = os.path.dirname(self.__currentline.filepath)
@@ -259,14 +340,17 @@ class Preprocessor(object):
         if newpath is not None:
             newpath = os.path.normpath(newpath).replace('\\', '/')
         if os.path.exists(newpath):
+            begin = time.clock()
             with open(newpath, 'rt') as ih:
-                self.add_raw_lines(ih.readlines(), newpath, self.__lines.index(self.__currentline)+1)
+                rawlines = ih.readlines()
+                self.time_reading_files += time.clock() - begin
+                self.add_raw_lines(rawlines, newpath, self.__lines.index(self.__currentline)+1)
             return True
         return False
 
     def cmd_line(self, contents):
         """As if #line contents"""
-        contents = expand_macros(contents, self.__macro_objects)
+        contents = expand_macros(contents, self.__macros_sorted)
         result = preprocessor_line2.match(contents)
         if result is not None:
             self.__fileoverride = result.group(2)
@@ -287,7 +371,7 @@ class Preprocessor(object):
         if result is None:
             raise RuntimeError('cmd_undef("'+contents+'") does not match a #undef')
         try:
-            self.__macro_objects.remove(MacroObject(result.group(1)))
+            self.__macros_sorted.remove(MacroObject(result.group(1)))
         except ValueError:
             pass
         return not self.__passthru_undefined
@@ -304,6 +388,7 @@ class Preprocessor(object):
         """Adds additional raw lines to the internal store identified using path.
            Line continuations are fused and comments eliminated at this stage
            leaving the internal store of lines ready for preprocessing."""
+        begin = time.clock()
         lines = []
         for idx in xrange(0, len(rawlines)):
             lines.append(Line(rawlines[idx], path, idx + 1))
@@ -320,6 +405,7 @@ class Preprocessor(object):
         while idx < len(lines):
             #print(lines[idx].lineno, lines[idx].line)
             parts = tokenise_stringliterals(lines[idx].line)
+            changed = False
             #print(lines[idx].lineno)
             #for part in parts:
             #    print("   ", part)
@@ -335,6 +421,7 @@ class Preprocessor(object):
                     ce = parts[partidx].find('*/')
                     if ce != -1:
                         parts[partidx] = parts[partidx][ce+2:]
+                        changed = True
                         # Do I need to merge lines due to a multi line comment?
                         if in_comment < idx:
                             for n in xrange(in_comment, idx):
@@ -353,23 +440,31 @@ class Preprocessor(object):
                         ce = parts[partidx].find('*/', cb) if cb != -1 else -1
                         if cb != -1 and ce != -1:
                             parts[partidx] = parts[partidx][:cb] + ' ' + parts[partidx][ce+2:]
+                            changed = True
                             continue
                         if ce == -1 and cb != -1:
                             parts[partidx] = parts[partidx][:cb] + ' '
+                            changed = True
                             in_comment = idx
                         cb = parts[partidx].find('//')
                         if cb != -1:
                             parts[partidx] = parts[partidx][:cb]
                             parts = parts[:partidx]
+                            changed = True
                         break
                 partidx = partidx + 1
-            #print(lines[idx].lineno, parts)
-            lines[idx].line = ''.join(parts)
+            if changed:
+                #print(lines[idx].lineno, parts)
+                lines[idx].line = ''
+                for part in parts:
+                    lines[idx].line += part
             idx = idx + 1
         if index == -1:
             self.__lines.extend(lines)
         else:
             self.__lines = self.__lines[:index] + lines + self.__lines[index:]
+        end = time.clock()
+        self.time_adding_raw_lines += end-begin
 
     def get_lines(self, lineno = True):
         """Returns internal store of lines ready for writing to output.
@@ -393,27 +488,35 @@ class Preprocessor(object):
            macros and calculations as execution proceeds"""
         lineidx = 0
         while lineidx < len(self.__lines):
+            begin = time.clock()
             self.__currentline = self.__lines[lineidx]
             try:
                 # Is this line a preprocessor command line?
                 result = preprocessor_command.match(self.__currentline.line)
                 if result is not None:
-                    cmd = result.group(1)
-                    if cmd in self.__cmds:
-                        if self.__cmds[cmd](result.group(2)):
-                            # Munch this line
-                            del self.__lines[lineidx]
-                            continue
-                    else:
-                        self.cmd_warning("#"+result.group(1)+" not understood by this implementation")
+                    try:
+                        cmd = result.group(1)
+                        if cmd in self.__cmds:
+                            if self.__cmds[cmd](result.group(2)):
+                                # Munch this line
+                                del self.__lines[lineidx]
+                                continue
+                        else:
+                            self.cmd_warning("#"+result.group(1)+" not understood by this implementation")
+                    finally:
+                        if cmd in self.time_cmds:
+                            self.time_cmds[cmd] += time.clock() - begin
+                        self.time_executing += time.clock() - begin
                 else:
                     # Expand any macros in this line
-                    self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macro_objects)
+                    self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
+                    self.time_expanding_macros += time.clock() - begin
             except Exception as e:
                 self.cmd_error(traceback.format_exc())
+                self.time_handling_errors += time.clock() - begin
             lineidx += 1
         self.__currentline = None
-        #for macro in self.__macro_objects:
+        #for macro in self.__macros_sorted:
         #    print(macro)
                         
 
@@ -421,9 +524,9 @@ if __name__ == "__main__":
     #if len(sys.argv)<3:
     #    print("Usage: "+sys.argv[0]+" outputpath [-Iincludepath...] [-Dmacro...] header1 [header2...]", file=sys.stderr)
     #    sys.exit(1)
-    start = time.time()
+    start = time.clock()
     path='test/test-c/n_std.c'
-    p = Preprocessor(quiet=True)
+    p = Preprocessor(quiet=False)
     p.cmd_define('__STDC__ 1')
     p.cmd_define('__STDC_VERSION__ 199901L')
     with open(path, 'rt') as ih:
@@ -431,7 +534,15 @@ if __name__ == "__main__":
     p.preprocess()
     with open('test/n_std.i', 'w') as oh:
         oh.writelines(p.get_lines())
-    end = time.time()
+    end = time.clock()
     print("Preprocessed", path, "in ", end-start, "seconds")
+    print("  Opening and reading files took", p.time_reading_files)
+    print("  Decommenting and adding raw lines took", p.time_adding_raw_lines)
+    print("  Executing preprocessor commands took", p.time_executing)
+    print("  Expanding macros in lines took", p.time_expanding_macros)
+    print("  Handling errors took", p.time_handling_errors)
+    print("\n  Individual commands:")
+    for cmd, time in p.time_cmds.iteritems():
+        print("    #"+cmd+":", time)
     sys.exit(p.return_code)
         
