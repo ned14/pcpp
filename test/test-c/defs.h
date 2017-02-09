@@ -1,5 +1,6 @@
 /* defs.h   */
 
+#ifndef NO_SYSTEM_HEADERS
 #include    <stdio.h>
 
 /* assert(): Enable one of these three. */
@@ -19,3 +20,4 @@ extern int      strcmp( const char *, const char *);
 extern size_t   strlen( const char *);
 extern void     exit( int);
 
+#endif

@@ -2,44 +2,6 @@
 # Python C99 conforming preprocessor useful for generating single include files for C and C++ libraries
 # (C) 2017 Niall Douglas http://www.nedproductions.biz/
 # Started: Feb 2017
-#
-# What's working:
-# - line continuation operator \
-# - C99 correct elimination of comments
-# - __DATE__, __TIME__, __FILE__, __LINE__
-# - #define macro replacement
-#   - correctly expands recursively, and each macro only ever expanded once
-#     as per C99 rules
-# - #undef macro
-# - #include "path", <path> and PATH
-#   - include_not_found(system_include, curdir, includepath) handler
-#     is called to find non-curdir headers, this includes any system headers
-# - #error
-# - #warning
-# - #pragma (ignored)
-# - #line no, no "file" and NUMBER FILE
-# - defined operator
-# - C operators:
-#   - +, -, !, ~
-#   - *, /, %
-#   - +, -
-#   - <<, >>
-#   - <, <=, >, >=
-#   - ==, !=
-#   - &
-#   - ^
-#   - |
-#   - &&
-#   - ||
-# - #if, #ifdef, #ifndef, #elif, #else, #endif
-#   - will have a special mode to pass through preprocessor logic if any
-#     inputs are undefined (instead of treating undefined macros as if 0)
-#
-#
-# What remains to implement:
-# - Stringizing operator #
-# - Token pasting operator ##
-# - #define macro(...) expr
 
 from __future__ import print_function
 import sys, os, re, datetime, traceback, time
@@ -51,14 +13,19 @@ preprocessor_continuation  = re.compile(r"\s*#\s*([a-z]+)\s*(.*)\s*\\")
 preprocessor_stringliteral = re.compile(r"(.*)\"(\\.|[^\"])*\"(.*)")
 preprocessor_multicomment  = re.compile(r"(.*)/\*.*?\*/(.*)")
 preprocessor_singlecomment = re.compile(r"(.*)//")
-preprocessor_punctuator    = re.compile(r"[ \t\n\r\f\v{}\[\]#()]")
+preprocessor_punctuator    = re.compile(r"[ \t\n\r\f\v{}\[\]#()!+\-*/,;:]")
 preprocessor_macro_name    = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)")
 preprocessor_macro_object  = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\s+(.+)")
 preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\((.*)\)\s*(.*)")
 preprocessor_include       = re.compile(r"[<\"](.+)[>\"]")
 preprocessor_line          = re.compile(r"([0-9]+)")
 preprocessor_line2         = re.compile(r"([0-9]+)\s+(.*)\s*(.*)")
-preprocessor_defined       = re.compile(r"(defined)[ \t\n\r\f\v(]*([^ )]+)")
+preprocessor_defined       = re.compile(r"(defined\s*)\(*([^ \t\n\r\f\v)]+)\)*")
+preprocessor_number_long   = re.compile(r"([0-9]+)(L|l)")
+preprocessor_number_long_long = re.compile(r"([0-9]+)(LL|ll)")
+preprocessor_number_unsigned_long_long = re.compile(r"([0-9]+)(ULL|ull)")
+preprocessor_number_unsigned_long = re.compile(r"([0-9]+)(UL|ul)")
+preprocessor_number_unsigned = re.compile(r"([0-9]+)(U|u)")
 def is_preprocessor_punctuator(c):
     """Returns true if a preprocessor delimiter"""
     result = preprocessor_punctuator.match(c)
@@ -108,7 +75,7 @@ class string_view(object):
         raise ValueError, "Cannot add string_view to type %s" % repr(other)
 
     def __repr__(self):
-        return self.__string[self.__start:self.__end]
+        return "'"+self.__string[self.__start:self.__end]+"'"
         
     def __str__(self):
         return self.__string[self.__start:self.__end]
@@ -124,24 +91,44 @@ class string_view(object):
     def rfind(self, sub, start=0, end=-1):
         return self.__string.rfind(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
 
-def tokenise_stringliterals(line):
+def tokenise_stringliterals(line, in_comment = False):
     """Split string literals in line, literals always end up at odd indices in returned list.
        NOTE we return string views of input line, NOT copies"""
     line_view = string_view(line)
     out = []
     idx = 0
+    idx2 = 0
     while 1:
         dq = line.find('"', idx)
         sq = line.find("'", idx)
-        if dq == -1 and sq == -1:
-            out.append(line_view[idx:])
+        cs = 0 if in_comment and idx == 0 else line.find("/*", idx)
+        if dq == -1 and sq == -1 and cs == -1:
+            out.append(line_view[idx2:])
             return out
         if dq != -1 and sq != -1:
             if dq < sq:
                 sq = -1
             else:
                 dq = -1
-        if dq != -1:
+        if cs != -1 and dq != -1:
+            if cs < dq:
+                dq = -1
+            else:
+                cs = -1
+        if cs != -1 and sq != -1:
+            if cs < sq:
+                sq = -1
+            else:
+                cs = -1
+        # Now exactly one of dq, sq or cs is not -1
+        # If it's dq or sq, split the string literals into odd indices but
+        # if it's a cs, skip idx to the end of the comment
+        if cs != -1:
+            end = line.find("*/", cs)
+            if end == -1:
+                end = len(line)
+            idx = end+2
+        elif dq != -1:
             end = dq
             while 1:
                 end = line.find('"', end+1)
@@ -150,10 +137,10 @@ def tokenise_stringliterals(line):
                     break
                 if line_view[end-1]!='\\':
                     break
-            out.append(line_view[idx:dq])
+            out.append(line_view[idx2:dq])
             out.append(line_view[dq:end+1])
-            idx = end+1
-        if sq != -1:
+            idx = idx2 = end+1
+        elif sq != -1:
             end = sq
             while 1:
                 end = line.find("'", end+1)
@@ -162,28 +149,46 @@ def tokenise_stringliterals(line):
                     break
                 if line_view[end-1]!='\\':
                     break
-            out.append(line_view[idx:sq])
+            out.append(line_view[idx2:sq])
             out.append(line_view[sq:end+1])
-            idx = end+1
+            idx = idx2 = end+1
 
-def expand_macros(contents, macros, macros_dict, inside_macro):
+def expand_defineds(contents, macros_dict):
+    """Expand all 'defined macro' operators, returning the expanded line"""
+    parts = tokenise_stringliterals(contents)
+    partidx = 0
+    changed = False
+    while partidx < len(parts):
+        thispart = parts[partidx]
+        idx = len(thispart)
+        while 1:
+            idx = thispart.rfind('defined', 0, idx)
+            if idx == -1:
+                break
+            if idx == 0 or is_preprocessor_punctuator(thispart[idx-1]):
+                if idx+7 == len(thispart) or is_preprocessor_punctuator(thispart[idx+7]):
+                    if isinstance(thispart, string_view):
+                        thispart = str(thispart)
+                    result = preprocessor_defined.match(thispart[idx:])
+                    assert result is not None
+                    thispart = thispart[:idx + result.start(1)] + ('1' if result.group(2) in macros_dict else '0') + thispart[idx + result.end(0):]
+                    changed = True
+        parts[partidx] = thispart
+        partidx += 2
+    if not changed:
+        return contents
+    contents = ''
+    for part in parts:
+        contents += part
+    return contents
+
+def expand_macros(contents, macros):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
     parts = tokenise_stringliterals(contents)
     partidx = 0
     changed = False
     while partidx < len(parts):
         thispart = parts[partidx]
-        if inside_macro:
-            # Expand any defined MACRO
-            if 'defined' in thispart:
-                thispart = str(thispart)
-                changed = True
-                while 1:
-                    result = preprocessor_defined.search(thispart)
-                    if result is None:
-                        break
-                    thispart = thispart[:result.start(1)] + thispart[result.end(1):result.start(2)] + ('1' if result.group(2) in macros_dict else '0') + thispart[result.end(2):]
-                parts[partidx] = thispart
         # Do a quick search of the macro objects to expand first, if nothing early exit
         need_to_expand = False
         for macro in macros:
@@ -243,6 +248,25 @@ def evaluate_expr(contents, undefined_means_zero):
     contents = contents.replace('!', ' not ')
     contents = contents.replace('||', ' or ')
     contents = contents.replace('&&', ' and ')
+    # Python's integer literals are different to C's:
+    # - L -> nothing
+    # - LL -> L
+    # - ULL -> L
+    # - UL -> L
+    # - U -> L
+    def helper(contents, re, replace):
+        while 1:
+            result = re.search(contents)
+            if result is None:
+                break
+            contents = contents[:result.start(2)] + replace + contents[result.end(2):]
+        return contents
+    contents = helper(contents, preprocessor_number_long, '')
+    contents = helper(contents, preprocessor_number_long_long, 'L')
+    contents = helper(contents, preprocessor_number_unsigned_long_long, 'L')
+    contents = helper(contents, preprocessor_number_unsigned_long, 'L')
+    contents = helper(contents, preprocessor_number_unsigned, 'L')
+        
     vars = {}
     while 1:
         print("=>", contents)
@@ -323,7 +347,10 @@ class Preprocessor(object):
     def __line(self):
         return '0' if self.__currentline is None else str(self.__currentline.lineno + self.__lineoverride)
     def __date(self):
-        return self.__datetime.strftime('"%b %d %Y"')
+        d = self.__datetime.strftime('"%b %d %Y"')
+        if d[5] == '0':
+            d = d[:5] + ' ' + d[6:]
+        return d
     def __time(self):
         return self.__datetime.strftime('"%H:%M:%S"')
 
@@ -390,22 +417,19 @@ class Preprocessor(object):
 
     def cmd_elif(self, contents):
         """As if #elif expr"""
-        print("#elif", contents)
         # If this if sequence is being evaluated and last stanza was false and no stanza has been executed yet
-        if not self.__ifstack[-1][0] and self.__is_disabled and not self.__ifstack[-1][1]:
+        if not self.__ifstack[-1][0] and not self.__ifstack[-1][1]:
             self.cmd_endif('')
             self.cmd_if(contents)
         
     def cmd_else(self, contents):
         """As if #else"""
-        print("#else", contents)
-        if not self.__ifstack[-1][0]:
-            self.__isdisabled = not self.__isdisabled
+        if not self.__ifstack[-1][0] and not self.__ifstack[-1][1]:
+            self.__isdisabled = False
         return True
 
     def cmd_endif(self, contents):
         """As if #endif"""
-        print("#endif", contents)
         self.__isdisabled = self.__ifstack.pop()[0]
         return True
 
@@ -418,42 +442,47 @@ class Preprocessor(object):
 
     def cmd_if(self, contents):
         """As if #if expr"""
-        print("#if", contents)
         if self.__isdisabled:
             self.__ifstack.append((self.__isdisabled, False, self.__currentline))
             return
-        contents = expand_macros(contents, self.__macros_sorted, self.__macros_dict, True)
-        result = evaluate_expr(contents,not self.__passthru_undefined)
+        contents = expand_defineds(contents, self.__macros_dict)
+        contents = expand_macros(contents, self.__macros_sorted)
+        try:
+            result = evaluate_expr(contents,not self.__passthru_undefined)
+        except:
+            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
+            raise
         if result is None:
             self.__ifstack.append((self.__isdisabled, False, self.__currentline))
             return
-        self.__isdisabled = result == 0
-        self.__ifstack.append((self.__isdisabled, not self.__isdisabled, self.__currentline))
+        willtake = result != 0
+        self.__ifstack.append((self.__isdisabled, willtake, self.__currentline))
+        self.__isdisabled = not willtake
         return True
         
     def cmd_ifdef(self, contents):
         """As if #ifdef macro"""
-        print("#ifdef", contents)
         if self.__isdisabled:
             self.__ifstack.append((self.__isdisabled, False, self.__currentline))
             return
-        self.__isdisabled = contents not in self.__macros_dict
-        self.__ifstack.append((self.__isdisabled, not self.__isdisabled, self.__currentline))
+        willtake = contents in self.__macros_dict
+        self.__ifstack.append((self.__isdisabled, willtake, self.__currentline))
+        self.__isdisabled = not willtake
         return True
         
     def cmd_ifndef(self, contents):
         """As if #ifndef macro"""
-        print("#ifndef", contents)
         if self.__isdisabled:
             self.__ifstack.append((self.__isdisabled, False, self.__currentline))
             return
-        self.__isdisabled = contents in self.__macros_dict
-        self.__ifstack.append((self.__isdisabled, not self.__isdisabled, self.__currentline))
+        willtake = contents not in self.__macros_dict
+        self.__ifstack.append((self.__isdisabled, willtake, self.__currentline))
+        self.__isdisabled = not willtake
         return True
         
     def cmd_include(self, contents):
         """As if #include contents, returns True if successfully included"""
-        contents = expand_macros(contents, self.__macros_sorted, self.__macros_dict, True).lstrip().rstrip()
+        contents = expand_macros(contents, self.__macros_sorted).lstrip().rstrip()
         self.__fileoverride = None
         self.__lineoverride = 0
         result = preprocessor_include.match(contents)
@@ -480,7 +509,7 @@ class Preprocessor(object):
 
     def cmd_line(self, contents):
         """As if #line contents"""
-        contents = expand_macros(contents, self.__macros_sorted, self.__macros_dict, True)
+        contents = expand_macros(contents, self.__macros_sorted)
         result = preprocessor_line2.match(contents)
         if result is not None:
             self.__fileoverride = result.group(2)
@@ -488,7 +517,11 @@ class Preprocessor(object):
             result = preprocessor_line.match(contents)
             if result is None:
                 raise RuntimeError('cmd_line("'+contents+'") does not match a #line')
-        self.__lineoverride = int(result.group(1)) - self.__currentline.lineno - 1
+        if int(result.group(1)) == self.__currentline.lineno - 1:
+            # This is hacky and incorrect if the file name is different, but it works around a bug
+            self.__fileoverride =self.__lineoverride = None
+        else:
+            self.__lineoverride = int(result.group(1)) - self.__currentline.lineno - 1
         return False  # always pass through
 
     def cmd_pragma(self, contents):
@@ -534,7 +567,7 @@ class Preprocessor(object):
         idx = 0
         while idx < len(lines):
             #print(lines[idx].lineno, lines[idx].line)
-            parts = tokenise_stringliterals(lines[idx].line)
+            parts = tokenise_stringliterals(lines[idx].line, in_comment)
             changed = False
             #print(lines[idx].lineno)
             #for part in parts:
@@ -547,6 +580,7 @@ class Preprocessor(object):
                         parts[partidx] = ''
                     partidx = partidx + 1
                     continue
+                # FIXME: Multiple whitespace needs to be collapsed into a single space
                 if in_comment is not None:
                     ce = parts[partidx].find('*/')
                     if ce != -1:
@@ -554,13 +588,15 @@ class Preprocessor(object):
                         changed = True
                         # Do I need to merge lines due to a multi line comment?
                         if in_comment < idx:
+                            # Insert the parts before the comment before me
+                            parts.insert(0, '')
+                            parts.insert(0, lines[in_comment].line)
+                            partidx = partidx + 2
+                            # Retain the line where the multiline comment began, but delete all
+                            # intermediate lines include the current one
                             for n in xrange(in_comment, idx):
                                 del lines[in_comment + 1]
                             idx = in_comment
-                            # Insert the parts before the comment before me
-                            parts.insert(0, '')
-                            parts.insert(0, lines[idx].line)
-                            partidx = partidx + 2
                         in_comment = None
                     else:
                         parts[partidx] = ''
@@ -588,6 +624,7 @@ class Preprocessor(object):
                 lines[idx].line = ''
                 for part in parts:
                     lines[idx].line += part
+                lines[idx].line = lines[idx].line.rstrip().lstrip()
             idx = idx + 1
         if index == -1:
             self.__lines.extend(lines)
@@ -605,8 +642,11 @@ class Preprocessor(object):
         for line in self.__lines:
             if lineno:
                 lastlineno += 1
-                if line.filepath != lastfilepath or line.lineno != lastlineno:
-                    lines.append('# %d "%s"\n' % (line.lineno, line.filepath))
+                if line.filepath != lastfilepath or (line.lineno != lastlineno and len(line.line.rstrip().lstrip())):
+                    if lastlineno == line.lineno - 1:
+                        lines.append('\n')
+                    else:
+                        lines.append('# %d "%s"\n' % (line.lineno, line.filepath))
                     lastlineno = line.lineno
                     lastfilepath = line.filepath
             lines.append(line.line+'\n')
@@ -622,29 +662,37 @@ class Preprocessor(object):
                 # Is this line a preprocessor command line?
                 result = preprocessor_command.match(self.__currentline.line)
                 if result is not None:
-                    self.time_executing.start()
                     try:
+                        self.time_executing.start()
                         cmd = result.group(1)
                         if self.__isdisabled:
-                            if cmd not in self.ifcmds:
-                                cmd = None
-                        if cmd in self.__cmds:
-                            self.time_cmds[cmd].start()
-                            if self.__cmds[cmd](result.group(2)):
-                                # Munch this line
-                                del self.__lines[lineidx]
-                                continue
+                            if cmd in self.ifcmds:
+                                try:
+                                    self.time_cmds[cmd].start()
+                                    if self.__cmds[cmd](result.group(2)):
+                                        # Munch this line
+                                        del self.__lines[lineidx]
+                                        continue
+                                finally:
+                                    self.time_cmds[cmd].stop()
+                        elif cmd in self.__cmds:
+                            try:
+                                self.time_cmds[cmd].start()
+                                if self.__cmds[cmd](result.group(2)):
+                                    # Munch this line
+                                    del self.__lines[lineidx]
+                                    continue
+                            finally:
+                                self.time_cmds[cmd].stop()
                         else:
                             self.cmd_warning("#"+result.group(1)+" not understood by this implementation")
                     finally:
-                        if cmd in self.time_cmds:
-                            self.time_cmds[cmd].stop()
                         self.time_executing.stop()
                 elif not self.__isdisabled:
                     try:
                         self.time_expanding_macros.start()
                         # Expand any macros in this line
-                        self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted, self.__macros_dict, False)
+                        self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
                     finally:
                         self.time_expanding_macros.stop()
             except Exception as e:
@@ -668,6 +716,7 @@ if __name__ == "__main__":
     p = Preprocessor(quiet=False)
     p.cmd_define('__STDC__ 1')
     p.cmd_define('__STDC_VERSION__ 199901L')
+    p.cmd_define('NO_SYSTEM_HEADERS')
     with open(path, 'rt') as ih:
         p.add_raw_lines(ih.readlines(), path)
     p.preprocess()

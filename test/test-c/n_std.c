@@ -182,8 +182,10 @@ void    n_5( void)
 /* 6.1: Header-name quoted by " and " as well as by < and > can include
         standard headers.   */
 /* Note: Standard headers can be included any times.    */
+#ifndef NO_SYSTEM_HEADERS
 #include    "ctype.h"
 #include    <ctype.h>
+#endif
 
 void    n_6( void)
 /*      #include directive. */
@@ -224,7 +226,7 @@ void    n_7( void)
 }
 
 /* Restore to correct line number and filename. */
-#line   248 "n_std.c"
+#line   230 "n_std.c"
 
 void    n_9( void)
 /*      #pragma directive.  */
@@ -288,7 +290,9 @@ void    n_11( void)
 #endif
 }
 
+#ifndef NO_SYSTEM_HEADERS
 #include    <limits.h>
+#endif
 
 void    n_12( void)
 /*      Integer preprocessing number token and type of #if expression.  */
