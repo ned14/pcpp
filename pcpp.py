@@ -18,12 +18,7 @@
 # - #warning
 # - #pragma (ignored)
 # - #line no, no "file" and NUMBER FILE
-#
-#
-# What remains to implement:
 # - defined operator
-# - Stringizing operator #
-# - Token pasting operator ##
 # - C operators:
 #   - +, -, !, ~
 #   - *, /, %
@@ -39,12 +34,18 @@
 # - #if, #ifdef, #ifndef, #elif, #else, #endif
 #   - will have a special mode to pass through preprocessor logic if any
 #     inputs are undefined (instead of treating undefined macros as if 0)
+#
+#
+# What remains to implement:
+# - Stringizing operator #
+# - Token pasting operator ##
 # - #define macro(...) expr
 
 from __future__ import print_function
 import sys, os, re, datetime, traceback, time
 
 tailwhitespace             = re.compile(r".*(\s+)")
+nameerror_extract          = re.compile(r"name '(.*)' is not defined")
 preprocessor_command       = re.compile(r"\s*#\s*([a-z]+)\s*(.*)")
 preprocessor_continuation  = re.compile(r"\s*#\s*([a-z]+)\s*(.*)\s*\\")
 preprocessor_stringliteral = re.compile(r"(.*)\"(\\.|[^\"])*\"(.*)")
@@ -57,6 +58,7 @@ preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\((.*)\)\s*(.*
 preprocessor_include       = re.compile(r"[<\"](.+)[>\"]")
 preprocessor_line          = re.compile(r"([0-9]+)")
 preprocessor_line2         = re.compile(r"([0-9]+)\s+(.*)\s*(.*)")
+preprocessor_defined       = re.compile(r"(defined)[ \t\n\r\f\v(]*([^ )]+)")
 def is_preprocessor_punctuator(c):
     """Returns true if a preprocessor delimiter"""
     result = preprocessor_punctuator.match(c)
@@ -164,13 +166,24 @@ def tokenise_stringliterals(line):
             out.append(line_view[sq:end+1])
             idx = end+1
 
-def expand_macros(contents, macros):
+def expand_macros(contents, macros, macros_dict, inside_macro):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
     parts = tokenise_stringliterals(contents)
     partidx = 0
     changed = False
     while partidx < len(parts):
         thispart = parts[partidx]
+        if inside_macro:
+            # Expand any defined MACRO
+            if 'defined' in thispart:
+                thispart = str(thispart)
+                changed = True
+                while 1:
+                    result = preprocessor_defined.search(thispart)
+                    if result is None:
+                        break
+                    thispart = thispart[:result.start(1)] + thispart[result.end(1):result.start(2)] + ('1' if result.group(2) in macros_dict else '0') + thispart[result.end(2):]
+                parts[partidx] = thispart
         # Do a quick search of the macro objects to expand first, if nothing early exit
         need_to_expand = False
         for macro in macros:
@@ -215,6 +228,33 @@ def expand_macros(contents, macros):
     for part in parts:
         contents += part
     return contents
+
+def evaluate_expr(contents, undefined_means_zero):
+    """Convert a C input expression into a Python one and evaluate it"""
+    # First some early outs
+    contents = contents.lstrip().rstrip()
+    if contents == '0':
+        return 0
+    if contents == '1':
+        return 1
+
+    print(contents)        
+    contents = contents.replace('!=', '<>')
+    contents = contents.replace('!', ' not ')
+    contents = contents.replace('||', ' or ')
+    contents = contents.replace('&&', ' and ')
+    vars = {}
+    while 1:
+        print("=>", contents)
+        try:
+            return int(eval(contents, vars, vars))
+        except NameError as e:
+            if not undefined_means_zero:
+                return
+            result = nameerror_extract.match(e.args[0])
+            if result is None:
+                raise
+            vars[result.group(1)] = 0
 
 class Timing(object):
     """Keeps timings"""
@@ -262,15 +302,12 @@ class Line(object):
             self.line = line
         self.filepath = filepath
         self.lineno = lineno
-
-class ConditionalLine(Line):
-    """A line containing an #if, #ifdef or #ifndef"""
-    def __init__(self, line):
-        Line.__init__(self, line.line, line.filepath, line.lineno)
+        self.processedidx = None  # Set once this line has been executed
 
 class Preprocessor(object):
     """Instantiate one of these to preprocess some text!"""
     systemmacros = [ '__FILE__', '__LINE__', '__DATE__', '__TIME__' ]
+    ifcmds = [ 'if', 'ifdef', 'ifndef', 'else', 'elif', 'endif' ]
     
     def include_not_found(self, system_include, curdir, includepath):
         """Handler called when a #include is not found from the current directory.
@@ -302,6 +339,7 @@ class Preprocessor(object):
         self.__datetime = datetime.datetime.now()
         self.__cmds = {k[4:]:getattr(self, k) for k in dir(self) if k.startswith('cmd_')}
         self.__ifstack = []
+        self.__isdisabled = False
 
         self.time_cmds = {k[4:]:Timing() for k in dir(self) if k.startswith('cmd_')}
         self.time_reading_files = Timing()
@@ -350,6 +388,27 @@ class Preprocessor(object):
         #print(self.__macros_sorted)
         return not self.__passthru_undefined
 
+    def cmd_elif(self, contents):
+        """As if #elif expr"""
+        print("#elif", contents)
+        # If this if sequence is being evaluated and last stanza was false and no stanza has been executed yet
+        if not self.__ifstack[-1][0] and self.__is_disabled and not self.__ifstack[-1][1]:
+            self.cmd_endif('')
+            self.cmd_if(contents)
+        
+    def cmd_else(self, contents):
+        """As if #else"""
+        print("#else", contents)
+        if not self.__ifstack[-1][0]:
+            self.__isdisabled = not self.__isdisabled
+        return True
+
+    def cmd_endif(self, contents):
+        """As if #endif"""
+        print("#endif", contents)
+        self.__isdisabled = self.__ifstack.pop()[0]
+        return True
+
     def cmd_error(self, contents):
         """As if #error contents"""
         if not self.__quiet:
@@ -357,9 +416,44 @@ class Preprocessor(object):
         self.return_code += 1
         return not self.__passthru_undefined
 
+    def cmd_if(self, contents):
+        """As if #if expr"""
+        print("#if", contents)
+        if self.__isdisabled:
+            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
+            return
+        contents = expand_macros(contents, self.__macros_sorted, self.__macros_dict, True)
+        result = evaluate_expr(contents,not self.__passthru_undefined)
+        if result is None:
+            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
+            return
+        self.__isdisabled = result == 0
+        self.__ifstack.append((self.__isdisabled, not self.__isdisabled, self.__currentline))
+        return True
+        
+    def cmd_ifdef(self, contents):
+        """As if #ifdef macro"""
+        print("#ifdef", contents)
+        if self.__isdisabled:
+            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
+            return
+        self.__isdisabled = contents not in self.__macros_dict
+        self.__ifstack.append((self.__isdisabled, not self.__isdisabled, self.__currentline))
+        return True
+        
+    def cmd_ifndef(self, contents):
+        """As if #ifndef macro"""
+        print("#ifndef", contents)
+        if self.__isdisabled:
+            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
+            return
+        self.__isdisabled = contents in self.__macros_dict
+        self.__ifstack.append((self.__isdisabled, not self.__isdisabled, self.__currentline))
+        return True
+        
     def cmd_include(self, contents):
         """As if #include contents, returns True if successfully included"""
-        contents = expand_macros(contents, self.__macros_sorted).lstrip().rstrip()
+        contents = expand_macros(contents, self.__macros_sorted, self.__macros_dict, True).lstrip().rstrip()
         self.__fileoverride = None
         self.__lineoverride = 0
         result = preprocessor_include.match(contents)
@@ -386,7 +480,7 @@ class Preprocessor(object):
 
     def cmd_line(self, contents):
         """As if #line contents"""
-        contents = expand_macros(contents, self.__macros_sorted)
+        contents = expand_macros(contents, self.__macros_sorted, self.__macros_dict, True)
         result = preprocessor_line2.match(contents)
         if result is not None:
             self.__fileoverride = result.group(2)
@@ -531,6 +625,9 @@ class Preprocessor(object):
                     self.time_executing.start()
                     try:
                         cmd = result.group(1)
+                        if self.__isdisabled:
+                            if cmd not in self.ifcmds:
+                                cmd = None
                         if cmd in self.__cmds:
                             self.time_cmds[cmd].start()
                             if self.__cmds[cmd](result.group(2)):
@@ -543,16 +640,20 @@ class Preprocessor(object):
                         if cmd in self.time_cmds:
                             self.time_cmds[cmd].stop()
                         self.time_executing.stop()
-                else:
+                elif not self.__isdisabled:
                     try:
                         self.time_expanding_macros.start()
                         # Expand any macros in this line
-                        self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
+                        self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted, self.__macros_dict, False)
                     finally:
                         self.time_expanding_macros.stop()
             except Exception as e:
                 self.cmd_error(traceback.format_exc())
-            lineidx += 1
+            if self.__isdisabled:
+                del self.__lines[lineidx]
+            else:
+                self.__currentline.processedidx = lineidx
+                lineidx += 1
         self.__currentline = None
         #for macro in self.__macros_sorted:
         #    print(macro)
