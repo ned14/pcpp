@@ -6,10 +6,16 @@ Very useful for preprocessing header only C++ libraries into single file include
 and other such malarky. There is a special mode to pass through preprocessor logic if any
 inputs are undefined (instead of treating undefined macros as if 0).
 
-Processing speed is pretty good. We use a mostly non-tokenising parser with a
+Processing speed is pretty good. We use a mostly non-tokenising parser for speed with a
 zero copy fast path line processing if no processing is done for some line. This
 makes preprocessing large numbers of lines with no macros being expanded in them
 very low cost as they are basically passed through with no memory allocation done.
+
+The non-tokenising parser is the main source of departures from the standard and
+donations of a proper tokenising parser especially for executing `#if` expressions based on
+http://www.dabeaz.com/ply/ are welcome. In practice, in most real world code, you
+won't notice the departures and if you do, the application of extra brackets to
+group subexpressions so Python's `eval()` executes right will fix it.
 
 ## What's working:
 - line continuation operator \
@@ -67,21 +73,25 @@ very low cost as they are basically passed through with no memory allocation don
   fast path for when a line contains no macros. Being standards compliant
   here confers little benefit for a huge loss in performance.
 
-- Expression evaluation is a bit broken (code donations of a proper lexing parser based on http://www.dabeaz.com/ply/ are welcome!)
+- Expression evaluation is a bit broken (code donations of a proper lexing
+  parser based on http://www.dabeaz.com/ply/ are welcome!)
 
   Currently `#if` expressions are evaluated by converting them into Python
   expressions and calling `eval()` on them. This works surprisingly well
-  most of the time, but because Python is not C, weird corner cases break.
+  most of the time, but because Python is not C, corner cases break.
   These are the known such broken corner cases:
   - Unary operator evaluation will break for evil expressions such as `-!+!9`
   because logical NOT in Python results in a boolean, not an integer, and
   a unary plus or negative boolean is invalid syntax in Python
   - Python has no concept of an unsigned integer and C expressions relying
-  on say unsigned integer overflow working will fail badly. To be honest
-  if your preprocessor logic is relying on that anyway, you should rewrite it.
-  For reference, unsigneds are mapped to long integers in Python, as are long longs.
-  - Without a tokenising lexer, the C ternary operator is hard to accurately
+  on unsigned integer semantics will fail badly e.g. `-1 <= 0U`
+  is supposed to be evaluated as false in the C preprocessor, but it will be
+  evaluated as true under this implementation. To be honest
+  if your preprocessor logic is relying on those sorts of behaviours, you should rewrite it.
+  For reference, unsigneds are mapped to long (signed) integers in Python, as are long longs.
+  - Without a back tracking tokenising lexer, the C ternary operator is hard to accurately
   convert into a Python ternary operation, so you need to help it by using one
   of these two forms:
     - `(x) ? y : z` (z gets evaluated according to Python not C precedence)
-    - `(x ? y : z)` (preferred, evaluates correctly)
+    - `(x ? y : z)` (preferred, evaluates correctly, we inject brackets
+    around the subexpessions before sending to Python)

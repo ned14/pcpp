@@ -36,12 +36,19 @@ def is_preprocessor_punctuator(c):
 class string_view(object):
     """A string like view onto some other string"""
     def __init__(self, s, start=0, end=-1):
-        self.__string = s
-        self.__start = start
-        self.__end = len(s) if end == -1 else end
+        if end == -1:
+            end = len(s)
+        if isinstance(s, string_view):
+            self.__string = s.__string
+            self.__start = s.__start + start
+            self.__end = s.__start + end
+        else:
+            self.__string = s
+            self.__start = start
+            self.__end = end
         if self.__start >= self.__end or self.__start >= len(s):
             self.__start = 0
-            self.__end = 0;
+            self.__end = 0
 
     def __len__(self):
         return self.__end - self.__start
@@ -88,10 +95,12 @@ class string_view(object):
         raise ValueError, "Cannot find type %s in a string_view" % repr(other)        
         
     def find(self, sub, start=0, end=-1):
-        return self.__string.find(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
+        idx = self.__string.find(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
+        return idx - self.__start if idx != -1 else -1
 
     def rfind(self, sub, start=0, end=-1):
-        return self.__string.rfind(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
+        idx = self.__string.rfind(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
+        return idx - self.__start if idx != -1 else -1
 
 def tokenise_stringliterals(line, in_comment = False):
     """Split string literals in line, literals always end up at odd indices in returned list.
@@ -154,6 +163,59 @@ def tokenise_stringliterals(line, in_comment = False):
             out.append(line_view[idx2:sq])
             out.append(line_view[sq:end+1])
             idx = idx2 = end+1
+
+def tokenise_arguments(contents):
+    """Converts a bracket and comma sequence into a list of string_views"""
+    start = contents.find('(')
+    end = contents.rfind(')')
+    assert start != -1
+    assert end != -1
+    parameters = []
+    line_view = string_view(contents, start + 1, end)
+    parts = tokenise_stringliterals(line_view)
+    inbracket = 0
+    lastcomma = 0
+    idxbase = 0
+    partidx = 0
+    while partidx < len(parts):
+        thispart = parts[partidx]
+        idx = 0
+        while idx < len(thispart):
+            cb = thispart.find(',', idx) if inbracket == 0 else -1
+            bb = thispart.find('(', idx)
+            #be = thispart.find(')', idx)
+            print(cb, bb, be, thispart)
+            if cb == -1 and bb == -1 and be == -1:
+                break
+            if cb != -1 and bb != -1:
+                if cb < bb:
+                    bb = -1
+                else:
+                    cb = -1
+            if be != -1 and bb != -1:
+                if be < bb:
+                    bb = -1
+                else:
+                    be = -1
+            if be != -1 and cb != -1:
+                if be < cb:
+                    cb = -1
+                else:
+                    be = -1
+            if bb != -1:
+                inbracket += 1
+                idx = bb + 1
+            elif be != -1:
+                inbracket -= 1
+                idx = be + 1
+            elif cb != -1:
+                parameters.append(line_view[lastcomma:idxbase + cb])
+                lastcomma = idxbase + cb + 1
+                idx = cb + 1        
+        idxbase += len(thispart) + len(parts[partidx + 1]) if partidx < len(parts) - 1 else 0
+        partidx += 2
+    parameters.append(line_view[lastcomma:])
+    return parameters
 
 def expand_defineds(contents, macros_dict):
     """Expand all 'defined macro' operators, returning the expanded line"""
@@ -322,14 +384,37 @@ class Timing(object):
 class MacroObject(object):
     """Token replacing macro"""
     def __init__(self, name, contents=''):
-        self.name = lambda: name
-        self.contents = lambda: contents
+        if name[-1] == ')':
+            self.parameters = tokenise_arguments(name)
+            self.variadic = False
+            if len(self.parameters) > 0 and '...' in self.parameters[-1]:
+                self.variadic = True
+                del self.parameters[-1]
+            name = name[:name.find('(')]
+            self.name = lambda: name
+            self.contents = self.__contents
+            self.__contents = contents
+        else:
+            self.name = lambda: name
+            self.contents = lambda: contents
     def __repr__(self):
         return '#define '+self.name()+' '+self.contents()
     def __cmp__(self, other):
         return -1 if self.name()<other.name() else 0 if self.name()==other.name() else 1
     def __hash__(self):
         return hash(self.name())
+    def __contents(self, *args):
+        if len(args) < len(self.parameters) or (not self.variadic and len(args) > len(self.parameters)):
+            raise RuntimeError("Macro "+self.name()+"(...) called with %d arguments when it takes %d" % (len(args), len(self.parameters)))
+        # Define a local macro list mapping the macro parameters to the args
+        macros = [MacroObject(name, value) for name, value in zip(self.parameters, args)]
+        if self.variadic:
+            vaargs = ''
+            if len(args) > len(self.parameters):
+                vaargs = ','.join(args[len(args)-len(self.parameters):])
+            macros.append(MacroObject('__VA_ARGS__', vaargs))
+        macros.sort(key=lambda x: len(x.name()))
+        return expand_macros(self.__contents, macros)
 
 class Line(object):
     """A line from an original source file"""
