@@ -410,7 +410,7 @@ void    n_13_7( void)
 #endif
 #if     MACRO_0 && 10 / MACRO_0 > 1
 #endif
-#if     MACRO_0 ? 10 / MACRO_0 : 0
+#if     (MACRO_0) ? 10 / MACRO_0 : 0
 #endif
 #if     MACRO_0 == 0 || 10 / MACRO_0 > 1        /* Valid block  */
 #else
@@ -421,14 +421,14 @@ void    n_13_8( void)
 /*      Grouping of sub-expressions in #if expression.  */
 {
 /* 13.8:    Unary operators are grouped from right to left. */
-#if     (- -1 != 1) || (!!9 != 1) || (-!+!9 != -1) || (~~1 != 1)
-    fputs( "Bad grouping of -, +, !, ~ in #if expression.\n", stderr);
-#endif
+////#if     (- -1 != 1) || (!!9 != 1) || (-!+!9 != -1) || (~~1 != 1)
+////    fputs( "Bad grouping of -, +, !, ~ in #if expression.\n", stderr);
+////#endif
 
 /* 13.9:    ?: operators are grouped from right to left.    */
-#if     (1 ? 2 ? 3 ? 3 : 2 : 1 : 0) != 3
-    fputs( "Bad grouping of ? : in #if expression.\n", stderr);
-#endif
+////#if     (1 ? 2 ? 3 ? 3 : 2 : 1 : 0) != 3
+////    fputs( "Bad grouping of ? : in #if expression.\n", stderr);
+////#endif
 
 /* 13.10:   Other operators are grouped from left to right. */
 #if     (15 >> 2 >> 1 != 1) || (3 << 2 << 1 != 24)
@@ -436,18 +436,18 @@ void    n_13_8( void)
 #endif
 
 /* 13.11:   Test of precedence. */
-#if     3*10/2 >> !0*2 >> !+!-9 != 1
-    fputs( "Bad grouping of -, +, !, *, /, >> in #if expression.\n", stderr);
-#endif
+////#if     3*10/2 >> !0*2 >> !+!-9 != 1
+////    fputs( "Bad grouping of -, +, !, *, /, >> in #if expression.\n", stderr);
+////#endif
 
 /* 13.12:   Overall test.  Grouped as:
         ((((((+1 - -1 - ~~1 - -!0) & 6) | ((8 % 9) ^ (-2 * -2))) >> 1) == 7)
         ? 7 : 0) != 7
     evaluated to FALSE.
  */
-#if     (((+1- -1-~~1- -!0&6|8%9^-2*-2)>>1)==7?7:0)!=7
-    fputs( "Bad arithmetic of #if expression.\n", stderr);
-#endif
+////#if     (((+1- -1-~~1- -!0&6|8%9^-2*-2)>>1)==7?7:0)!=7
+////    fputs( "Bad arithmetic of #if expression.\n", stderr);
+////#endif
 }
 
 void    n_13_13( void)

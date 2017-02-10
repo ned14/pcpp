@@ -40,11 +40,10 @@ very low cost as they are basically passed through with no memory allocation don
   - `|`
   - `&&`
   - `||`
+  - `x ? y : z` (partial support, see known bugs)
 - `#if`, `#ifdef`, `#ifndef`, `#elif`, `#else`, `#endif`
 
 ## What isn't working:
-- C operators:
-  - x ? y : z
 - Stringizing operator #
 - Token pasting operator ##
 - _Pragma operator
@@ -68,7 +67,7 @@ very low cost as they are basically passed through with no memory allocation don
   fast path for when a line contains no macros. Being standards compliant
   here confers little benefit for a huge loss in performance.
 
-- Expression evaluation is a bit broken
+- Expression evaluation is a bit broken (code donations of a proper lexing parser based on http://www.dabeaz.com/ply/ are welcome!)
 
   Currently `#if` expressions are evaluated by converting them into Python
   expressions and calling `eval()` on them. This works surprisingly well
@@ -81,5 +80,8 @@ very low cost as they are basically passed through with no memory allocation don
   on say unsigned integer overflow working will fail badly. To be honest
   if your preprocessor logic is relying on that anyway, you should rewrite it.
   For reference, unsigneds are mapped to long integers in Python, as are long longs.
-  - The C ternary operator makes no sense to Python and cannot be easily
-  fixed so long as we are using an `eval()` based design.
+  - Without a tokenising lexer, the C ternary operator is hard to accurately
+  convert into a Python ternary operation, so you need to help it by using one
+  of these two forms:
+    - `(x) ? y : z` (z gets evaluated according to Python not C precedence)
+    - `(x ? y : z)` (preferred, evaluates correctly)

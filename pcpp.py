@@ -26,6 +26,8 @@ preprocessor_number_long_long = re.compile(r"([0-9]+)(LL|ll)")
 preprocessor_number_unsigned_long_long = re.compile(r"([0-9]+)(ULL|ull)")
 preprocessor_number_unsigned_long = re.compile(r"([0-9]+)(UL|ul)")
 preprocessor_number_unsigned = re.compile(r"([0-9]+)(U|u)")
+preprocessor_ternary1      = re.compile(r"(\(.+\)\s*)\?(.+):(.+)")
+preprocessor_ternary2      = re.compile(r"\((.+)\?(.+):(.+)\)")
 def is_preprocessor_punctuator(c):
     """Returns true if a preprocessor delimiter"""
     result = preprocessor_punctuator.match(c)
@@ -243,11 +245,12 @@ def evaluate_expr(contents, undefined_means_zero):
     if contents == '1':
         return 1
 
-    print(contents)        
+    #print(contents)        
     contents = contents.replace('!=', '<>')
     contents = contents.replace('!', ' not ')
     contents = contents.replace('||', ' or ')
     contents = contents.replace('&&', ' and ')
+    
     # Python's integer literals are different to C's:
     # - L -> nothing
     # - LL -> L
@@ -266,10 +269,22 @@ def evaluate_expr(contents, undefined_means_zero):
     contents = helper(contents, preprocessor_number_unsigned_long_long, 'L')
     contents = helper(contents, preprocessor_number_unsigned_long, 'L')
     contents = helper(contents, preprocessor_number_unsigned, 'L')
+
+    # Try to handle the C ternary operator
+    while 1:
+        result = preprocessor_ternary1.search(contents)
+        if result is None:
+            break
+        contents = contents[:result.start(1)] + '(' + result.group(2)+ ') if ' + result.group(1) + ' else ' + contents[result.start(3):]
+    while 1:
+        result = preprocessor_ternary2.search(contents)
+        if result is None:
+            break
+        contents = contents[:result.start(1)] + '(' + result.group(2)+ ') if (' + result.group(1) + ') else (' + result.group(3) + ')' + contents[result.end(3):]
         
     vars = {}
     while 1:
-        print("=>", contents)
+        #print("=>", contents)
         try:
             return int(eval(contents, vars, vars))
         except NameError as e:
@@ -421,11 +436,16 @@ class Preprocessor(object):
         if not self.__ifstack[-1][0] and not self.__ifstack[-1][1]:
             self.cmd_endif('')
             self.cmd_if(contents)
+        return True
         
     def cmd_else(self, contents):
         """As if #else"""
-        if not self.__ifstack[-1][0] and not self.__ifstack[-1][1]:
-            self.__isdisabled = False
+        if not self.__ifstack[-1][0]:
+            # If some previous #elif executed, disable now, else enable now
+            if self.__ifstack[-1][1]:
+                self.__isdisabled = True
+            else:
+                self.__isdisabled = False
         return True
 
     def cmd_endif(self, contents):
@@ -448,7 +468,7 @@ class Preprocessor(object):
         contents = expand_defineds(contents, self.__macros_dict)
         contents = expand_macros(contents, self.__macros_sorted)
         try:
-            result = evaluate_expr(contents,not self.__passthru_undefined)
+            result = evaluate_expr(contents, not self.__passthru_undefined)
         except:
             self.__ifstack.append((self.__isdisabled, False, self.__currentline))
             raise
@@ -519,9 +539,11 @@ class Preprocessor(object):
                 raise RuntimeError('cmd_line("'+contents+'") does not match a #line')
         if int(result.group(1)) == self.__currentline.lineno - 1:
             # This is hacky and incorrect if the file name is different, but it works around a bug
-            self.__fileoverride =self.__lineoverride = None
+            self.__fileoverride = self.__lineoverride = None
         else:
             self.__lineoverride = int(result.group(1)) - self.__currentline.lineno - 1
+        # Rewrite current line to match calculated line
+        self.__currentline.line = '# ' + str(int(self.__line())+1) + ' ' + self.__file()
         return False  # always pass through
 
     def cmd_pragma(self, contents):
@@ -533,10 +555,9 @@ class Preprocessor(object):
         result = preprocessor_macro_name.match(contents)
         if result is None:
             raise RuntimeError('cmd_undef("'+contents+'") does not match a #undef')
-        try:
-            self.__macros_sorted.remove(MacroObject(result.group(1)))
-        except ValueError:
-            pass
+        if result.group(1) in self.__macros_dict:
+            self.__macros_sorted.remove(self.__macros_dict[result.group(1)])
+            del self.__macros_dict[result.group(1)]
         return not self.__passthru_undefined
 
     def cmd_warning(self, contents):
@@ -643,8 +664,10 @@ class Preprocessor(object):
             if lineno:
                 lastlineno += 1
                 if line.filepath != lastfilepath or (line.lineno != lastlineno and len(line.line.rstrip().lstrip())):
-                    if lastlineno == line.lineno - 1:
-                        lines.append('\n')
+                    if line.lineno - lastlineno < 3:
+                        while lastlineno < line.lineno:
+                            lines.append('\n')
+                            lastlineno += 1
                     else:
                         lines.append('# %d "%s"\n' % (line.lineno, line.filepath))
                     lastlineno = line.lineno
