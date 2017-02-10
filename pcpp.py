@@ -664,11 +664,14 @@ class Preprocessor(object):
             if lineno:
                 lastlineno += 1
                 if line.filepath != lastfilepath or (line.lineno != lastlineno and len(line.line.rstrip().lstrip())):
-                    if line.lineno - lastlineno < 3:
+                    if line.lineno - lastlineno < 5:
                         while lastlineno < line.lineno:
                             lines.append('\n')
                             lastlineno += 1
                     else:
+                        # Eat all blank lines before me
+                        while len(lines) and lines[-1].rstrip() == '':
+                            lines.pop()
                         lines.append('# %d "%s"\n' % (line.lineno, line.filepath))
                     lastlineno = line.lineno
                     lastfilepath = line.filepath
