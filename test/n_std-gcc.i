@@ -46,7 +46,7 @@ int main( void)
 
     n_2();
     n_3();
-    n_4();
+
     n_5();
     n_6();
     n_7();
@@ -116,18 +116,6 @@ void n_3( void)
     assert( abcd == 4);
 }
 
-void n_4( void)
-
-{
-
-
-
-    assert( strcmp( "abc", "abc") == 0);
-
-
-    assert( strcmp( "<:", "<" ":") == 0);
-}
-
 void n_5( void)
 
 
@@ -138,7 +126,7 @@ void n_5( void)
 
     assert( abcde == 5);
 }
-# 190 "test/test-c/n_std.c"
+# 178 "test/test-c/n_std.c"
 void n_6( void)
 
 {
@@ -149,13 +137,13 @@ void n_6( void)
 
 
 # 1 "test/test-c/header.h" 1
-# 200 "test/test-c/n_std.c" 2
+# 188 "test/test-c/n_std.c" 2
     assert( abc == 3);
 
 
 
 # 1 "test/test-c/header.h" 1
-# 205 "test/test-c/n_std.c" 2
+# 193 "test/test-c/n_std.c" 2
     assert( abc == 3);
 }
 
@@ -172,7 +160,7 @@ void n_7( void)
     assert( 1234 == 1234);
     assert( strcmp( "n_7.c", "n_7.c") == 0);
 }
-# 230 "n_std.c"
+# 218 "n_std.c"
 
 void n_9( void)
 
@@ -194,7 +182,7 @@ void n_10( void)
 
 
     assert( 1);
-# 263 "n_std.c"
+# 251 "n_std.c"
 }
 
 void n_11( void)
@@ -212,7 +200,7 @@ void n_11( void)
 
 
     assert( abc);
-# 291 "n_std.c"
+# 279 "n_std.c"
 }
 
 
@@ -228,37 +216,37 @@ void n_12( void)
 
 
     fputs( "Bad evaluation of long.\n", stderr);
-# 337 "n_std.c"
+# 325 "n_std.c"
 }
 
 void n_13( void)
-# 355 "n_std.c"
+# 343 "n_std.c"
 {
-# 375 "n_std.c"
+# 363 "n_std.c"
 }
 
 void n_13_5( void)
 
 {
-# 399 "n_std.c"
+# 387 "n_std.c"
 }
 
 void n_13_7( void)
 
 {
-# 418 "n_std.c"
+# 406 "n_std.c"
 }
 
 void n_13_8( void)
 
 {
-# 451 "n_std.c"
+# 439 "n_std.c"
 }
 
 void n_13_13( void)
 
 {
-# 478 "n_std.c"
+# 466 "n_std.c"
 }
 
 void n_15( void)
@@ -268,7 +256,7 @@ void n_15( void)
 
 
     assert( 1);
-# 495 "n_std.c"
+# 483 "n_std.c"
     assert( 1);
 
 }
@@ -299,7 +287,7 @@ void n_19( void)
 
 {
     int c = 1;
-# 533 "n_std.c"
+# 521 "n_std.c"
     assert( ( c ) == 1);
 }
 
@@ -411,7 +399,7 @@ void n_25( void)
 
     assert( strcmp( "ZERO_TOKEN", "ZERO_TOKEN") == 0);
 }
-# 660 "n_std.c"
+# 648 "n_std.c"
 int f( int a)
 {
     return a;
@@ -465,7 +453,7 @@ void n_27( void)
 
 {
     int a = 1, b = 2, c, m = 1, n = 2;
-# 723 "n_std.c"
+# 711 "n_std.c"
     assert( 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 == 36);
 
 
@@ -500,20 +488,20 @@ void n_28( void)
 
 
 {
-    char * date = "Feb  9 2017";
+    char * date = "Feb 11 2017";
 
 
     assert( strcmp( "n_std.c", "n_std.c") == 0);
 
 
-    assert( 763 == 779);
+    assert( 751 == 779);
 
 
-    assert( strlen( "Feb  9 2017") == 11);
+    assert( strlen( "Feb 11 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "23:48:45") == 8);
+    assert( strlen( "17:44:49") == 8);
 
 
     assert( 1);
@@ -530,7 +518,7 @@ void n_28( void)
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
 }
-# 780 "n_std.c" 2
+# 768 "n_std.c" 2
 }
 
 void n_29( void)
@@ -576,7 +564,7 @@ void n_30( void)
 void n_32( void)
 
 {
-# 834 "n_std.c"
+# 822 "n_std.c"
 }
 
 void n_37( void)
@@ -604,9 +592,9 @@ void n_37( void)
 
 
     nest = 0;
-# 877 "n_std.c"
+# 865 "n_std.c"
                                 nest = 8;
-# 886 "n_std.c"
+# 874 "n_std.c"
     assert( nest == 8);
 
 
@@ -658,7 +646,7 @@ void n_37( void)
 # 5 "test/test-c/nest3.h" 2
 # 5 "test/test-c/nest2.h" 2
 # 5 "test/test-c/nest1.h" 2
-# 891 "n_std.c" 2
+# 879 "n_std.c" 2
     assert( nest == 8);
 
 
@@ -707,6 +695,6 @@ void n_37( void)
 
 
 # 1 "test/test-c/m1024.h" 1
-# 939 "n_std.c" 2
+# 927 "n_std.c" 2
     assert( 1);
 }

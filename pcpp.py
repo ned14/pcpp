@@ -7,6 +7,7 @@ from __future__ import print_function
 import sys, os, re, datetime, traceback, time
 
 tailwhitespace             = re.compile(r".*(\s+)")
+multiwhitespace            = re.compile(r"(\s\s+)")
 nameerror_extract          = re.compile(r"name '(.*)' is not defined")
 preprocessor_command       = re.compile(r"\s*#\s*([a-z]+)\s*(.*)")
 preprocessor_continuation  = re.compile(r"\s*#\s*([a-z]+)\s*(.*)\s*\\")
@@ -92,7 +93,7 @@ class string_view(object):
     def __contains__(self, item):
         if isinstance(item, str):
             return -1 != self.__string.find(item, self.__start, self.__end)
-        raise ValueError, "Cannot find type %s in a string_view" % repr(other)        
+        raise ValueError, "Cannot find type %s in a string_view" % repr(item)        
         
     def find(self, sub, start=0, end=-1):
         idx = self.__string.find(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
@@ -165,7 +166,7 @@ def tokenise_stringliterals(line, in_comment = False):
             idx = idx2 = end+1
 
 def tokenise_arguments(contents):
-    """Converts a bracket and comma sequence into a list of string_views"""
+    """Converts a bracket and comma sequence into a list of string_views and chars consumed"""
     start = contents.find('(')
     parameters = []
     line_view = string_view(contents, start + 1)
@@ -211,11 +212,19 @@ def tokenise_arguments(contents):
                 idx = cb + 1
         if inbracket < 0:
             parameters.append(line_view[lastcomma:idxbase + be])
-            return parameters
+            return (parameters, idxbase + be + start + 2)
         idxbase += len(thispart) + len(parts[partidx + 1]) if partidx < len(parts) - 1 else 0
         partidx += 2
     parameters.append(line_view[lastcomma:])
-    return parameters
+    return (parameters, len(contents))
+
+def remove_multiwhitespace(contents):
+    """Removes any instances of multiple whitespace"""
+    while 1:
+        result = multiwhitespace.search(contents)
+        if result is None:
+            return contents
+        contents = contents[:result.start(1)] + ' ' + contents[result.end(1):]
 
 def expand_defineds(contents, macros_dict):
     """Expand all 'defined macro' operators, returning the expanded line"""
@@ -250,6 +259,7 @@ def expand_macros(contents, macros, rounds = 2**30):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
     parts = tokenise_stringliterals(contents)
     partidx = 0
+    idxbase = 0
     changed = False
     while partidx < len(parts):
         thispart = parts[partidx]
@@ -274,7 +284,6 @@ def expand_macros(contents, macros, rounds = 2**30):
                     if macroname in macros_expanded:
                         continue
                     macronamelen = len(macroname)
-                    #print("Searching for macro", macro.name())
                     pls_remove = False
                     thispartidx = 0
                     while thispartidx < len(thispart):
@@ -282,6 +291,7 @@ def expand_macros(contents, macros, rounds = 2**30):
                         while idx != -1:
                             p = thispart[thispartidx]
                             idx = p.find(macroname, idx)
+                            #print('"'+p+'" "'+macroname+'"', idx)
                             if idx != -1:
                                 if idx == 0 or is_preprocessor_punctuator(p[idx-1]):
                                     if idx+macronamelen == len(p) or is_preprocessor_punctuator(p[idx+macronamelen]):
@@ -290,9 +300,13 @@ def expand_macros(contents, macros, rounds = 2**30):
                                             if macro.parameters is None:
                                                 args = []
                                             else:
-                                                # FIXME Need to pass in contents indexed correctly
-                                                #args = tokenise_arguments()
-                                                break
+                                                # Figure out where in the original line we are currently at
+                                                originalidx = idxbase
+                                                for part in xrange(0, thispartidx):
+                                                    originalidx += len(thispart[part])
+                                                originalidx += idx
+                                                args, consumed = tokenise_arguments(contents[originalidx:])
+                                                macronamelen = consumed
                                             thispart[thispartidx] = p[idx+macronamelen:]
                                             thispart.insert(thispartidx, macro.contents(*args))
                                             thispart.insert(thispartidx, p[:idx])
@@ -312,8 +326,9 @@ def expand_macros(contents, macros, rounds = 2**30):
                 for part in thispart:
                     #print("  '"+part+"'")
                     parts[partidx] += part
-                thispart = parts[partidx]
+                thispart = parts[partidx] # = remove_multiwhitespace(parts[partidx])
                 print("=>", thispart)
+        idxbase += len(parts[partidx]) + (len(parts[partidx + 1]) if partidx < len(parts) -1 else 0)
         partidx += 2
     if not changed:
         return contents
@@ -408,8 +423,9 @@ class Timing(object):
 class MacroObject(object):
     """Token replacing macro"""
     def __init__(self, name, contents=''):
+        name = str(name)
         if name[-1] == ')':
-            self.parameters = tokenise_arguments(name)
+            self.parameters = [ str(p).rstrip().lstrip() for p in tokenise_arguments(name)[0] ]
             self.variadic = False
             if len(self.parameters) > 0 and '...' in self.parameters[-1]:
                 self.variadic = True
@@ -467,11 +483,13 @@ class Preprocessor(object):
         raise RuntimeError('#include "'+includepath+'" not found')
     
     def __file(self):
-        if self.__fileoverride is not None:
-            return self.__fileoverride
+        if self.__currentline.filepath in self.__lineoverrides:
+            return self.__lineoverrides[self.__currentline.filepath][1]
         return '"null"' if self.__currentline is None else '"'+self.__currentline.filepath+'"'
     def __line(self):
-        return '0' if self.__currentline is None else str(self.__currentline.lineno + self.__lineoverride)
+        if self.__currentline.filepath in self.__lineoverrides:
+            return str(self.__currentline.lineno + self.__lineoverrides[self.__currentline.filepath][0])
+        return '0' if self.__currentline is None else str(self.__currentline.lineno)
     def __date(self):
         d = self.__datetime.strftime('"%b %d %Y"')
         if d[5] == '0':
@@ -487,8 +505,7 @@ class Preprocessor(object):
         self.__macros_dict = {}    # Map of same MacroObject instances by macro name
         self.__lines = []          # List of Line instances each representing a line in a given file
         self.__currentline = None
-        self.__fileoverride = None
-        self.__lineoverride = 0
+        self.__lineoverrides = {}
         self.__datetime = datetime.datetime.now()
         self.__cmds = {k[4:]:getattr(self, k) for k in dir(self) if k.startswith('cmd_')}
         self.__ifstack = []
@@ -618,8 +635,6 @@ class Preprocessor(object):
     def cmd_include(self, contents):
         """As if #include contents, returns True if successfully included"""
         contents = expand_macros(contents, self.__macros_sorted).lstrip().rstrip()
-        self.__fileoverride = None
-        self.__lineoverride = 0
         result = preprocessor_include.match(contents)
         if result is None:
             newpath = contents
@@ -647,16 +662,15 @@ class Preprocessor(object):
         contents = expand_macros(contents, self.__macros_sorted)
         result = preprocessor_line2.match(contents)
         if result is not None:
-            self.__fileoverride = result.group(2)
+            lineoverride = int(result.group(1))
+            fileoverride = result.group(2)
         else:
             result = preprocessor_line.match(contents)
             if result is None:
                 raise RuntimeError('cmd_line("'+contents+'") does not match a #line')
-        if int(result.group(1)) == self.__currentline.lineno - 1:
-            # This is hacky and incorrect if the file name is different, but it works around a bug
-            self.__fileoverride = self.__lineoverride = None
-        else:
-            self.__lineoverride = int(result.group(1)) - self.__currentline.lineno - 1
+            lineoverride = int(result.group(1))
+            fileoverride = self.__file()
+        self.__lineoverrides[self.__currentline.filepath] = (lineoverride - self.__currentline.lineno - 1, fileoverride)
         # Rewrite current line to match calculated line
         self.__currentline.line = '# ' + str(int(self.__line())+1) + ' ' + self.__file()
         return False  # always pass through
@@ -784,13 +798,18 @@ class Preprocessor(object):
                             lines.append('\n')
                             lastlineno += 1
                     else:
-                        # Eat all blank lines before me
-                        while len(lines) and lines[-1].rstrip() == '':
-                            lines.pop()
                         lines.append('# %d "%s"\n' % (line.lineno, line.filepath))
                     lastlineno = line.lineno
                     lastfilepath = line.filepath
-            lines.append(line.line+'\n')
+            lines.append(line.line + '\n')
+        # Eliminate all empty lines before a # line directive
+        idx = 1
+        while idx < len(lines):
+            if lines[idx][0] == '#' and lines[idx][2].isdigit():
+                while lines[idx-1].rstrip() == '':
+                    del lines[idx-1]
+                    idx -= 1
+            idx += 1
         return lines
         
     def preprocess(self):
@@ -844,8 +863,6 @@ class Preprocessor(object):
                 self.__currentline.processedidx = lineidx
                 lineidx += 1
         self.__currentline = None
-        #for macro in self.__macros_sorted:
-        #    print(macro)
                         
 
 if __name__ == "__main__":

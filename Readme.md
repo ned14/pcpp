@@ -22,6 +22,7 @@ group subexpressions so Python's `eval()` executes right will fix it.
 - C99 correct elimination of comments
 - `__DATE__`, `__TIME__`, `__FILE__`, `__LINE__`
 - Object `#define`
+- Function `#define macro(...)`
   - correctly expands recursively, and each macro only ever expanded once
     as per C99 rules
 - `#undef`
@@ -49,21 +50,23 @@ group subexpressions so Python's `eval()` executes right will fix it.
   - `x ? y : z` (partial support, see known bugs)
 - `#if`, `#ifdef`, `#ifndef`, `#elif`, `#else`, `#endif`
 
-## What isn't working:
+## What isn't working yet:
 - Stringizing operator #
 - Token pasting operator ##
 - _Pragma operator
-- Function `#define macro(...)`
 
 ## What won't be implemented:
-- Trigraphs
+- Digraphs and Trigraphs
 
 ## Known bugs:
-- `#line` override tracks lines incorrectly when there are multiline comments.
+- `#line` override isn't observed during empty line collapsing
 
-  A hack workaround exists that if `#line` is used to reset to next line,
-  we disable the override which restores correct line tracking and this
-  bug appears to disappear :)
+  `#line` can be used to override `__FILE__` and `__LINE__`, this works as per the
+  standard. However long runs of empty lines are collapsed into an automatically
+  emitted `# lineno "file"` during the final stage, and these do not observe any
+  `#line` overrides, rather they always report the original file and line number.
+  Fixing this would not be hard, if this is a problem for you please open a bug on
+  the issue tracker.
 
 - Multiple whitespace are supposed to be collapsed into single whitespace
   throughout the file, including in non-macro parts.
@@ -83,6 +86,8 @@ group subexpressions so Python's `eval()` executes right will fix it.
   - Unary operator evaluation will break for evil expressions such as `-!+!9`
   because logical NOT in Python results in a boolean, not an integer, and
   a unary plus or negative boolean is invalid syntax in Python
+  - Similarly expressions which assume that boolean operations output either
+  a zero or a one will fail e.g. `(2 || 3) == 0`
   - Python has no concept of an unsigned integer and C expressions relying
   on unsigned integer semantics will fail badly e.g. `-1 <= 0U`
   is supposed to be evaluated as false in the C preprocessor, but it will be
