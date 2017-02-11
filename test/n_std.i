@@ -1,15 +1,5 @@
 # 19 "test/test-c/n_std.c"
-
-
-
-
-
-#define sub( x, y)      (x - y)
-#define str( a)         # a
-#define xstr( a)        str( a)
-#define glue( a, b)     a ## b
-#define xglue( a, b)    glue( a, b)
-
+# 30 "test/test-c/n_std.c"
 void    n_1( void);
 void    n_2( void);
 void    n_3( void);
@@ -91,17 +81,10 @@ void    n_2( void)
 
 
 
-#define FUNC( a, b, c)          a + b + c
+
 
     assert( FUNC( ab, cd, ef) == 6);
-
-
-
-
-#define FUNC( a, b      , c)                a + b               + c
-
-
-
+# 122 "test/test-c/n_std.c"
     assert (FUNC( ab, cd, ef) == 6);
 
 
@@ -299,7 +282,7 @@ void    n_18( void)
 
 
 
-#define FTN_LIKE(a)     ( a )
+
 {
     int     c = 3;
 
@@ -313,7 +296,7 @@ void    n_18( void)
     assert( FTN_LIKE( c) == 3);
 
 
-#define STR( n1, n2)    "n1:n2"
+
     assert( strcmp( STR( 1, 2), "n1:n2") == 0);
 }
 
@@ -326,7 +309,7 @@ void    n_19( void)
 
 
 
-#define FTN_LIKE( a     )(                             a )
+
 
 
     assert( FTN_LIKE( c) == 1);
@@ -352,7 +335,7 @@ void    n_21( void)
 
 
 
-#define sub( a, b)  a-b
+
 
 
     assert( sub( x, -y) == -1);
@@ -410,7 +393,7 @@ assert( strcmp( str(    ab      +
 
 
 
-#define f(a)        a
+
     assert( strcmp( xstr( x-f(y)), "x-y") == 0);
 }
 
@@ -422,7 +405,7 @@ void    n_25( void)
     int     a = 1, b = 2, abc = 3, MACRO_0MACRO_1 = 2;
 
 
-#define sub( x, y)      (x - y)
+
 
 
 
@@ -473,13 +456,13 @@ void    n_26( void)
 
 
 
-#define f(a)    a + f(a)
+
     assert( f( x) == 2);
 
 
 
-#define g(a)    a + h( a)
-#define h(a)    a + g( a)
+
+
     assert( g( x) == 4);
 
 
@@ -498,17 +481,17 @@ void    n_27( void)
     assert( 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 == 36);
 
 
-#define FUNC4( a, b)    FUNC3( a, b) + NEST4
-#define FUNC3( a, b)    FUNC2( a, b) + NEST3
-#define FUNC2( a, b)    FUNC1( a, b) + NEST2
-#define FUNC1( a, b)    (a) + (b)
+
+
+
+
     assert( FUNC4( 1, NEST1 + 2) == 23);
 
 
     assert( glue( MACRO_, 1) == 1);
 
 
-#define math( op, a, b) op( (a), (b))
+
 
 
 
@@ -521,7 +504,7 @@ void    n_27( void)
 
 
 
-#define n( a)   a 
+
     assert( n( n) == 2);
 }
 
@@ -529,7 +512,7 @@ void    n_28( void)
 
 
 {
-    char *  date = "Feb 10 2017";
+    char *  date = "Feb 11 2017";
 
 
     assert( strcmp( "n_std.c", "n_std.c") == 0);
@@ -538,11 +521,11 @@ void    n_28( void)
     assert( 763 == 779);
 
 
-    assert( strlen( "Feb 10 2017") == 11);
+    assert( strlen( "Feb 11 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "17:51:53") == 8);
+    assert( strlen( "01:06:17") == 8);
 
 
     assert( 1);
@@ -584,7 +567,7 @@ void    n_30( void)
 
 {
 
-#define FUNC( a, b, c)      a + b + c
+
 
     int     a = 1, b = 2, c = 3;
 
@@ -621,7 +604,7 @@ void    n_37( void)
 
 
 
-#define glue31(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E)       a##b##c##d##e##f##g##h##i##j##k##l##m##n##o##p##q##r##s##t##u##v##w##x##y##z##A##B##C##D##E
+
 
 
     int     ABCDEFGHIJKLMNOPQRSTUVWXYZabcde = 31;

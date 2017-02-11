@@ -16,7 +16,7 @@ preprocessor_singlecomment = re.compile(r"(.*)//")
 preprocessor_punctuator    = re.compile(r"[ \t\n\r\f\v{}\[\]#()!+\-*/,;:]")
 preprocessor_macro_name    = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)")
 preprocessor_macro_object  = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\s+(.+)")
-preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\((.*)\)\s*(.*)")
+preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*\(.*\))\s*(.*)")
 preprocessor_include       = re.compile(r"[<\"](.+)[>\"]")
 preprocessor_line          = re.compile(r"([0-9]+)")
 preprocessor_line2         = re.compile(r"([0-9]+)\s+(.*)\s*(.*)")
@@ -167,11 +167,8 @@ def tokenise_stringliterals(line, in_comment = False):
 def tokenise_arguments(contents):
     """Converts a bracket and comma sequence into a list of string_views"""
     start = contents.find('(')
-    end = contents.rfind(')')
-    assert start != -1
-    assert end != -1
     parameters = []
-    line_view = string_view(contents, start + 1, end)
+    line_view = string_view(contents, start + 1)
     parts = tokenise_stringliterals(line_view)
     inbracket = 0
     lastcomma = 0
@@ -180,11 +177,11 @@ def tokenise_arguments(contents):
     while partidx < len(parts):
         thispart = parts[partidx]
         idx = 0
-        while idx < len(thispart):
+        while idx < len(thispart) and inbracket >= 0:
             cb = thispart.find(',', idx) if inbracket == 0 else -1
             bb = thispart.find('(', idx)
-            #be = thispart.find(')', idx)
-            print(cb, bb, be, thispart)
+            be = thispart.find(')', idx)
+            #print(cb, bb, be, thispart)
             if cb == -1 and bb == -1 and be == -1:
                 break
             if cb != -1 and bb != -1:
@@ -211,7 +208,10 @@ def tokenise_arguments(contents):
             elif cb != -1:
                 parameters.append(line_view[lastcomma:idxbase + cb])
                 lastcomma = idxbase + cb + 1
-                idx = cb + 1        
+                idx = cb + 1
+        if inbracket < 0:
+            parameters.append(line_view[lastcomma:idxbase + be])
+            return parameters
         idxbase += len(thispart) + len(parts[partidx + 1]) if partidx < len(parts) - 1 else 0
         partidx += 2
     parameters.append(line_view[lastcomma:])
@@ -246,7 +246,7 @@ def expand_defineds(contents, macros_dict):
         contents += part
     return contents
 
-def expand_macros(contents, macros):
+def expand_macros(contents, macros, rounds = 2**30):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
     parts = tokenise_stringliterals(contents)
     partidx = 0
@@ -262,9 +262,12 @@ def expand_macros(contents, macros):
         if need_to_expand:
             changed = True
             macros_expanded = {}
-            while 1:
+            while rounds > 0:
+                rounds -= 1
+                # Do one round of expanding macros in this part
                 expanded = False
-                # Search this part for macros to expand, expanding from end to start
+                thispart = [ thispart ]  # odd indices are expanded macros
+                # We search longest macro names first down to shortest
                 for midx in xrange(len(macros)-1, -1, -1):
                     macro = macros[midx]
                     macroname = macro.name()
@@ -273,23 +276,44 @@ def expand_macros(contents, macros):
                     macronamelen = len(macroname)
                     #print("Searching for macro", macro.name())
                     pls_remove = False
-                    idx = len(thispart)
-                    while idx != -1:
-                        idx = thispart.rfind(macroname, 0, idx)
-                        if idx != -1:
-                            #print(idx, macronamelen, len(thispart), "'"+thispart+"'")
-                            if idx == 0 or is_preprocessor_punctuator(thispart[idx-1]):
-                                if idx+macronamelen == len(thispart) or is_preprocessor_punctuator(thispart[idx+macronamelen]):
-                                    thispart = thispart[:idx] + macro.contents() + thispart[idx+macronamelen:]
-                                    #print(thispart)
-                            idx -= 1
-                            pls_remove = True
+                    thispartidx = 0
+                    while thispartidx < len(thispart):
+                        idx = 0
+                        while idx != -1:
+                            p = thispart[thispartidx]
+                            idx = p.find(macroname, idx)
+                            if idx != -1:
+                                if idx == 0 or is_preprocessor_punctuator(p[idx-1]):
+                                    if idx+macronamelen == len(p) or is_preprocessor_punctuator(p[idx+macronamelen]):
+                                        # Function macros without parameters must be ignored
+                                        if macro.parameters is None or (idx+macronamelen < len(p) and p[idx+macronamelen] == '('):
+                                            if macro.parameters is None:
+                                                args = []
+                                            else:
+                                                # FIXME Need to pass in contents indexed correctly
+                                                #args = tokenise_arguments()
+                                                break
+                                            thispart[thispartidx] = p[idx+macronamelen:]
+                                            thispart.insert(thispartidx, macro.contents(*args))
+                                            thispart.insert(thispartidx, p[:idx])
+                                            pls_remove = True
+                                            idx -= 1
+                                idx += 1
+                        thispartidx += 2
                     if pls_remove:
-                        parts[partidx] = thispart
                         macros_expanded[macroname] = None
                         expanded = True
                 if not expanded:
                     break
+                # Round of expansion has finished, rejoin part fragments into a single part
+                old = parts[partidx]
+                parts[partidx] = ''
+                print("<=", old)
+                for part in thispart:
+                    #print("  '"+part+"'")
+                    parts[partidx] += part
+                thispart = parts[partidx]
+                print("=>", thispart)
         partidx += 2
     if not changed:
         return contents
@@ -397,6 +421,8 @@ class MacroObject(object):
         else:
             self.name = lambda: name
             self.contents = lambda: contents
+            self.parameters = None
+            self.variadic = False
     def __repr__(self):
         return '#define '+self.name()+' '+self.contents()
     def __cmp__(self, other):
@@ -414,7 +440,7 @@ class MacroObject(object):
                 vaargs = ','.join(args[len(args)-len(self.parameters):])
             macros.append(MacroObject('__VA_ARGS__', vaargs))
         macros.sort(key=lambda x: len(x.name()))
-        return expand_macros(self.__contents, macros)
+        return expand_macros(self.__contents, macros, rounds = 1)
 
 class Line(object):
     """A line from an original source file"""
@@ -491,24 +517,28 @@ class Preprocessor(object):
         # Is it a #define name(pars) object?
         result = preprocessor_macro_function.match(contents)
         if result is not None:
-            return  # temporary
-        # Is it a #define name object?
-        result = preprocessor_macro_object.match(contents)
-        if result is not None:
             macroname = result.group(1)
             macrocontents = result.group(2)
         else:
-            # Is it a #define name?
-            result = preprocessor_macro_name.match(contents)
-            if result is None:
-                raise RuntimeError('cmd_define("'+contents+'") does not match a #define')
-            macroname = result.group(1)
-            macrocontents = ''
+            # Is it a #define name object?
+            result = preprocessor_macro_object.match(contents)
+            if result is not None:
+                macroname = result.group(1)
+                macrocontents = result.group(2)
+            else:
+                # Is it a #define name?
+                result = preprocessor_macro_name.match(contents)
+                if result is None:
+                    raise RuntimeError('cmd_define("'+contents+'") does not match a #define')
+                macroname = result.group(1)
+                macrocontents = ''
+        m = MacroObject(macroname, macrocontents)
+        macroname = m.name()
         if macroname in self.__macros_dict:
-            if macroname not in self.systemmacros:
-                self.__macros_dict[macroname].contents = lambda: macrocontents
+            m2 = self.__macros_dict[macroname]
+            #if m2.parameters != m.parameters or m2.contents() != m.contents():
+            #    raise RuntimeError('Redefinition of macro ' + macroname)
         else:
-            m = MacroObject(macroname, macrocontents)
             self.__macros_sorted.append(m)
             self.__macros_sorted.sort(key=lambda x: len(x.name()))
             self.__macros_dict[macroname] = m
