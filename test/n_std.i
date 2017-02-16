@@ -83,9 +83,9 @@ void    n_2( void)
 
 
 
-    assert(  ab +  cd +  ef == 6);
+    assert( ab + cd + ef == 6);
 # 122 "test/test-c/n_std.c"
-    assert ( ab +  cd               +  ef == 6);
+    assert ( ab + cd + ef == 6);
 
 
     assert (strcmp( "abcde", "abcde") == 0);
@@ -103,7 +103,7 @@ void    n_3( void)
     int     abcd = 4;
 
 
-assert( strcmp( # a, "abc de") == 0);
+assert( strcmp( "abc de", "abc de") == 0);
 # 156 "test/test-c/n_std.c"
     assert( abcd == 4);
 }
@@ -266,7 +266,7 @@ void    n_18( void)
 
 
 
-    assert(  == 3);
+    assert( ( c ) == 3);
 
 
 
@@ -285,7 +285,7 @@ void    n_19( void)
 
 
 
-    assert(  == 1);
+    assert( ( c ) == 1);
 }
 
 void    n_20( void)
@@ -293,7 +293,7 @@ void    n_20( void)
 {
 
 
-    double   fl;
+    double fl;
     assert( sizeof fl == sizeof (double));
 }
 
@@ -311,7 +311,7 @@ void    n_21( void)
 
 
 
-    assert(  x- -y == -1);
+    assert( x- -y == -1);
 }
 
 void    n_22( void)
@@ -320,14 +320,14 @@ void    n_22( void)
 
 
 
-    assert( strcmp( , "12E+EXP") == 0);
-
-
-    assert( strcmp( , ".2e-EXP") == 0);
 
 
 
-    assert( strcmp( , "12+1") == 0);
+
+
+
+
+    assert( strcmp( "12+1", "12+1") == 0);
 }
 
 void    n_23( void)
@@ -336,38 +336,38 @@ void    n_23( void)
     int     xy = 1;
 
 
-    assert(  x ##  y == 1);
+    assert( xy == 1);
 
 
 
 
-    assert(  == 12.0);
+    assert( .12e+2 == 12.0);
 }
 
 void    n_24( void)
 
 {
 
-    assert( strcmp( # a, "a+b") == 0);
+    assert( strcmp( "a+b", "a+b") == 0);
 
 
 
-assert( strcmp( # a
+assert( strcmp( "ab +"
         cd  ), "ab + cd") == 0);
 
 
 
-    assert( strcmp( # a'"' + "' \""), "'\"' + \"' \\\"\"") == 0);
+    assert( strcmp( "'\"' + \"' \\\"\""'"' + "' \""), "'\"' + \"' \\\"\"") == 0);
 
 
 
-    assert( strcmp( # a"abc"), "\"abc\"") == 0);
+    assert( strcmp( "\"abc\"""abc"), "\"abc\"") == 0);
 
 
 
 
 
-    assert( strcmp( , "x-y") == 0);
+    assert( strcmp( "x-f(y)", "x-y") == 0);
 }
 
 void    n_25( void)
@@ -382,19 +382,19 @@ void    n_25( void)
 
 
 
-    assert( a,b, 1) == 1);
+    assert( sub( TWO_ARGS, 1) == 1);
 
 
-    assert( , a) == -1);
+    assert( ( - a) == -1);
 
 
-    assert(  == 3);
+    assert( glue( a, b)c == 3);
 
 
-    assert(  MACRO_0 ##  MACRO_10, 1) == 2);
+    assert( 01 == 2);
 
 
-    assert( strcmp( # a), "ZERO_TOKEN") == 0);
+    assert( strcmp( "", "ZERO_TOKEN") == 0);
 }
 # 648 "test/test-c/n_std.c"
 int     f( int a)
@@ -430,17 +430,17 @@ void    n_26( void)
 
 
 
-    assert(  == 2);
+    assert( x + f( x) == 2);
 
 
 
 
 
-    assert(  == 4);
+    assert( x + x + g( x) == 4);
 
 
 
-    assert(  == 2);
+    assert( Z[0] + f( Z[0]) == 2);
 }
 
 void    n_27( void)
@@ -458,34 +458,34 @@ void    n_27( void)
 
 
 
-    assert( + 1 + 2 + 3 + 4 == 23);
+    assert( ( 1) + ( NEST1 + 2) + NEST2 + NEST2 + 3 + NEST2 + 3 + 4 == 23);
 
 
-    assert(  MACRO_ ##  1 == 1);
-
-
-
+    assert( 1 == 1);
 
 
 
-    assert(  == -1);
 
 
-    c = ;
+
+    assert( ( ( a) - ( b)) == -1);
+
+
+    c = ( a - b );
     assert( c == -1);
 
 
 
 
 
-    assert(  m  == 2);
+    assert( n == 2);
 }
 
 void    n_28( void)
 
 
 {
-    char *  date = "Feb 11 2017";
+    char * date = "Feb 16 2017";
 
 
     assert( strcmp( "n_std.c", "n_std.c") == 0);
@@ -494,11 +494,11 @@ void    n_28( void)
     assert( 751 == 779);
 
 
-    assert( strlen( "Feb 11 2017") == 11);
+    assert( strlen( "Feb 16 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "17:39:14") == 8);
+    assert( strlen( "01:03:37") == 8);
 
 
     assert( 1);
@@ -510,7 +510,7 @@ void    n_28( void)
 
 
 {
-    char *  file = "test/test-c/line.h";
+    char * file = "test/test-c/line.h";
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
 }

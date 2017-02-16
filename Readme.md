@@ -49,11 +49,8 @@ group subexpressions so Python's `eval()` executes right will fix it.
   - `||`
   - `x ? y : z` (partial support, see known bugs)
 - `#if`, `#ifdef`, `#ifndef`, `#elif`, `#else`, `#endif`
-
-## What isn't working yet:
 - Stringizing operator #
 - Token pasting operator ##
-- _Pragma operator
 
 ## What won't be implemented:
 - Digraphs and Trigraphs
@@ -100,3 +97,16 @@ group subexpressions so Python's `eval()` executes right will fix it.
     - `(x) ? y : z` (z gets evaluated according to Python not C precedence)
     - `(x ? y : z)` (preferred, evaluates correctly, we inject brackets
     around the subexpessions before sending to Python)
+
+- Numbers are not tokenised any differently to strings
+
+  It is rare you will notice this in real world code, but something like
+  this shows the problem:
+  ```
+  #define EXP 1
+  #define str(a) #a
+  #define xstr(a) str(a)
+  // FAILS, xE+y should not expand y as anything of the form xE+y should
+  // be tokenised as a single number, even if invalid
+  assert( strcmp( xstr( 12E+EXP), "12E+EXP") == 0);
+  ```

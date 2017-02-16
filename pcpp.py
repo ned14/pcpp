@@ -6,6 +6,8 @@
 from __future__ import print_function
 import sys, os, re, datetime, traceback, time
 
+debug = False
+
 tailwhitespace             = re.compile(r".*(\s+)")
 multiwhitespace            = re.compile(r"(\s\s+)")
 nameerror_extract          = re.compile(r"name '(.*)' is not defined")
@@ -17,7 +19,7 @@ preprocessor_singlecomment = re.compile(r"(.*)//")
 preprocessor_punctuator    = re.compile(r"[ \t\n\r\f\v{}\[\]#()!+\-*/,;:]")
 preprocessor_macro_name    = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)")
 preprocessor_macro_object  = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\s+(.+)")
-preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*\(.*\))\s*(.*)")
+preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*\([^)]*\))\s*(.*)")
 preprocessor_include       = re.compile(r"[<\"](.+)[>\"]")
 preprocessor_line          = re.compile(r"([0-9]+)")
 preprocessor_line2         = re.compile(r"([0-9]+)\s+(.*)\s*(.*)")
@@ -37,16 +39,12 @@ def is_preprocessor_punctuator(c):
 class string_view(object):
     """A string like view onto some other string"""
     def __init__(self, s, start=0, end=-1):
+        assert isinstance(s, str)
         if end == -1:
             end = len(s)
-        if isinstance(s, string_view):
-            self.__string = s.__string
-            self.__start = s.__start + start
-            self.__end = s.__start + end
-        else:
-            self.__string = s
-            self.__start = start
-            self.__end = end
+        self.__string = s
+        self.__start = start
+        self.__end = end
         if self.__start >= self.__end or self.__start >= len(s):
             self.__start = 0
             self.__end = 0
@@ -105,8 +103,21 @@ class string_view(object):
 
 def tokenise_stringliterals(line, in_comment = False):
     """Split string literals in line, literals always end up at odd indices in returned list.
-       NOTE we return string views of input line, NOT copies"""
-    line_view = string_view(line)
+       NOTE we return string views of input line, NOT copies
+
+    >>> tokenise_stringliterals('str( a)')
+    ['str( a)']
+    >>> tokenise_stringliterals('str( a,x)')
+    ['str( a,x)']
+    >>> tokenise_stringliterals('"niall" is here')
+    ['', '"niall"', ' is here']
+    >>> tokenise_stringliterals('"\\\\"niall\\\\"" is here')
+    ['', '"\\"niall\\""', ' is here']
+    """
+    if isinstance(line, string_view):
+        line_view = line
+    else:
+        line_view = string_view(line)
     out = []
     idx = 0
     idx2 = 0
@@ -147,7 +158,7 @@ def tokenise_stringliterals(line, in_comment = False):
                 if end == -1:
                     end = len(line)
                     break
-                if line_view[end-1]!='\\':
+                if line[end-1]!='\\':
                     break
             out.append(line_view[idx2:dq])
             out.append(line_view[dq:end+1])
@@ -159,14 +170,22 @@ def tokenise_stringliterals(line, in_comment = False):
                 if end == -1:
                     end = len(line)
                     break
-                if line_view[end-1]!='\\':
+                if line[end-1]!='\\':
                     break
             out.append(line_view[idx2:sq])
             out.append(line_view[sq:end+1])
             idx = idx2 = end+1
 
 def tokenise_arguments(contents):
-    """Converts a bracket and comma sequence into a list of string_views and chars consumed"""
+    """Converts a bracket and comma sequence into a list of string_views and chars consumed
+
+    >>> tokenise_arguments('str( a)')
+    ([' a'], 7)
+    >>> tokenise_arguments('str( a,x)')
+    ([' a', 'x'], 9)
+    >>> tokenise_arguments('sub( ( a), ( b))')
+    ([' ( a)', ' ( b)'], 16)
+    """
     start = contents.find('(')
     parameters = []
     line_view = string_view(contents, start + 1)
@@ -218,13 +237,24 @@ def tokenise_arguments(contents):
     parameters.append(line_view[lastcomma:])
     return (parameters, len(contents))
 
-def remove_multiwhitespace(contents):
+def remove_multiwhitespace(contents, preserve_indent = False):
     """Removes any instances of multiple whitespace"""
+    indent = ''
+    if preserve_indent:
+        contents2 = contents.lstrip()
+        indent = contents[:len(contents)-len(contents2)]
+        contents = contents2
     while 1:
         result = multiwhitespace.search(contents)
         if result is None:
-            return contents
+            return indent + contents
         contents = contents[:result.start(1)] + ' ' + contents[result.end(1):]
+
+def stringize(contents):
+    """Convert contents into a valid C string, escaped if necessary"""
+    contents = str(contents).rstrip().lstrip().replace('\\', '\\\\')
+    contents = contents.replace('"', '\\"')
+    return contents
 
 def expand_defineds(contents, macros_dict):
     """Expand all 'defined macro' operators, returning the expanded line"""
@@ -257,84 +287,119 @@ def expand_defineds(contents, macros_dict):
 
 def expand_macros(contents, macros, rounds = 2**30):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
-    parts = tokenise_stringliterals(contents)
-    partidx = 0
-    idxbase = 0
-    changed = False
-    while partidx < len(parts):
-        thispart = parts[partidx]
+    macros_expanded = {}
+    while rounds > 0:
+        rounds -= 1
+        changed = False
+        # Break line into non-literals (even) and string literals (odd)
+        parts = tokenise_stringliterals(contents)
         # Do a quick search of the macro objects to expand first, if nothing early exit
         need_to_expand = False
         for macro in macros:
-            if macro.name() in thispart:
-                need_to_expand = True
-                break
-        if need_to_expand:
-            changed = True
-            macros_expanded = {}
-            while rounds > 0:
-                rounds -= 1
-                # Do one round of expanding macros in this part
+            macroname = macro.name()
+            if macroname not in macros_expanded:
+                for partidx in xrange(0, len(parts), 2):
+                    if macroname in parts[partidx]:
+                        need_to_expand = True
+                        break
+        if not need_to_expand:
+            break
+        
+        # We search longest macro names first down to shortest
+        for midx in xrange(len(macros)-1, -1, -1):
+            macro = macros[midx]
+            macroname = macro.name()
+            if macroname in macros_expanded:
+                continue
+            macronamelen = len(macroname)
+            pls_remove = False
+            partidx = 0
+            idxbase = 0
+            # Iterate only the non string literal parts
+            while partidx < len(parts):
+                thispart = [ parts[partidx] ]  # odd indices are expanded macros
                 expanded = False
-                thispart = [ thispart ]  # odd indices are expanded macros
-                # We search longest macro names first down to shortest
-                for midx in xrange(len(macros)-1, -1, -1):
-                    macro = macros[midx]
-                    macroname = macro.name()
-                    if macroname in macros_expanded:
-                        continue
-                    macronamelen = len(macroname)
-                    pls_remove = False
-                    thispartidx = 0
-                    while thispartidx < len(thispart):
-                        idx = 0
-                        while idx != -1:
-                            p = thispart[thispartidx]
-                            idx = p.find(macroname, idx)
-                            #print('"'+p+'" "'+macroname+'"', idx)
-                            if idx != -1:
-                                if idx == 0 or is_preprocessor_punctuator(p[idx-1]):
-                                    if idx+macronamelen == len(p) or is_preprocessor_punctuator(p[idx+macronamelen]):
-                                        # Function macros without parameters must be ignored
-                                        if macro.parameters is None or (idx+macronamelen < len(p) and p[idx+macronamelen] == '('):
-                                            if macro.parameters is None:
-                                                args = []
-                                            else:
-                                                # Figure out where in the original line we are currently at
-                                                originalidx = idxbase
-                                                for part in xrange(0, thispartidx):
-                                                    originalidx += len(thispart[part])
-                                                originalidx += idx
-                                                args, consumed = tokenise_arguments(contents[originalidx:])
-                                                macronamelen = consumed
-                                            thispart[thispartidx] = p[idx+macronamelen:]
-                                            thispart.insert(thispartidx, macro.contents(*args))
-                                            thispart.insert(thispartidx, p[:idx])
-                                            pls_remove = True
-                                            idx -= 1
-                                idx += 1
-                        thispartidx += 2
-                    if pls_remove:
-                        macros_expanded[macroname] = None
-                        expanded = True
-                if not expanded:
-                    break
-                # Round of expansion has finished, rejoin part fragments into a single part
-                old = parts[partidx]
-                parts[partidx] = ''
-                print("<=", old)
-                for part in thispart:
-                    #print("  '"+part+"'")
-                    parts[partidx] += part
-                thispart = parts[partidx] # = remove_multiwhitespace(parts[partidx])
-                print("=>", thispart)
-        idxbase += len(parts[partidx]) + (len(parts[partidx + 1]) if partidx < len(parts) -1 else 0)
-        partidx += 2
-    if not changed:
-        return contents
-    contents = ''
-    for part in parts:
-        contents += part
+                thispartidx = 0
+                # Expand the current macro in the current non string literal, placing the expansions
+                # at odd indices
+                while thispartidx < len(thispart):
+                    idx = 0
+                    while idx != -1:
+                        p = thispart[thispartidx]
+                        idx = p.find(macroname, idx)
+                        #print('"'+p+'" "'+macroname+'"', idx)
+                        if idx != -1:
+                            if idx == 0 or is_preprocessor_punctuator(p[idx-1]):
+                                if idx+macronamelen == len(p) or is_preprocessor_punctuator(p[idx+macronamelen]):
+                                    # Function macros without parameters must be ignored
+                                    if macro.parameters is None or (idx+macronamelen < len(p) and p[idx+macronamelen] == '('):
+                                        if macro.parameters is None:
+                                            args = []
+                                        else:
+                                            # Figure out where in the original line we are currently at
+                                            originalidx = idxbase
+                                            for part in xrange(0, thispartidx):
+                                                originalidx += len(thispart[part])
+                                            originalidx += idx
+                                            args, consumed = tokenise_arguments(contents[originalidx:])
+                                            macronamelen = consumed
+                                            #print('PARSED ARGS TO CALL', macroname,'=', args, 'from', contents[originalidx:])
+                                        # Replace the macro with its expanded contents
+                                        thispart[thispartidx] = p[idx+macronamelen:]
+                                        thispart.insert(thispartidx, macro.contents(*args))
+                                        thispart.insert(thispartidx, p[:idx])
+                                        pls_remove = True
+                                        expanded = True
+                                        changed = True
+                                        idx -= 1
+                            idx += 1
+                    thispartidx += 2
+                if expanded:
+                    # We expanded the current macro at least once, so rejoin the list of expansions
+                    # Check for stringizing and tokenising operators
+                    for n in xrange(1, len(thispart), 2):
+                        # Was this expanded part preceded by a stringizing operator?
+                        sidx = thispart[n - 1].rfind('#')
+                        if sidx != -1:
+                            temp = str(thispart[n - 1]).rstrip()
+                            if temp[-1] == '#' and (len(temp) < 2 or temp[-2] != '#'):
+                                thispart[n - 1] = temp[:-1]
+                                thispart[n] = '"' + stringize(thispart[n]) + '"'
+                    old = parts[partidx]
+                    parts[partidx] = ''
+                    for n in thispart:
+                        parts[partidx] += n
+                    parts[partidx] = remove_multiwhitespace(parts[partidx], partidx == 0)
+                    if debug:
+                        print("expand_macros", macroname, old, "=>", parts[partidx])
+                idxbase += len(parts[partidx]) + (len(parts[partidx + 1]) if partidx < len(parts) -1 else 0)
+                partidx += 2
+            # Mark the current macro as having been expanded, and retokenise the modified
+            # line as sting literals may have been inserted into it
+            if pls_remove:
+                macros_expanded[macroname] = None
+                contents = ''
+                for part in parts:
+                    contents += part
+                parts = tokenise_stringliterals(contents)
+        if not changed:
+            break
+        # Having completed one full round of macro expansion, we now apply the tokenising operator
+        if '##' in contents:
+            changed = False
+            for partidx in xrange(0, len(parts), 2):
+                idx = 0
+                while 1:
+                    thispart = parts[partidx]
+                    idx = thispart.find('##', idx)
+                    if idx == -1:
+                        break
+                    parts[partidx] = str(thispart[:idx]).rstrip() + str(thispart[idx+2:]).lstrip()
+                    changed = True
+            if changed:
+                contents = ''
+                for part in parts:
+                    contents += part                    
     return contents
 
 def evaluate_expr(contents, undefined_means_zero):
@@ -424,6 +489,7 @@ class MacroObject(object):
     """Token replacing macro"""
     def __init__(self, name, contents=''):
         name = str(name)
+        #print('MacroObject(', name, '=', contents, ')')
         if name[-1] == ')':
             self.parameters = [ str(p).rstrip().lstrip() for p in tokenise_arguments(name)[0] ]
             self.variadic = False
@@ -433,21 +499,33 @@ class MacroObject(object):
             name = name[:name.find('(')]
             self.name = lambda: name
             self.contents = self.__contents
-            self.__contents = contents
+            self.__rawcontents = contents
         else:
             self.name = lambda: name
             self.contents = lambda: contents
             self.parameters = None
             self.variadic = False
+        if debug:
+            print(repr(self))
     def __repr__(self):
-        return '#define '+self.name()+' '+self.contents()
+        n = '#define '+self.name()
+        if self.parameters:
+            n += '('
+            first = True
+            for p in self.parameters:
+                n += p if first else ', '+p
+                first = False
+            n += ') '+self.__rawcontents
+        else:
+            n += ' '+self.contents()
+        return n
     def __cmp__(self, other):
         return -1 if self.name()<other.name() else 0 if self.name()==other.name() else 1
     def __hash__(self):
         return hash(self.name())
     def __contents(self, *args):
         if len(args) < len(self.parameters) or (not self.variadic and len(args) > len(self.parameters)):
-            raise RuntimeError("Macro "+self.name()+"(...) called with %d arguments when it takes %d" % (len(args), len(self.parameters)))
+            raise RuntimeError("Macro "+repr(self)+" called with %d arguments when it takes %d" % (len(args), len(self.parameters)))
         # Define a local macro list mapping the macro parameters to the args
         macros = [MacroObject(name, value) for name, value in zip(self.parameters, args)]
         if self.variadic:
@@ -455,8 +533,9 @@ class MacroObject(object):
             if len(args) > len(self.parameters):
                 vaargs = ','.join(args[len(args)-len(self.parameters):])
             macros.append(MacroObject('__VA_ARGS__', vaargs))
+        #print('EXPAND FUNCTION MACRO', self.name(), '(', macros, ') args =', args)
         macros.sort(key=lambda x: len(x.name()))
-        return expand_macros(self.__contents, macros, rounds = 1)
+        return expand_macros(self.__rawcontents, macros, rounds = 1)
 
 class Line(object):
     """A line from an original source file"""
@@ -866,6 +945,11 @@ class Preprocessor(object):
                         
 
 if __name__ == "__main__":
+    if 1:
+        import doctest
+        failurecount, testcount = doctest.testmod()
+        if failurecount > 0:
+            sys.exit(1)
     #if len(sys.argv)<3:
     #    print("Usage: "+sys.argv[0]+" outputpath [-Iincludepath...] [-Dmacro...] header1 [header2...]", file=sys.stderr)
     #    sys.exit(1)
