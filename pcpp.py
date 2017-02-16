@@ -234,8 +234,9 @@ def tokenise_arguments(contents):
             return (parameters, idxbase + be + start + 2)
         idxbase += len(thispart) + len(parts[partidx + 1]) if partidx < len(parts) - 1 else 0
         partidx += 2
+    # No closing bracket
     parameters.append(line_view[lastcomma:])
-    return (parameters, len(contents))
+    return (parameters, -1)
 
 def remove_multiwhitespace(contents, preserve_indent = False):
     """Removes any instances of multiple whitespace"""
@@ -284,6 +285,11 @@ def expand_defineds(contents, macros_dict):
     for part in parts:
         contents += part
     return contents
+
+class UnfinishedMacroExpansion(Exception):
+    """Thrown by expand_macros() when during a macro expansion the expansion did not finish due to an
+    unexpected end of line. The caller should append the next line and retry."""
+    pass
 
 def expand_macros(contents, macros, rounds = 2**30):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
@@ -342,6 +348,8 @@ def expand_macros(contents, macros, rounds = 2**30):
                                                 originalidx += len(thispart[part])
                                             originalidx += idx
                                             args, consumed = tokenise_arguments(contents[originalidx:])
+                                            if consumed == -1:
+                                                raise UnfinishedMacroExpansion()
                                             macronamelen = consumed
                                             #print('PARSED ARGS TO CALL', macroname,'=', args, 'from', contents[originalidx:])
                                         # Replace the macro with its expanded contents
@@ -855,6 +863,7 @@ class Preprocessor(object):
                     lines[idx].line += part
                 lines[idx].line = lines[idx].line.rstrip().lstrip()
             idx = idx + 1
+
         if index == -1:
             self.__lines.extend(lines)
         else:
@@ -930,8 +939,15 @@ class Preprocessor(object):
                 elif not self.__isdisabled:
                     try:
                         self.time_expanding_macros.start()
-                        # Expand any macros in this line
-                        self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
+                        while 1:
+                            # Expand any macros in this line
+                            try:
+                                self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
+                                break
+                            except UnfinishedMacroExpansion:
+                                # Append the next line and try again
+                                self.__lines[lineidx].line += self.__lines[lineidx + 1].line
+                                del self.__lines[lineidx + 1]
                     finally:
                         self.time_expanding_macros.stop()
             except Exception as e:

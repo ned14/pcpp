@@ -352,8 +352,8 @@ void    n_24( void)
 
 
 
-assert( strcmp( "ab +"
-        cd  ), "ab + cd") == 0);
+assert( strcmp( "ab + cd", "ab + cd") == 0);
+
 
 
 
@@ -498,7 +498,7 @@ void    n_28( void)
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "01:03:37") == 8);
+    assert( strlen( "15:07:20") == 8);
 
 
     assert( 1);
@@ -586,8 +586,8 @@ void    n_37( void)
 
 
     assert(
-        glue31( A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R
-            , S, T, U, V, W, X, -y, Z[0], a, b, c, d, e)
+         ABCDEFGHIJKLMNOPQRSTUVWXYZABCDE
+
         == 31);
 
 
