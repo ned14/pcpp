@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function
 import sys, os, re, datetime, traceback, time
 #from future_builtins import dict   # Faster python3 dict
 #from future_builtins import range  # Faster python3 range
-from future_builtins import zip    # Faster python3 zip
+#from future_builtins import zip    # Faster python3 zip
 
 debug = False
 
@@ -744,7 +744,7 @@ class Preprocessor(object):
         system_include = contents[0]=='<'
         if not system_include and newpath[0] != '/':
             newpath = os.path.join(curdir, newpath)
-        if not os.path.exists(path):
+        if not os.path.exists(newpath):
             newpath = self.include_not_found(system_include, curdir, result.group(1))
         if newpath is not None:
             newpath = os.path.normpath(newpath).replace('\\', '/')
@@ -882,6 +882,7 @@ class Preprocessor(object):
         else:
             self.__lines = self.__lines[:index] + lines + self.__lines[index:]
         self.time_adding_raw_lines.stop()
+        return self.return_code
 
     def get_lines(self, lineno = True):
         """Returns internal store of lines ready for writing to output.
@@ -971,17 +972,4 @@ class Preprocessor(object):
                 self.__currentline.processedidx = lineidx
                 lineidx += 1
         self.__currentline = None
-                        
-
-if __name__ == "__main__":
-    #if len(sys.argv)<3:
-    #    print("Usage: "+sys.argv[0]+" outputpath [-Iincludepath...] [-Dmacro...] header1 [header2...]", file=sys.stderr)
-    #    sys.exit(1)
-    p = Preprocessor(quiet=False)
-    with open(inpath, 'rt') as ih:
-        p.add_raw_lines(ih.readlines(), path)
-    p.preprocess()
-    with open(outpath, 'w') as oh:
-        oh.writelines(p.get_lines())
-    sys.exit(p.return_code)
-        
+        return self.return_code

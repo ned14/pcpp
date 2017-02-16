@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pcpp',
-    version='0.01',
+    version='0.1',
     description='A C99 preprocessor written in pure Python',
     author='Niall Douglas',
     url='http://pypi.python.org/pypi/pcpp',
