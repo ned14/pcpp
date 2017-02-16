@@ -3,8 +3,11 @@
 # (C) 2017 Niall Douglas http://www.nedproductions.biz/
 # Started: Feb 2017
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import sys, os, re, datetime, traceback, time
+#from future_builtins import dict   # Faster python3 dict
+#from future_builtins import range  # Faster python3 range
+from future_builtins import zip    # Faster python3 zip
 
 debug = False
 
@@ -54,16 +57,16 @@ class string_view(object):
 
     def __getitem__(self, key):
         if isinstance(key, slice):
-            start = key.start
-            end = key.end
+            start = 0 if key.start is None else key.start
+            end = len(self) if key.stop is None else key.stop
             start += self.__end if start < 0 else self.__start
             end += self.__end if end < 0 else self.__start
-            return string_view(self.__string, start, end) if key.step == 1 else self.__string[start:end:step]
+            return string_view(self.__string, start, end) if key.step == 1 else self.__string[start:end:key.step]
         elif isinstance(key, int):
             key += self.__end if key < 0 else self.__start
             return self.__string[key]
         else:
-            raise TypeError, "Invalid key type"
+            raise TypeError("Invalid key type")
 
     def __getslice__(self, start, end):
         if end == 2147483647:
@@ -75,12 +78,12 @@ class string_view(object):
     def __add__(self, other):
         if isinstance(other, str) or isinstance(other, string_view):
             return str(self) + other
-        raise ValueError, "Cannot add string_view to type %s" % repr(other)
+        raise ValueError("Cannot add string_view to type %s" % repr(other))
 
     def __radd__(self, other):
         if isinstance(other, str) or isinstance(other, string_view):
             return other + str(self)
-        raise ValueError, "Cannot add string_view to type %s" % repr(other)
+        raise ValueError("Cannot add string_view to type %s" % repr(other))
 
     def __repr__(self):
         return "'"+self.__string[self.__start:self.__end]+"'"
@@ -91,7 +94,7 @@ class string_view(object):
     def __contains__(self, item):
         if isinstance(item, str):
             return -1 != self.__string.find(item, self.__start, self.__end)
-        raise ValueError, "Cannot find type %s in a string_view" % repr(item)        
+        raise ValueError("Cannot find type %s in a string_view" % repr(item))        
         
     def find(self, sub, start=0, end=-1):
         idx = self.__string.find(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
@@ -304,7 +307,7 @@ def expand_macros(contents, macros, rounds = 2**30):
         for macro in macros:
             macroname = macro.name()
             if macroname not in macros_expanded:
-                for partidx in xrange(0, len(parts), 2):
+                for partidx in range(0, len(parts), 2):
                     if macroname in parts[partidx]:
                         need_to_expand = True
                         break
@@ -322,7 +325,7 @@ def expand_macros(contents, macros, rounds = 2**30):
         #
         # You should split the object and function macros so we can fast path any
         # pure object like macro expansion which the code below is perfect at.
-        for midx in xrange(len(macros)-1, -1, -1):
+        for midx in range(len(macros)-1, -1, -1):
             macro = macros[midx]
             macroname = macro.name()
             if macroname in macros_expanded:
@@ -354,7 +357,7 @@ def expand_macros(contents, macros, rounds = 2**30):
                                         else:
                                             # Figure out where in the original line we are currently at
                                             originalidx = idxbase
-                                            for part in xrange(0, thispartidx):
+                                            for part in range(0, thispartidx):
                                                 originalidx += len(thispart[part])
                                             originalidx += idx
                                             args, consumed = tokenise_arguments(contents[originalidx:])
@@ -375,7 +378,7 @@ def expand_macros(contents, macros, rounds = 2**30):
                 if expanded:
                     # We expanded the current macro at least once, so rejoin the list of expansions
                     # Check for stringizing and tokenising operators
-                    for n in xrange(1, len(thispart), 2):
+                    for n in range(1, len(thispart), 2):
                         # Was this expanded part preceded by a stringizing operator?
                         sidx = thispart[n - 1].rfind('#')
                         if sidx != -1:
@@ -388,7 +391,7 @@ def expand_macros(contents, macros, rounds = 2**30):
                     for n in thispart:
                         parts[partidx] += n
                     parts[partidx] = remove_multiwhitespace(parts[partidx], partidx == 0)
-                    if 1: #debug:
+                    if debug:
                         print("expand_macros", macroname, old, "=>", parts[partidx])
                 idxbase += len(parts[partidx]) + (len(parts[partidx + 1]) if partidx < len(parts) -1 else 0)
                 partidx += 2
@@ -405,7 +408,7 @@ def expand_macros(contents, macros, rounds = 2**30):
         # Having completed one full round of macro expansion, we now apply the tokenising operator
         if '##' in contents:
             changed = False
-            for partidx in xrange(0, len(parts), 2):
+            for partidx in range(0, len(parts), 2):
                 idx = 0
                 while 1:
                     thispart = parts[partidx]
@@ -800,11 +803,11 @@ class Preprocessor(object):
            leaving the internal store of lines ready for preprocessing."""
         self.time_adding_raw_lines.start()
         lines = []
-        for idx in xrange(0, len(rawlines)):
+        for idx in range(0, len(rawlines)):
             lines.append(Line(rawlines[idx], path, idx + 1))
             
         # Merge any continued lines onto a single line
-        for idx in xrange(0, len(lines)):
+        for idx in range(0, len(lines)):
             while idx<len(lines)-1 and len(lines[idx].line) and lines[idx].line[-1]=='\\':
                 lines[idx].line = lines[idx].line[:-1] + lines[idx + 1].line
                 del lines[idx + 1]
@@ -841,7 +844,7 @@ class Preprocessor(object):
                             partidx = partidx + 2
                             # Retain the line where the multiline comment began, but delete all
                             # intermediate lines include the current one
-                            for n in xrange(in_comment, idx):
+                            for n in range(in_comment, idx):
                                 del lines[in_comment + 1]
                             idx = in_comment
                         in_comment = None
@@ -997,7 +1000,7 @@ if __name__ == "__main__":
     print("  Executing preprocessor commands took", p.time_executing)
     print("  Expanding macros in lines took", p.time_expanding_macros)
     print("\n  Individual commands:")
-    for cmd, time in p.time_cmds.iteritems():
+    for cmd, time in p.time_cmds.items():
         print("    #"+cmd+":", time)
     sys.exit(p.return_code)
         
