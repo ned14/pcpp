@@ -974,33 +974,14 @@ class Preprocessor(object):
                         
 
 if __name__ == "__main__":
-    if 1:
-        import doctest
-        failurecount, testcount = doctest.testmod()
-        if failurecount > 0:
-            sys.exit(1)
     #if len(sys.argv)<3:
     #    print("Usage: "+sys.argv[0]+" outputpath [-Iincludepath...] [-Dmacro...] header1 [header2...]", file=sys.stderr)
     #    sys.exit(1)
-    start = time.clock()
-    path='test/test-c/n_std.c'
     p = Preprocessor(quiet=False)
-    p.cmd_define('__STDC__ 1')
-    p.cmd_define('__STDC_VERSION__ 199901L')
-    p.cmd_define('NO_SYSTEM_HEADERS')
-    with open(path, 'rt') as ih:
+    with open(inpath, 'rt') as ih:
         p.add_raw_lines(ih.readlines(), path)
     p.preprocess()
-    with open('test/n_std.i', 'w') as oh:
+    with open(outpath, 'w') as oh:
         oh.writelines(p.get_lines())
-    end = time.clock()
-    print("Preprocessed", path, "in ", end-start, "seconds")
-    print("  Opening and reading files took", p.time_reading_files)
-    print("  Decommenting and adding raw lines took", p.time_adding_raw_lines)
-    print("  Executing preprocessor commands took", p.time_executing)
-    print("  Expanding macros in lines took", p.time_expanding_macros)
-    print("\n  Individual commands:")
-    for cmd, time in p.time_cmds.items():
-        print("    #"+cmd+":", time)
     sys.exit(p.return_code)
         
