@@ -55,24 +55,7 @@ group subexpressions so Python's `eval()` executes right will fix it.
 ## What won't be implemented:
 - Digraphs and Trigraphs
 
-## Known bugs:
-- `#line` override isn't observed during empty line collapsing
-
-  `#line` can be used to override `__FILE__` and `__LINE__`, this works as per the
-  standard. However long runs of empty lines are collapsed into an automatically
-  emitted `# lineno "file"` during the final stage, and these do not observe any
-  `#line` overrides, rather they always report the original file and line number.
-  Fixing this would not be hard, if this is a problem for you please open a bug on
-  the issue tracker.
-
-- Multiple whitespace are supposed to be collapsed into single whitespace
-  throughout the file, including in non-macro parts.
-
-  We don't do this outside modified lines because it causes a ton load more line modifications
-  which slows down processing very significantly as we have a no-new-string
-  fast path for when a line contains no macros. Being standards compliant
-  here confers little benefit for a huge loss in performance.
-
+## Known bugs (ordered from worst to least worst):
 - Expression evaluation is a bit broken (code donations of a proper lexing
   parser based on http://www.dabeaz.com/ply/ are welcome!)
 
@@ -98,11 +81,19 @@ group subexpressions so Python's `eval()` executes right will fix it.
     - `(x ? y : z)` (preferred, evaluates correctly, we inject brackets
     around the subexpessions before sending to Python)
 
+- `#line` override isn't observed during empty line collapsing
+
+  `#line` can be used to override `__FILE__` and `__LINE__`, this works as per the
+  standard. However long runs of empty lines are collapsed into an automatically
+  emitted `# lineno "file"` during the final stage, and these do not observe any
+  `#line` overrides, rather they always report the original file and line number.
+  Fixing this would not be hard, patches adding support are welcome.
+
 - Numbers are not tokenised any differently to strings
 
   It is rare you will notice this in real world code, but something like
   this shows the problem:
-  ```
+  ```c
   #define EXP 1
   #define str(a) #a
   #define xstr(a) str(a)
@@ -110,3 +101,17 @@ group subexpressions so Python's `eval()` executes right will fix it.
   // be tokenised as a single number, even if invalid
   assert( strcmp( xstr( 12E+EXP), "12E+EXP") == 0);
   ```
+  Patches adding support are welcome.
+
+- `_Pragma` used to emit preprocessor calculated `#pragma` is not implemented.
+
+  It would not be hard to add. Patches adding support are welcome.
+
+- Multiple whitespace are supposed to be collapsed into single whitespace
+  throughout the file, including in non-macro parts.
+
+  We don't do this outside modified lines because it causes a ton load more line modifications
+  which slows down processing very significantly as we have a no-new-string
+  fast path for when a line contains no macros. Being standards compliant
+  here confers little benefit for a huge loss in performance.
+

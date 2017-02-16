@@ -312,6 +312,16 @@ def expand_macros(contents, macros, rounds = 2**30):
             break
         
         # We search longest macro names first down to shortest
+        # FIXME: We actually need to figure out any nesting of function like macro
+        # invocations, expanding the innermost function like macros WITHOUT expanding
+        # their arguments. After expanding the innermost function like macros, rounds
+        # of expansion are performed until no more expansion, only THEN do we move up
+        # to the next highest function like macro. NOTE that the macros_expanded
+        # dictionary must be kept only per top level expansion rather than global to
+        # the entire line at present which is a BUG.
+        #
+        # You should split the object and function macros so we can fast path any
+        # pure object like macro expansion which the code below is perfect at.
         for midx in xrange(len(macros)-1, -1, -1):
             macro = macros[midx]
             macroname = macro.name()
@@ -378,7 +388,7 @@ def expand_macros(contents, macros, rounds = 2**30):
                     for n in thispart:
                         parts[partidx] += n
                     parts[partidx] = remove_multiwhitespace(parts[partidx], partidx == 0)
-                    if debug:
+                    if 1: #debug:
                         print("expand_macros", macroname, old, "=>", parts[partidx])
                 idxbase += len(parts[partidx]) + (len(parts[partidx + 1]) if partidx < len(parts) -1 else 0)
                 partidx += 2
