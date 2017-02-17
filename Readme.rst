@@ -1,6 +1,5 @@
 A C99 preprocessor written in pure Python
 =========================================
-.. highlight:: c
 
 (C) 2017 Niall Douglas http://www.nedproductions.biz/
 
