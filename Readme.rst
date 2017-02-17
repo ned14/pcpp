@@ -1,5 +1,5 @@
 A C99 preprocessor written in pure Python
-===
+=========================================
 .. highlight:: c
 
 (C) 2017 Niall Douglas http://www.nedproductions.biz/
@@ -20,7 +20,7 @@ won't notice the departures and if you do, the application of extra brackets to
 group subexpressions so Python's ``eval()`` executes right will fix it.
 
 What's working:
----
+---------------
 - line continuation operator \
 - C99 correct elimination of comments
 - ``__DATE__``, ``__TIME__``, ``__FILE__``, ``__LINE__``
@@ -56,11 +56,11 @@ What's working:
 - Token pasting operator ##
 
 What won't be implemented:
----
+--------------------------
 - Digraphs and Trigraphs
 
 Known bugs (ordered from worst to least worst):
----
+-----------------------------------------------
 - Function macro expansion order is wrong (it's being worked on right now)
 
 - Expression evaluation is a bit broken (code donations of a proper lexing
