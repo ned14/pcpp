@@ -5,7 +5,7 @@ A C99 preprocessor written in pure Python
 
 \(C) 2017 Niall Douglas http://www.nedproductions.biz/
 
-PyPI: https://pypi.python.org/pypi/pcpp
+PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp
 
 A pure Python v2 C preprocessor implementation very useful for preprocessing header only
 C++ libraries into single file includes and other such build or packaging stage malarky.
@@ -45,7 +45,9 @@ What's working:
 ---------------
 - line continuation operator '``\``'
 - C99 correct elimination of comments
-- :c:`__DATE__`, :c:`__TIME__`, :c:`__FILE__`, :c:`__LINE__`
+- :c:`__DATE__`, :c:`__TIME__`, :c:`__FILE__`, :c:`__LINE__` and the very common
+  extension :c:`__COUNTER__`. Note that :c:`__STDC__` et al are NOT defined by
+  default, you need to define those manually before starting preprocessing.
 - Object :c:`#define`
 - Function :c:`#define macro(...)`
 
@@ -89,8 +91,10 @@ What won't be implemented:
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
-**Function macro parameter expansion order is wrong**
- (it's being worked on right now)
+**Function macro expansion is wrong**
+ This is tricky to get right, after all MSVC's preprocessor gets it wrong.
+ I've disabled stringizing and token pasting temporarily, the current design is incapable
+ of applying those operators across string literals. **Work to fix this is in progress**.
 
 **Expression evaluation is a bit broken**
  Currently :c:`#if` expressions are evaluated by converting them into Python

@@ -103,7 +103,7 @@ void    n_3( void)
     int     abcd = 4;
 
 
-assert( strcmp( "abc de", "abc de") == 0);
+assert( strcmp( # abc de, "abc de") == 0);
 # 156 "tests/test-c/n_std.c"
     assert( abcd == 4);
 }
@@ -327,7 +327,7 @@ void    n_22( void)
 
 
 
-    assert( strcmp( "12+1", "12+1") == 0);
+    assert( strcmp( # 12+1, "12+1") == 0);
 }
 
 void    n_23( void)
@@ -336,38 +336,38 @@ void    n_23( void)
     int     xy = 1;
 
 
-    assert( xy == 1);
+    assert( x ## y == 1);
 
 
 
 
-    assert( .12e+2 == 12.0);
+    assert( .12e+ ## 2 == 12.0);
 }
 
 void    n_24( void)
 
 {
 
-    assert( strcmp( "a+b", "a+b") == 0);
+    assert( strcmp( # a+b, "a+b") == 0);
 
 
 
-assert( strcmp( "ab + cd", "ab + cd") == 0);
-
-
-
-
-    assert( strcmp( "'\"' + \"' \\\"\""'"' + "' \""), "'\"' + \"' \\\"\"") == 0);
-
-
-
-    assert( strcmp( "\"abc\"""abc"), "\"abc\"") == 0);
+assert( strcmp( # ab + cd , "ab + cd") == 0);
 
 
 
 
+    assert( strcmp( # '"' + "' \"", "'\"' + \"' \\\"\"") == 0);
 
-    assert( strcmp( "x-f(y)", "x-y") == 0);
+
+
+    assert( strcmp( # "abc", "\"abc\"") == 0);
+
+
+
+
+
+    assert( strcmp( # x-y, "x-y") == 0);
 }
 
 void    n_25( void)
@@ -382,19 +382,19 @@ void    n_25( void)
 
 
 
-    assert( sub( TWO_ARGS, 1) == 1);
+    assert( ( a,b - 1) == 1);
 
 
     assert( ( - a) == -1);
 
 
-    assert( glue( a, b)c == 3);
+    assert( glue( a, b) ## c == 3);
 
 
-    assert( 01 == 2);
+    assert( 0 ## 1 == 2);
 
 
-    assert( strcmp( "", "ZERO_TOKEN") == 0);
+    assert( strcmp( # , "ZERO_TOKEN") == 0);
 }
 # 648 "tests/test-c/n_std.c"
 int     f( int a)
@@ -461,7 +461,7 @@ void    n_27( void)
     assert( ( 1) + ( NEST1 + 2) + NEST2 + NEST2 + 3 + NEST2 + 3 + 4 == 23);
 
 
-    assert( 1 == 1);
+    assert( MACRO_ ## 1 == 1);
 
 
 
@@ -485,7 +485,7 @@ void    n_28( void)
 
 
 {
-    char * date = "Feb 16 2017";
+    char * date = "Feb 17 2017";
 
 
     assert( strcmp( "n_std.c", "n_std.c") == 0);
@@ -494,11 +494,11 @@ void    n_28( void)
     assert( 751 == 779);
 
 
-    assert( strlen( "Feb 16 2017") == 11);
+    assert( strlen( "Feb 17 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "23:52:52") == 8);
+    assert( strlen( "18:31:41") == 8);
 
 
     assert( 1);
@@ -586,7 +586,7 @@ void    n_37( void)
 
 
     assert(
-         ABCDEFGHIJKLMNOPQRSTUVWXYZABCDE
+         A## B## C## D## E## F## G## H## I## J## K## L## M## N## O## P## Q## R ## S## T## U## V## W## X## -y## Z[0]## A## B## C## D## E
 
         == 31);
 

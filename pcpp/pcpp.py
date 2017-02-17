@@ -294,49 +294,45 @@ class UnfinishedMacroExpansion(Exception):
     unexpected end of line. The caller should append the next line and retry."""
     pass
 
-def expand_macros(contents, macros, rounds = 2**30):
+def expand_macros(_contents, macros, function_args = False):
     """Recursively expands any macro objects and functions in contents, returning the expanded line"""
     macros_expanded = {}
-    while rounds > 0:
-        rounds -= 1
+    # We don't have the nonlocal keyword in Python 2, so use the static attributes
+    # of this class to keep nonlocal state
+    class state(object):
+        contents = _contents
         changed = False
+        parts = None
+    while 1:
+        state.changed = False
         # Break line into non-literals (even) and string literals (odd)
-        parts = tokenise_stringliterals(contents)
+        state.parts = tokenise_stringliterals(state.contents)
         # Do a quick search of the macro objects to expand first, if nothing early exit
         need_to_expand = False
         for macro in macros:
             macroname = macro.name()
             if macroname not in macros_expanded:
-                for partidx in range(0, len(parts), 2):
-                    if macroname in parts[partidx]:
+                for partidx in range(0, len(state.parts), 2):
+                    if macroname in state.parts[partidx]:
                         need_to_expand = True
                         break
         if not need_to_expand:
             break
         
-        # We search longest macro names first down to shortest
-        # FIXME: We actually need to figure out any nesting of function like macro
-        # invocations, expanding the innermost function like macros WITHOUT expanding
-        # their arguments. After expanding the innermost function like macros, rounds
-        # of expansion are performed until no more expansion, only THEN do we move up
-        # to the next highest function like macro. NOTE that the macros_expanded
-        # dictionary must be kept only per top level expansion rather than global to
-        # the entire line at present which is a BUG.
+        # We search longest macro names first down to shortest as a nasty
+        # approximation of a tokenising implementation
         #
-        # You should split the object and function macros so we can fast path any
-        # pure object like macro expansion which the code below is perfect at.
-        for midx in range(len(macros)-1, -1, -1):
-            macro = macros[midx]
-            macroname = macro.name()
-            if macroname in macros_expanded:
-                continue
+        # It is important in each round to expand function-like macros first, then once
+        # all those are expanded we expand object-like macros followed by reassembling
+        # the parts into a new line, doing any stringizing and token pasting.
+        def expand_macro(macroname):
             macronamelen = len(macroname)
             pls_remove = False
             partidx = 0
             idxbase = 0
             # Iterate only the non string literal parts
-            while partidx < len(parts):
-                thispart = [ parts[partidx] ]  # odd indices are expanded macros
+            while partidx < len(state.parts):
+                thispart = [ state.parts[partidx] ]  # odd indices are expanded macros
                 expanded = False
                 thispartidx = 0
                 # Expand the current macro in the current non string literal, placing the expansions
@@ -360,68 +356,121 @@ def expand_macros(contents, macros, rounds = 2**30):
                                             for part in range(0, thispartidx):
                                                 originalidx += len(thispart[part])
                                             originalidx += idx
-                                            args, consumed = tokenise_arguments(contents[originalidx:])
+                                            args, consumed = tokenise_arguments(state.contents[originalidx:])
                                             if consumed == -1:
                                                 raise UnfinishedMacroExpansion()
+                                            #print('PARSED ARGS TO CALL', macroname,'=', args, 'from', state.contents[originalidx:])
+                                            # We may need to consume a string literal or two if the args contained those
+                                            remaining = consumed - (len(p) - idx)
+                                            if remaining > 0:
+                                                while remaining > 0:
+                                                    # Delete the next string literal entirely
+                                                    remaining -= len(state.parts[partidx + 1])
+                                                    del state.parts[partidx + 1]
+                                                    if remaining > len(state.parts[partidx + 1]):
+                                                        # Delete the following non-string literal entirely
+                                                        remaining -= len(state.parts[partidx + 1])
+                                                        del state.parts[partidx + 1]
+                                                    else:
+                                                        # Trim the front of the following non-string literal
+                                                        state.parts[partidx + 1] = state.parts[partidx + 1][remaining:]
+                                                        remaining = 0
+                                                assert remaining == 0                                                        
+                                            # Set the macro name length to the args consumed
                                             macronamelen = consumed
-                                            #print('PARSED ARGS TO CALL', macroname,'=', args, 'from', contents[originalidx:])
                                         # Replace the macro with its expanded contents
                                         thispart[thispartidx] = p[idx+macronamelen:]
                                         thispart.insert(thispartidx, macro.contents(*args))
                                         thispart.insert(thispartidx, p[:idx])
                                         pls_remove = True
                                         expanded = True
-                                        changed = True
+                                        state.changed = True
                                         idx -= 1
                             idx += 1
                     thispartidx += 2
                 if expanded:
                     # We expanded the current macro at least once, so rejoin the list of expansions
-                    # Check for stringizing and tokenising operators
-                    for n in range(1, len(thispart), 2):
-                        # Was this expanded part preceded by a stringizing operator?
-                        sidx = thispart[n - 1].rfind('#')
-                        if sidx != -1:
-                            temp = str(thispart[n - 1]).rstrip()
-                            if temp[-1] == '#' and (len(temp) < 2 or temp[-2] != '#'):
-                                thispart[n - 1] = temp[:-1]
-                                thispart[n] = '"' + stringize(thispart[n]) + '"'
-                    old = parts[partidx]
-                    parts[partidx] = ''
+                    if 0: #not function_args:
+                        # If we are not expanding a function macro's args, do stringization and token pasting now
+                        for n in range(1, len(thispart), 2):
+                            # Was this expanded part preceded by a stringizing operator?
+                            sidx = thispart[n - 1].rfind('#')
+                            if sidx != -1:
+                                temp = str(thispart[n - 1]).rstrip()
+                                if temp[-1] == '#':
+                                    if len(temp) < 2 or temp[-2] != '#':
+                                        # Stringize
+                                        thispart[n - 1] = temp[:-1]
+                                        thispart[n] = '"' + stringize(thispart[n]) + '"'
+                                    else:
+                                        # Token paste
+                                        thispart[n - 1] = temp[:-2].rstrip()
+                                        thispart[n] = str(thispart[n]).lstrip()
+                            sidx = thispart[n + 1].find('##')
+                            if sidx != -1:
+                                temp = str(thispart[n + 1]).lstrip()
+                                if temp[0:1] == '##':
+                                    # Token paste
+                                    thispart[n + 1] = temp[2:].lstrip()
+                                    thispart[n] = str(thispart[n]).rstrip()
+                    old = state.parts[partidx]
+                    state.parts[partidx] = ''
                     for n in thispart:
-                        parts[partidx] += n
-                    parts[partidx] = remove_multiwhitespace(parts[partidx], partidx == 0)
+                        state.parts[partidx] += n
+                    state.parts[partidx] = remove_multiwhitespace(state.parts[partidx], partidx == 0)
                     if debug:
-                        print("expand_macros", macroname, old, "=>", parts[partidx])
-                idxbase += len(parts[partidx]) + (len(parts[partidx + 1]) if partidx < len(parts) -1 else 0)
+                        print("expand_macros", macroname, old, "=>", state.parts[partidx])
+                idxbase += len(state.parts[partidx]) + (len(state.parts[partidx + 1]) if partidx < len(state.parts) -1 else 0)
                 partidx += 2
             # Mark the current macro as having been expanded, and retokenise the modified
             # line as sting literals may have been inserted into it
             if pls_remove:
                 macros_expanded[macroname] = None
-                contents = ''
-                for part in parts:
-                    contents += part
-                parts = tokenise_stringliterals(contents)
-        if not changed:
-            break
-        # Having completed one full round of macro expansion, we now apply the tokenising operator
-        if '##' in contents:
+                state.contents = ''
+                for part in state.parts:
+                    state.contents += part
+                state.parts = tokenise_stringliterals(state.contents)
+        
+        # Expand all function-like macros
+        for midx in range(len(macros)-1, -1, -1):
+            macro = macros[midx]
+            if macro.parameters is None:
+                continue
+            macroname = macro.name()
+            if macroname in macros_expanded:
+                continue
+            expand_macro(macroname)
+        # Expand all object-like macros
+        for midx in range(len(macros)-1, -1, -1):
+            macro = macros[midx]
+            if macro.parameters is not None:
+                continue
+            macroname = macro.name()
+            if macroname in macros_expanded:
+                continue
+            expand_macro(macroname)
+        # If we are expanding a function macro's args, do stringization and token pasting now
+        if 0: #function_args and '#' in state.contents:
             changed = False
-            for partidx in range(0, len(parts), 2):
+            for partidx in range(0, len(state.parts), 2):
                 idx = 0
                 while 1:
-                    thispart = parts[partidx]
+                    thispart = state.parts[partidx]
                     idx = thispart.find('##', idx)
                     if idx == -1:
                         break
-                    parts[partidx] = str(thispart[:idx]).rstrip() + str(thispart[idx+2:]).lstrip()
+                    state.parts[partidx] = str(thispart[:idx]).rstrip() + str(thispart[idx+2:]).lstrip()
                     changed = True
             if changed:
-                contents = ''
-                for part in parts:
-                    contents += part                    
-    return contents
+                state.contents = ''
+                for part in state.parts:
+                    state.contents += part
+                state.changed = True
+
+        # If nothing was expanded, we are done
+        if not state.changed:
+            break
+    return state.contents
 
 def evaluate_expr(contents, undefined_means_zero):
     """Convert a C input expression into a Python one and evaluate it"""
@@ -554,9 +603,10 @@ class MacroObject(object):
             if len(args) > len(self.parameters):
                 vaargs = ','.join(args[len(args)-len(self.parameters):])
             macros.append(MacroObject('__VA_ARGS__', vaargs))
-        #print('EXPAND FUNCTION MACRO', self.name(), '(', macros, ') args =', args)
         macros.sort(key=lambda x: len(x.name()))
-        return expand_macros(self.__rawcontents, macros, rounds = 1)
+        ret = expand_macros(self.__rawcontents, macros, function_args = True)
+        print('EXPAND FUNCTION MACRO', self.name(), '(', macros, ') =>', ret)
+        return ret
 
 class Line(object):
     """A line from an original source file"""
@@ -597,6 +647,9 @@ class Preprocessor(object):
         return d
     def __time(self):
         return self.__datetime.strftime('"%H:%M:%S"')
+    def __counter(self):
+        self.__countervalue += 1
+        return self.__countervalue - 1
 
     def __init__(self, passthru_undefined = False, quiet = False):
         self.__passthru_undefined = passthru_undefined
@@ -610,6 +663,7 @@ class Preprocessor(object):
         self.__cmds = {k[4:]:getattr(self, k) for k in dir(self) if k.startswith('cmd_')}
         self.__ifstack = []
         self.__isdisabled = False
+        self.__countervalue = 0
 
         self.time_cmds = {k[4:]:Timing() for k in dir(self) if k.startswith('cmd_')}
         self.time_reading_files = Timing()
@@ -623,10 +677,12 @@ class Preprocessor(object):
         self.cmd_define('__LINE__ x')
         self.cmd_define('__DATE__ x')
         self.cmd_define('__TIME__ x')
+        self.cmd_define('__COUNTER__ x')
         self.__macros_dict['__FILE__'].contents = self.__file
         self.__macros_dict['__LINE__'].contents = self.__line
         self.__macros_dict['__DATE__'].contents = self.__date
         self.__macros_dict['__TIME__'].contents = self.__time
+        self.__macros_dict['__COUNTER__'].contents = self.__counter
 
     def cmd_define(self, contents):
         """As if #define contents"""
