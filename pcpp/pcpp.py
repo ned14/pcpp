@@ -1,1031 +1,990 @@
 #!/usr/bin/python
-# Python C99 conforming preprocessor useful for generating single include files for C and C++ libraries
+# Python C99 conforming preprocessor useful for generating single include files
 # (C) 2017 Niall Douglas http://www.nedproductions.biz/
+# and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
+#
+# This C preprocessor was originally written by David Beazley and the
+# original can be found at https://github.com/dabeaz/ply/blob/master/ply/cpp.py
+# This edition substantially improves on standards conforming output,
+# getting quite close to what clang or GCC outputs.
 
-from __future__ import absolute_import, print_function
-import sys, os, re, datetime, traceback, time
-#from future_builtins import dict   # Faster python3 dict
-#from future_builtins import range  # Faster python3 range
-#from future_builtins import zip    # Faster python3 zip
+from __future__ import generators
 
-debug = False
+import sys
 
-tailwhitespace             = re.compile(r".*(\s+)")
-multiwhitespace            = re.compile(r"(\s\s+)")
-nameerror_extract          = re.compile(r"name '(.*)' is not defined")
-preprocessor_command       = re.compile(r"\s*#\s*([a-z]+)\s*(.*)")
-preprocessor_continuation  = re.compile(r"\s*#\s*([a-z]+)\s*(.*)\s*\\")
-preprocessor_stringliteral = re.compile(r"(.*)\"(\\.|[^\"])*\"(.*)")
-preprocessor_multicomment  = re.compile(r"(.*)/\*.*?\*/(.*)")
-preprocessor_singlecomment = re.compile(r"(.*)//")
-preprocessor_punctuator    = re.compile(r"[ \t\n\r\f\v{}\[\]#()!+\-*/,;:]")
-preprocessor_macro_name    = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)")
-preprocessor_macro_object  = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)\s+(.+)")
-preprocessor_macro_function= re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*\([^)]*\))\s*(.*)")
-preprocessor_include       = re.compile(r"[<\"](.+)[>\"]")
-preprocessor_line          = re.compile(r"([0-9]+)")
-preprocessor_line2         = re.compile(r"([0-9]+)\s+(.*)\s*(.*)")
-preprocessor_defined       = re.compile(r"(defined\s*)\(*([^ \t\n\r\f\v)]+)\)*")
-preprocessor_number_long   = re.compile(r"([0-9]+)(L|l)")
-preprocessor_number_long_long = re.compile(r"([0-9]+)(LL|ll)")
-preprocessor_number_unsigned_long_long = re.compile(r"([0-9]+)(ULL|ull)")
-preprocessor_number_unsigned_long = re.compile(r"([0-9]+)(UL|ul)")
-preprocessor_number_unsigned = re.compile(r"([0-9]+)(U|u)")
-preprocessor_ternary1      = re.compile(r"(\(.+\)\s*)\?(.+):(.+)")
-preprocessor_ternary2      = re.compile(r"\((.+)\?(.+):(.+)\)")
-def is_preprocessor_punctuator(c):
-    """Returns true if a preprocessor delimiter"""
-    result = preprocessor_punctuator.match(c)
-    return result is not None
+# Some Python 3 compatibility shims
+if sys.version_info.major < 3:
+    STRING_TYPES = (str, unicode)
+else:
+    STRING_TYPES = str
+    xrange = range
 
-class string_view(object):
-    """A string like view onto some other string"""
-    def __init__(self, s, start=0, end=-1):
-        assert isinstance(s, str)
-        if end == -1:
-            end = len(s)
-        self.__string = s
-        self.__start = start
-        self.__end = end
-        if self.__start >= self.__end or self.__start >= len(s):
-            self.__start = 0
-            self.__end = 0
+# -----------------------------------------------------------------------------
+# Default preprocessor lexer definitions.   These tokens are enough to get
+# a basic preprocessor working.   Other modules may import these if they want
+# -----------------------------------------------------------------------------
 
-    def __len__(self):
-        return self.__end - self.__start
+tokens = (
+   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT1', 'CPP_COMMENT2', 'CPP_POUND','CPP_DPOUND'
+)
 
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            start = 0 if key.start is None else key.start
-            end = len(self) if key.stop is None else key.stop
-            start += self.__end if start < 0 else self.__start
-            end += self.__end if end < 0 else self.__start
-            return string_view(self.__string, start, end) if key.step == 1 else self.__string[start:end:key.step]
-        elif isinstance(key, int):
-            key += self.__end if key < 0 else self.__start
-            return self.__string[key]
-        else:
-            raise TypeError("Invalid key type")
+literals = "+-*/%|&~^<>=!?()[]{}.,;:\\\'\""
 
-    def __getslice__(self, start, end):
-        if end == 2147483647:
-            end = self.__end - self.__start
-        start += self.__end if start < 0 else self.__start
-        end += self.__end if end < 0 else self.__start
-        return string_view(self.__string, start, end)
+# Whitespace, but don't match past the end of a line
+def t_CPP_WS(t):
+    r'([ \t]+\r?\n?|\r?\n)'
+    t.lexer.lineno += t.value.count("\n")
+    return t
 
-    def __add__(self, other):
-        if isinstance(other, str) or isinstance(other, string_view):
-            return str(self) + other
-        raise ValueError("Cannot add string_view to type %s" % repr(other))
+t_CPP_POUND = r'\#'
+t_CPP_DPOUND = r'\#\#'
 
-    def __radd__(self, other):
-        if isinstance(other, str) or isinstance(other, string_view):
-            return other + str(self)
-        raise ValueError("Cannot add string_view to type %s" % repr(other))
+# Identifier
+t_CPP_ID = r'[A-Za-z_][\w_]*'
 
-    def __repr__(self):
-        return "'"+self.__string[self.__start:self.__end]+"'"
-        
-    def __str__(self):
-        return self.__string[self.__start:self.__end]
+# Integer literal
+def CPP_INTEGER(t):
+    r'(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)'
+    return t
 
-    def __contains__(self, item):
-        if isinstance(item, str):
-            return -1 != self.__string.find(item, self.__start, self.__end)
-        raise ValueError("Cannot find type %s in a string_view" % repr(item))        
-        
-    def find(self, sub, start=0, end=-1):
-        idx = self.__string.find(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
-        return idx - self.__start if idx != -1 else -1
+t_CPP_INTEGER = CPP_INTEGER
 
-    def rfind(self, sub, start=0, end=-1):
-        idx = self.__string.rfind(sub, self.__start + start, self.__end if end == -1 else self.__start + end)
-        return idx - self.__start if idx != -1 else -1
+# Floating literal
+t_CPP_FLOAT = r'((\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
 
-def tokenise_stringliterals(line, in_comment = False):
-    """Split string literals in line, literals always end up at odd indices in returned list.
-       NOTE we return string views of input line, NOT copies
+# String literal
+def t_CPP_STRING(t):
+    r'\"([^\\\n]|(\\(.|\n)))*?\"'
+    t.lexer.lineno += t.value.count("\n")
+    return t
 
-    >>> tokenise_stringliterals('str( a)')
-    ['str( a)']
-    >>> tokenise_stringliterals('str( a,x)')
-    ['str( a,x)']
-    >>> tokenise_stringliterals('"niall" is here')
-    ['', '"niall"', ' is here']
-    >>> tokenise_stringliterals('"\\\\"niall\\\\"" is here')
-    ['', '"\\"niall\\""', ' is here']
-    """
-    if isinstance(line, string_view):
-        line_view = line
-    else:
-        line_view = string_view(line)
-    out = []
-    idx = 0
-    idx2 = 0
-    while 1:
-        dq = line.find('"', idx)
-        sq = line.find("'", idx)
-        cs = 0 if in_comment and idx == 0 else line.find("/*", idx)
-        if dq == -1 and sq == -1 and cs == -1:
-            out.append(line_view[idx2:])
-            return out
-        if dq != -1 and sq != -1:
-            if dq < sq:
-                sq = -1
-            else:
-                dq = -1
-        if cs != -1 and dq != -1:
-            if cs < dq:
-                dq = -1
-            else:
-                cs = -1
-        if cs != -1 and sq != -1:
-            if cs < sq:
-                sq = -1
-            else:
-                cs = -1
-        # Now exactly one of dq, sq or cs is not -1
-        # If it's dq or sq, split the string literals into odd indices but
-        # if it's a cs, skip idx to the end of the comment
-        if cs != -1:
-            end = line.find("*/", cs)
-            if end == -1:
-                end = len(line)
-            idx = end+2
-        elif dq != -1:
-            end = dq
-            while 1:
-                end = line.find('"', end+1)
-                if end == -1:
-                    end = len(line)
-                    break
-                if line[end-1]!='\\':
-                    break
-            out.append(line_view[idx2:dq])
-            out.append(line_view[dq:end+1])
-            idx = idx2 = end+1
-        elif sq != -1:
-            end = sq
-            while 1:
-                end = line.find("'", end+1)
-                if end == -1:
-                    end = len(line)
-                    break
-                if line[end-1]!='\\':
-                    break
-            out.append(line_view[idx2:sq])
-            out.append(line_view[sq:end+1])
-            idx = idx2 = end+1
+# Character constant 'c' or L'c'
+def t_CPP_CHAR(t):
+    r'(L)?\'([^\\\n]|(\\(.|\n)))*?\''
+    t.lexer.lineno += t.value.count("\n")
+    return t
 
-def tokenise_arguments(contents):
-    """Converts a bracket and comma sequence into a list of string_views and chars consumed
+# Comment
+def t_CPP_COMMENT1(t):
+    r'(/\*(.|\n)*?\*/)'
+    ncr = t.value.count("\n")
+    t.lexer.lineno += ncr
+    # replace with one space or a number of '\n'
+    t.type = 'CPP_WS'; t.value = '\n' * ncr if ncr else ' '
+    return t
 
-    >>> tokenise_arguments('str( a)')
-    ([' a'], 7)
-    >>> tokenise_arguments('str( a,x)')
-    ([' a', 'x'], 9)
-    >>> tokenise_arguments('sub( ( a), ( b))')
-    ([' ( a)', ' ( b)'], 16)
-    """
-    start = contents.find('(')
-    parameters = []
-    line_view = string_view(contents, start + 1)
-    parts = tokenise_stringliterals(line_view)
-    inbracket = 0
-    lastcomma = 0
-    idxbase = 0
-    partidx = 0
-    while partidx < len(parts):
-        thispart = parts[partidx]
-        idx = 0
-        while idx < len(thispart) and inbracket >= 0:
-            cb = thispart.find(',', idx) if inbracket == 0 else -1
-            bb = thispart.find('(', idx)
-            be = thispart.find(')', idx)
-            #print(cb, bb, be, thispart)
-            if cb == -1 and bb == -1 and be == -1:
-                break
-            if cb != -1 and bb != -1:
-                if cb < bb:
-                    bb = -1
-                else:
-                    cb = -1
-            if be != -1 and bb != -1:
-                if be < bb:
-                    bb = -1
-                else:
-                    be = -1
-            if be != -1 and cb != -1:
-                if be < cb:
-                    cb = -1
-                else:
-                    be = -1
-            if bb != -1:
-                inbracket += 1
-                idx = bb + 1
-            elif be != -1:
-                inbracket -= 1
-                idx = be + 1
-            elif cb != -1:
-                parameters.append(line_view[lastcomma:idxbase + cb])
-                lastcomma = idxbase + cb + 1
-                idx = cb + 1
-        if inbracket < 0:
-            parameters.append(line_view[lastcomma:idxbase + be])
-            return (parameters, idxbase + be + start + 2)
-        idxbase += len(thispart) + len(parts[partidx + 1]) if partidx < len(parts) - 1 else 0
-        partidx += 2
-    # No closing bracket
-    parameters.append(line_view[lastcomma:])
-    return (parameters, -1)
-
-def remove_multiwhitespace(contents, preserve_indent = False):
-    """Removes any instances of multiple whitespace"""
-    indent = ''
-    if preserve_indent:
-        contents2 = contents.lstrip()
-        indent = contents[:len(contents)-len(contents2)]
-        contents = contents2
-    while 1:
-        result = multiwhitespace.search(contents)
-        if result is None:
-            return indent + contents
-        contents = contents[:result.start(1)] + ' ' + contents[result.end(1):]
-
-def stringize(contents):
-    """Convert contents into a valid C string, escaped if necessary"""
-    contents = str(contents).rstrip().lstrip().replace('\\', '\\\\')
-    contents = contents.replace('"', '\\"')
-    return contents
-
-def expand_defineds(contents, macros_dict):
-    """Expand all 'defined macro' operators, returning the expanded line"""
-    parts = tokenise_stringliterals(contents)
-    partidx = 0
-    changed = False
-    while partidx < len(parts):
-        thispart = parts[partidx]
-        idx = len(thispart)
-        while 1:
-            idx = thispart.rfind('defined', 0, idx)
-            if idx == -1:
-                break
-            if idx == 0 or is_preprocessor_punctuator(thispart[idx-1]):
-                if idx+7 == len(thispart) or is_preprocessor_punctuator(thispart[idx+7]):
-                    if isinstance(thispart, string_view):
-                        thispart = str(thispart)
-                    result = preprocessor_defined.match(thispart[idx:])
-                    assert result is not None
-                    thispart = thispart[:idx + result.start(1)] + ('1' if result.group(2) in macros_dict else '0') + thispart[idx + result.end(0):]
-                    changed = True
-        parts[partidx] = thispart
-        partidx += 2
-    if not changed:
-        return contents
-    contents = ''
-    for part in parts:
-        contents += part
-    return contents
-
-class UnfinishedMacroExpansion(Exception):
-    """Thrown by expand_macros() when during a macro expansion the expansion did not finish due to an
-    unexpected end of line. The caller should append the next line and retry."""
-    pass
-
-def expand_macros(_contents, macros, function_args = False):
-    """Recursively expands any macro objects and functions in contents, returning the expanded line"""
-    macros_expanded = {}
-    # We don't have the nonlocal keyword in Python 2, so use the static attributes
-    # of this class to keep nonlocal state
-    class state(object):
-        contents = _contents
-        changed = False
-        parts = None
-    while 1:
-        state.changed = False
-        # Break line into non-literals (even) and string literals (odd)
-        state.parts = tokenise_stringliterals(state.contents)
-        # Do a quick search of the macro objects to expand first, if nothing early exit
-        need_to_expand = False
-        for macro in macros:
-            macroname = macro.name()
-            if macroname not in macros_expanded:
-                for partidx in range(0, len(state.parts), 2):
-                    if macroname in state.parts[partidx]:
-                        need_to_expand = True
-                        break
-        if not need_to_expand:
-            break
-        
-        # We search longest macro names first down to shortest as a nasty
-        # approximation of a tokenising implementation
-        #
-        # It is important in each round to expand function-like macros first, then once
-        # all those are expanded we expand object-like macros followed by reassembling
-        # the parts into a new line, doing any stringizing and token pasting.
-        def expand_macro(macroname):
-            macronamelen = len(macroname)
-            pls_remove = False
-            partidx = 0
-            idxbase = 0
-            # Iterate only the non string literal parts
-            while partidx < len(state.parts):
-                thispart = [ state.parts[partidx] ]  # odd indices are expanded macros
-                expanded = False
-                thispartidx = 0
-                # Expand the current macro in the current non string literal, placing the expansions
-                # at odd indices
-                while thispartidx < len(thispart):
-                    idx = 0
-                    while idx != -1:
-                        p = thispart[thispartidx]
-                        idx = p.find(macroname, idx)
-                        #print('"'+p+'" "'+macroname+'"', idx)
-                        if idx != -1:
-                            if idx == 0 or is_preprocessor_punctuator(p[idx-1]):
-                                if idx+macronamelen == len(p) or is_preprocessor_punctuator(p[idx+macronamelen]):
-                                    # Function macros without parameters must be ignored
-                                    if macro.parameters is None or (idx+macronamelen < len(p) and p[idx+macronamelen] == '('):
-                                        if macro.parameters is None:
-                                            args = []
-                                        else:
-                                            # Figure out where in the original line we are currently at
-                                            originalidx = idxbase
-                                            for part in range(0, thispartidx):
-                                                originalidx += len(thispart[part])
-                                            originalidx += idx
-                                            args, consumed = tokenise_arguments(state.contents[originalidx:])
-                                            if consumed == -1:
-                                                raise UnfinishedMacroExpansion()
-                                            #print('PARSED ARGS TO CALL', macroname,'=', args, 'from', state.contents[originalidx:])
-                                            # We may need to consume a string literal or two if the args contained those
-                                            remaining = consumed - (len(p) - idx)
-                                            if remaining > 0:
-                                                while remaining > 0:
-                                                    # Delete the next string literal entirely
-                                                    remaining -= len(state.parts[partidx + 1])
-                                                    del state.parts[partidx + 1]
-                                                    if remaining > len(state.parts[partidx + 1]):
-                                                        # Delete the following non-string literal entirely
-                                                        remaining -= len(state.parts[partidx + 1])
-                                                        del state.parts[partidx + 1]
-                                                    else:
-                                                        # Trim the front of the following non-string literal
-                                                        state.parts[partidx + 1] = state.parts[partidx + 1][remaining:]
-                                                        remaining = 0
-                                                assert remaining == 0                                                        
-                                            # Set the macro name length to the args consumed
-                                            macronamelen = consumed
-                                        # Replace the macro with its expanded contents
-                                        thispart[thispartidx] = p[idx+macronamelen:]
-                                        thispart.insert(thispartidx, macro.contents(*args))
-                                        thispart.insert(thispartidx, p[:idx])
-                                        pls_remove = True
-                                        expanded = True
-                                        state.changed = True
-                                        idx -= 1
-                            idx += 1
-                    thispartidx += 2
-                if expanded:
-                    # We expanded the current macro at least once, so rejoin the list of expansions
-                    if 0: #not function_args:
-                        # If we are not expanding a function macro's args, do stringization and token pasting now
-                        for n in range(1, len(thispart), 2):
-                            # Was this expanded part preceded by a stringizing operator?
-                            sidx = thispart[n - 1].rfind('#')
-                            if sidx != -1:
-                                temp = str(thispart[n - 1]).rstrip()
-                                if temp[-1] == '#':
-                                    if len(temp) < 2 or temp[-2] != '#':
-                                        # Stringize
-                                        thispart[n - 1] = temp[:-1]
-                                        thispart[n] = '"' + stringize(thispart[n]) + '"'
-                                    else:
-                                        # Token paste
-                                        thispart[n - 1] = temp[:-2].rstrip()
-                                        thispart[n] = str(thispart[n]).lstrip()
-                            sidx = thispart[n + 1].find('##')
-                            if sidx != -1:
-                                temp = str(thispart[n + 1]).lstrip()
-                                if temp[0:1] == '##':
-                                    # Token paste
-                                    thispart[n + 1] = temp[2:].lstrip()
-                                    thispart[n] = str(thispart[n]).rstrip()
-                    old = state.parts[partidx]
-                    state.parts[partidx] = ''
-                    for n in thispart:
-                        state.parts[partidx] += n
-                    state.parts[partidx] = remove_multiwhitespace(state.parts[partidx], partidx == 0)
-                    if debug:
-                        print("expand_macros", macroname, old, "=>", state.parts[partidx])
-                idxbase += len(state.parts[partidx]) + (len(state.parts[partidx + 1]) if partidx < len(state.parts) -1 else 0)
-                partidx += 2
-            # Mark the current macro as having been expanded, and retokenise the modified
-            # line as sting literals may have been inserted into it
-            if pls_remove:
-                macros_expanded[macroname] = None
-                state.contents = ''
-                for part in state.parts:
-                    state.contents += part
-                state.parts = tokenise_stringliterals(state.contents)
-        
-        # Expand all function-like macros
-        for midx in range(len(macros)-1, -1, -1):
-            macro = macros[midx]
-            if macro.parameters is None:
-                continue
-            macroname = macro.name()
-            if macroname in macros_expanded:
-                continue
-            expand_macro(macroname)
-        # Expand all object-like macros
-        for midx in range(len(macros)-1, -1, -1):
-            macro = macros[midx]
-            if macro.parameters is not None:
-                continue
-            macroname = macro.name()
-            if macroname in macros_expanded:
-                continue
-            expand_macro(macroname)
-        # If we are expanding a function macro's args, do stringization and token pasting now
-        if 0: #function_args and '#' in state.contents:
-            changed = False
-            for partidx in range(0, len(state.parts), 2):
-                idx = 0
-                while 1:
-                    thispart = state.parts[partidx]
-                    idx = thispart.find('##', idx)
-                    if idx == -1:
-                        break
-                    state.parts[partidx] = str(thispart[:idx]).rstrip() + str(thispart[idx+2:]).lstrip()
-                    changed = True
-            if changed:
-                state.contents = ''
-                for part in state.parts:
-                    state.contents += part
-                state.changed = True
-
-        # If nothing was expanded, we are done
-        if not state.changed:
-            break
-    return state.contents
-
-def evaluate_expr(contents, undefined_means_zero):
-    """Convert a C input expression into a Python one and evaluate it"""
-    # First some early outs
-    contents = contents.lstrip().rstrip()
-    if contents == '0':
-        return 0
-    if contents == '1':
-        return 1
-
-    #print(contents)        
-    contents = contents.replace('!=', '<>')
-    contents = contents.replace('!', ' not ')
-    contents = contents.replace('||', ' or ')
-    contents = contents.replace('&&', ' and ')
+# Line comment
+def t_CPP_COMMENT2(t):
+    r'(//.*?(\n|$))'
+    # replace with '/n'
+    t.type = 'CPP_WS'; t.value = '\n'
+    return t
     
-    # Python's integer literals are different to C's:
-    # - L -> nothing
-    # - LL -> L
-    # - ULL -> L
-    # - UL -> L
-    # - U -> L
-    def helper(contents, re, replace):
-        while 1:
-            result = re.search(contents)
-            if result is None:
-                break
-            contents = contents[:result.start(2)] + replace + contents[result.end(2):]
-        return contents
-    contents = helper(contents, preprocessor_number_long, '')
-    contents = helper(contents, preprocessor_number_long_long, 'L')
-    contents = helper(contents, preprocessor_number_unsigned_long_long, 'L')
-    contents = helper(contents, preprocessor_number_unsigned_long, 'L')
-    contents = helper(contents, preprocessor_number_unsigned, 'L')
+def t_error(t):
+    t.type = t.value[0]
+    t.value = t.value[0]
+    t.lexer.skip(1)
+    return t
 
-    # Try to handle the C ternary operator
-    while 1:
-        result = preprocessor_ternary1.search(contents)
-        if result is None:
-            break
-        contents = contents[:result.start(1)] + '(' + result.group(2)+ ') if ' + result.group(1) + ' else ' + contents[result.start(3):]
-    while 1:
-        result = preprocessor_ternary2.search(contents)
-        if result is None:
-            break
-        contents = contents[:result.start(1)] + '(' + result.group(2)+ ') if (' + result.group(1) + ') else (' + result.group(3) + ')' + contents[result.end(3):]
-        
-    vars = {}
-    while 1:
-        #print("=>", contents)
-        try:
-            return int(eval(contents, vars, vars))
-        except NameError as e:
-            if not undefined_means_zero:
-                return
-            result = nameerror_extract.match(e.args[0])
-            if result is None:
-                raise
-            vars[result.group(1)] = 0
+import re
+import copy
+import time
+import os.path
+from ply.lex import LexToken
 
-class Timing(object):
-    """Keeps timings"""
-    def __init__(self):
-        self.accumulated = 0.0
-        self.calls = 0
-        self.min = 1<<30
-        self.max = 0
-        self.lastclock = None
-    def start(self):
-        self.lastclock = time.clock()
-    def stop(self):
-        diff = time.clock() - self.lastclock
-        self.accumulated += diff
-        self.calls += 1
-        if diff < self.min:
-            self.min = diff
-        if diff > self.max:
-            self.max = diff
-    def __repr__(self):
-        if self.calls == 0:
-            return "never executed"
-        return "%f secs (%d calls, avrg %f/call, min %f, max %f)" \
-                % (self.accumulated, self.calls, self.accumulated/self.calls, self.min, self.max)
+# -----------------------------------------------------------------------------
+# trigraph()
+# 
+# Given an input string, this function replaces all trigraph sequences. 
+# The following mapping is used:
+#
+#     ??=    #
+#     ??/    \
+#     ??'    ^
+#     ??(    [
+#     ??)    ]
+#     ??!    |
+#     ??<    {
+#     ??>    }
+#     ??-    ~
+# -----------------------------------------------------------------------------
 
-class MacroObject(object):
-    """Token replacing macro"""
-    def __init__(self, name, contents=''):
-        name = str(name)
-        #print('MacroObject(', name, '=', contents, ')')
-        if name[-1] == ')':
-            self.parameters = [ str(p).rstrip().lstrip() for p in tokenise_arguments(name)[0] ]
-            self.variadic = False
-            if len(self.parameters) > 0 and '...' in self.parameters[-1]:
-                self.variadic = True
-                del self.parameters[-1]
-            name = name[:name.find('(')]
-            self.name = lambda: name
-            self.contents = self.__contents
-            self.__rawcontents = contents
-        else:
-            self.name = lambda: name
-            self.contents = lambda: contents
-            self.parameters = None
-            self.variadic = False
-        if debug:
-            print(repr(self))
-    def __repr__(self):
-        n = '#define '+self.name()
-        if self.parameters:
-            n += '('
-            first = True
-            for p in self.parameters:
-                n += p if first else ', '+p
-                first = False
-            n += ') '+self.__rawcontents
-        else:
-            n += ' '+self.contents()
-        return n
-    def __cmp__(self, other):
-        return -1 if self.name()<other.name() else 0 if self.name()==other.name() else 1
-    def __hash__(self):
-        return hash(self.name())
-    def __contents(self, *args):
-        if len(args) < len(self.parameters) or (not self.variadic and len(args) > len(self.parameters)):
-            raise RuntimeError("Macro "+repr(self)+" called with %d arguments when it takes %d" % (len(args), len(self.parameters)))
-        # Define a local macro list mapping the macro parameters to the args
-        macros = [MacroObject(name, value) for name, value in zip(self.parameters, args)]
-        if self.variadic:
-            vaargs = ''
-            if len(args) > len(self.parameters):
-                vaargs = ','.join(args[len(args)-len(self.parameters):])
-            macros.append(MacroObject('__VA_ARGS__', vaargs))
-        macros.sort(key=lambda x: len(x.name()))
-        ret = expand_macros(self.__rawcontents, macros, function_args = True)
-        print('EXPAND FUNCTION MACRO', self.name(), '(', macros, ') =>', ret)
-        return ret
+_trigraph_pat = re.compile(r'''\?\?[=/\'\(\)\!<>\-]''')
+_trigraph_rep = {
+    '=':'#',
+    '/':'\\',
+    "'":'^',
+    '(':'[',
+    ')':']',
+    '!':'|',
+    '<':'{',
+    '>':'}',
+    '-':'~'
+}
 
-class Line(object):
-    """A line from an original source file"""
-    def __init__(self, line, filepath, lineno):
-        result = tailwhitespace.match(line)
-        if result is not None:
-            self.line = line[:result.start(1)]
-        else:
-            self.line = line
-        self.filepath = filepath
-        self.lineno = lineno
-        self.processedidx = None  # Set once this line has been executed
+def trigraph(input):
+    return _trigraph_pat.sub(lambda g: _trigraph_rep[g.group()[-1]],input)
+
+# ------------------------------------------------------------------
+# Macro object
+#
+# This object holds information about preprocessor macros
+#
+#    .name      - Macro name (string)
+#    .value     - Macro value (a list of tokens)
+#    .arglist   - List of argument names
+#    .variadic  - Boolean indicating whether or not variadic macro
+#    .vararg    - Name of the variadic parameter
+#
+# When a macro is created, the macro replacement token sequence is
+# pre-scanned and used to create patch lists that are later used
+# during macro expansion
+# ------------------------------------------------------------------
+
+class Macro(object):
+    def __init__(self,name,value,arglist=None,variadic=False):
+        self.name = name
+        self.value = value
+        self.arglist = arglist
+        self.variadic = variadic
+        if variadic:
+            self.vararg = arglist[-1]
+        self.source = None
+
+# ------------------------------------------------------------------
+# Preprocessor object
+#
+# Object representing a preprocessor.  Contains macro definitions,
+# include directories, and other information
+# ------------------------------------------------------------------
 
 class Preprocessor(object):
-    """Instantiate one of these to preprocess some text!"""
-    systemmacros = [ '__FILE__', '__LINE__', '__DATE__', '__TIME__' ]
-    ifcmds = [ 'if', 'ifdef', 'ifndef', 'else', 'elif', 'endif' ]
-    
-    def include_not_found(self, system_include, curdir, includepath):
-        """Handler called when a #include is not found from the current directory.
-           Return None to have the include passed through into the output"""
-        if self.__passthru_undefined:
-            return None
-        raise RuntimeError('#include "'+includepath+'" not found')
-    
-    def __file(self):
-        if self.__currentline.filepath in self.__lineoverrides:
-            return self.__lineoverrides[self.__currentline.filepath][1]
-        return '"null"' if self.__currentline is None else '"'+self.__currentline.filepath+'"'
-    def __line(self):
-        if self.__currentline.filepath in self.__lineoverrides:
-            return str(self.__currentline.lineno + self.__lineoverrides[self.__currentline.filepath][0])
-        return '0' if self.__currentline is None else str(self.__currentline.lineno)
-    def __date(self):
-        d = self.__datetime.strftime('"%b %d %Y"')
-        if d[5] == '0':
-            d = d[:5] + ' ' + d[6:]
-        return d
-    def __time(self):
-        return self.__datetime.strftime('"%H:%M:%S"')
-    def __counter(self):
-        self.__countervalue += 1
-        return self.__countervalue - 1
-
-    def __init__(self, passthru_undefined = False, quiet = False):
-        self.__passthru_undefined = passthru_undefined
-        self.__quiet = quiet
-        self.__macros_sorted = []  # List of MacroObject instances, sorted by length of name descending
-        self.__macros_dict = {}    # Map of same MacroObject instances by macro name
-        self.__lines = []          # List of Line instances each representing a line in a given file
-        self.__currentline = None
-        self.__lineoverrides = {}
-        self.__datetime = datetime.datetime.now()
-        self.__cmds = {k[4:]:getattr(self, k) for k in dir(self) if k.startswith('cmd_')}
-        self.__ifstack = []
-        self.__isdisabled = False
-        self.__countervalue = 0
-
-        self.time_cmds = {k[4:]:Timing() for k in dir(self) if k.startswith('cmd_')}
-        self.time_reading_files = Timing()
-        self.time_adding_raw_lines = Timing()
-        self.time_executing = Timing()
-        self.time_expanding_macros = Timing()
+    def __init__(self,lexer=None):
+        if lexer is None:
+            import ply.lex as lex
+            lexer = lex.lex()
+        self.lexer = lexer
+        self.macros = { }
+        self.path = []
+        self.temp_path = []
         self.return_code = 0
 
-        # Set up the magic macro objects
-        self.cmd_define('__FILE__ x')
-        self.cmd_define('__LINE__ x')
-        self.cmd_define('__DATE__ x')
-        self.cmd_define('__TIME__ x')
-        self.cmd_define('__COUNTER__ x')
-        self.__macros_dict['__FILE__'].contents = self.__file
-        self.__macros_dict['__LINE__'].contents = self.__line
-        self.__macros_dict['__DATE__'].contents = self.__date
-        self.__macros_dict['__TIME__'].contents = self.__time
-        self.__macros_dict['__COUNTER__'].contents = self.__counter
+        # Probe the lexer for selected tokens
+        self.lexprobe()
 
-    def cmd_define(self, contents):
-        """As if #define contents"""
-        need_sort = False
-        # Is it a #define name(pars) object?
-        result = preprocessor_macro_function.match(contents)
-        if result is not None:
-            macroname = result.group(1)
-            macrocontents = result.group(2)
-        else:
-            # Is it a #define name object?
-            result = preprocessor_macro_object.match(contents)
-            if result is not None:
-                macroname = result.group(1)
-                macrocontents = result.group(2)
-            else:
-                # Is it a #define name?
-                result = preprocessor_macro_name.match(contents)
-                if result is None:
-                    raise RuntimeError('cmd_define("'+contents+'") does not match a #define')
-                macroname = result.group(1)
-                macrocontents = ''
-        m = MacroObject(macroname, macrocontents)
-        macroname = m.name()
-        if macroname in self.__macros_dict:
-            m2 = self.__macros_dict[macroname]
-            #if m2.parameters != m.parameters or m2.contents() != m.contents():
-            #    raise RuntimeError('Redefinition of macro ' + macroname)
-        else:
-            self.__macros_sorted.append(m)
-            self.__macros_sorted.sort(key=lambda x: len(x.name()))
-            self.__macros_dict[macroname] = m
-        #print(self.__macros_sorted)
-        return not self.__passthru_undefined
+        tm = time.localtime()
+        self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
+        self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
+        self.parser = None
 
-    def cmd_elif(self, contents):
-        """As if #elif expr"""
-        # If this if sequence is being evaluated and last stanza was false and no stanza has been executed yet
-        if not self.__ifstack[-1][0] and not self.__ifstack[-1][1]:
-            self.cmd_endif('')
-            self.cmd_if(contents)
-        return True
-        
-    def cmd_else(self, contents):
-        """As if #else"""
-        if not self.__ifstack[-1][0]:
-            # If some previous #elif executed, disable now, else enable now
-            if self.__ifstack[-1][1]:
-                self.__isdisabled = True
-            else:
-                self.__isdisabled = False
-        return True
+    # -----------------------------------------------------------------------------
+    # tokenize()
+    #
+    # Utility function. Given a string of text, tokenize into a list of tokens
+    # -----------------------------------------------------------------------------
 
-    def cmd_endif(self, contents):
-        """As if #endif"""
-        self.__isdisabled = self.__ifstack.pop()[0]
-        return True
+    def tokenize(self,text):
+        tokens = []
+        self.lexer.input(text)
+        while True:
+            tok = self.lexer.token()
+            if not tok: break
+            tokens.append(tok)
+        return tokens
 
-    def cmd_error(self, contents):
-        """As if #error contents"""
-        if not self.__quiet:
-            print(self.__currentline.filepath+":"+str(self.__currentline.lineno)+":: error: "+contents, file=sys.stderr)
+    # ---------------------------------------------------------------------
+    # error()
+    #
+    # Report a preprocessor error/warning of some kind
+    # ----------------------------------------------------------------------
+
+    def error(self,file,line,msg):
+        print("%s:%d %s" % (file,line,msg))
         self.return_code += 1
-        return not self.__passthru_undefined
 
-    def cmd_if(self, contents):
-        """As if #if expr"""
-        if self.__isdisabled:
-            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
-            return
-        contents = expand_defineds(contents, self.__macros_dict)
-        contents = expand_macros(contents, self.__macros_sorted)
-        try:
-            result = evaluate_expr(contents, not self.__passthru_undefined)
-        except:
-            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
-            raise
-        if result is None:
-            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
-            return
-        willtake = result != 0
-        self.__ifstack.append((self.__isdisabled, willtake, self.__currentline))
-        self.__isdisabled = not willtake
-        return True
-        
-    def cmd_ifdef(self, contents):
-        """As if #ifdef macro"""
-        if self.__isdisabled:
-            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
-            return
-        willtake = contents in self.__macros_dict
-        self.__ifstack.append((self.__isdisabled, willtake, self.__currentline))
-        self.__isdisabled = not willtake
-        return True
-        
-    def cmd_ifndef(self, contents):
-        """As if #ifndef macro"""
-        if self.__isdisabled:
-            self.__ifstack.append((self.__isdisabled, False, self.__currentline))
-            return
-        willtake = contents not in self.__macros_dict
-        self.__ifstack.append((self.__isdisabled, willtake, self.__currentline))
-        self.__isdisabled = not willtake
-        return True
-        
-    def cmd_include(self, contents):
-        """As if #include contents, returns True if successfully included"""
-        contents = expand_macros(contents, self.__macros_sorted).lstrip().rstrip()
-        result = preprocessor_include.match(contents)
-        if result is None:
-            newpath = contents
+    # ----------------------------------------------------------------------
+    # lexprobe()
+    #
+    # This method probes the preprocessor lexer object to discover
+    # the token types of symbols that are important to the preprocessor.
+    # If this works right, the preprocessor will simply "work"
+    # with any suitable lexer regardless of how tokens have been named.
+    # ----------------------------------------------------------------------
+
+    def lexprobe(self):
+
+        # Determine the token type for identifiers
+        self.lexer.input("identifier")
+        tok = self.lexer.token()
+        if not tok or tok.value != "identifier":
+            print("Couldn't determine identifier type")
         else:
-            newpath = result.group(1)
-        curdir = os.path.dirname(self.__currentline.filepath)
-        system_include = contents[0]=='<'
-        if not system_include and newpath[0] != '/':
-            newpath = os.path.join(curdir, newpath)
-        if not os.path.exists(newpath):
-            newpath = self.include_not_found(system_include, curdir, result.group(1))
-        if newpath is not None:
-            newpath = os.path.normpath(newpath).replace('\\', '/')
-        if os.path.exists(newpath):
-            self.time_reading_files.start()
-            with open(newpath, 'rt') as ih:
-                rawlines = ih.readlines()
-                self.time_reading_files.stop()
-                self.add_raw_lines(rawlines, newpath, self.__lines.index(self.__currentline)+1)
-            return True
-        return False
+            self.t_ID = tok.type
 
-    def cmd_line(self, contents):
-        """As if #line contents"""
-        contents = expand_macros(contents, self.__macros_sorted)
-        result = preprocessor_line2.match(contents)
-        if result is not None:
-            lineoverride = int(result.group(1))
-            fileoverride = result.group(2)
+        # Determine the token type for integers
+        self.lexer.input("12345")
+        tok = self.lexer.token()
+        if not tok or int(tok.value) != 12345:
+            print("Couldn't determine integer type")
         else:
-            result = preprocessor_line.match(contents)
-            if result is None:
-                raise RuntimeError('cmd_line("'+contents+'") does not match a #line')
-            lineoverride = int(result.group(1))
-            fileoverride = self.__file()
-        self.__lineoverrides[self.__currentline.filepath] = (lineoverride - self.__currentline.lineno - 1, fileoverride)
-        # Rewrite current line to match calculated line
-        self.__currentline.line = '# ' + str(int(self.__line())+1) + ' ' + self.__file()
-        return False  # always pass through
+            self.t_INTEGER = tok.type
+            self.t_INTEGER_TYPE = type(tok.value)
 
-    def cmd_pragma(self, contents):
-        """As if #pragma contents"""
-        pass  # always pass through
-
-    def cmd_undef(self, contents):
-        """As if #undef contents"""
-        result = preprocessor_macro_name.match(contents)
-        if result is None:
-            raise RuntimeError('cmd_undef("'+contents+'") does not match a #undef')
-        if result.group(1) in self.__macros_dict:
-            self.__macros_sorted.remove(self.__macros_dict[result.group(1)])
-            del self.__macros_dict[result.group(1)]
-        return not self.__passthru_undefined
-
-    def cmd_warning(self, contents):
-        """As if #warning contents"""
-        if not self.__quiet:
-            print(self.__currentline.filepath+":"+str(self.__currentline.lineno)+":: warning: "+contents, file=sys.stderr)
-        return not self.__passthru_undefined
-
-
-
-    def add_raw_lines(self, rawlines, path, index = -1):
-        """Adds additional raw lines to the internal store identified using path.
-           Line continuations are fused and comments eliminated at this stage
-           leaving the internal store of lines ready for preprocessing."""
-        self.time_adding_raw_lines.start()
-        lines = []
-        for idx in range(0, len(rawlines)):
-            lines.append(Line(rawlines[idx], path, idx + 1))
-            
-        # Merge any continued lines onto a single line
-        for idx in range(0, len(lines)):
-            while idx<len(lines)-1 and len(lines[idx].line) and lines[idx].line[-1]=='\\':
-                lines[idx].line = lines[idx].line[:-1] + lines[idx + 1].line
-                del lines[idx + 1]
-                
-        # Replace all comments with a space
-        in_comment = None
-        idx = 0
-        while idx < len(lines):
-            #print(lines[idx].lineno, lines[idx].line)
-            parts = tokenise_stringliterals(lines[idx].line, in_comment)
-            changed = False
-            #print(lines[idx].lineno)
-            #for part in parts:
-            #    print("   ", part)
-            partidx = 0
-            while partidx < len(parts):
-                # Is this is a tokenised string part?
-                if partidx % 2 == 1:
-                    if in_comment is not None:
-                        parts[partidx] = ''
-                    partidx = partidx + 1
-                    continue
-                # FIXME: Multiple whitespace needs to be collapsed into a single space
-                if in_comment is not None:
-                    ce = parts[partidx].find('*/')
-                    if ce != -1:
-                        parts[partidx] = parts[partidx][ce+2:]
-                        changed = True
-                        # Do I need to merge lines due to a multi line comment?
-                        if in_comment < idx:
-                            # Insert the parts before the comment before me
-                            parts.insert(0, '')
-                            parts.insert(0, lines[in_comment].line)
-                            partidx = partidx + 2
-                            # Retain the line where the multiline comment began, but delete all
-                            # intermediate lines include the current one
-                            for n in range(in_comment, idx):
-                                del lines[in_comment + 1]
-                            idx = in_comment
-                        in_comment = None
-                    else:
-                        parts[partidx] = ''
-                if in_comment is None:
-                    while 1:
-                        cb = parts[partidx].find('/*')
-                        ce = parts[partidx].find('*/', cb) if cb != -1 else -1
-                        if cb != -1 and ce != -1:
-                            parts[partidx] = parts[partidx][:cb] + ' ' + parts[partidx][ce+2:]
-                            changed = True
-                            continue
-                        if ce == -1 and cb != -1:
-                            parts[partidx] = parts[partidx][:cb] + ' '
-                            changed = True
-                            in_comment = idx
-                        cb = parts[partidx].find('//')
-                        if cb != -1:
-                            parts[partidx] = parts[partidx][:cb]
-                            parts = parts[:partidx]
-                            changed = True
-                        break
-                partidx = partidx + 1
-            if changed:
-                #print(lines[idx].lineno, parts)
-                lines[idx].line = ''
-                for part in parts:
-                    lines[idx].line += part
-                lines[idx].line = lines[idx].line.rstrip().lstrip()
-            idx = idx + 1
-
-        if index == -1:
-            self.__lines.extend(lines)
+        # Determine the token type for strings enclosed in double quotes
+        self.lexer.input("\"filename\"")
+        tok = self.lexer.token()
+        if not tok or tok.value != "\"filename\"":
+            print("Couldn't determine string type")
         else:
-            self.__lines = self.__lines[:index] + lines + self.__lines[index:]
-        self.time_adding_raw_lines.stop()
-        return self.return_code
+            self.t_STRING = tok.type
 
-    def get_lines(self, lineno = True):
-        """Returns internal store of lines ready for writing to output.
-           lineno=True means emit #line directives to maintain link to
-           original source files"""
-        lines = []
-        lastfilepath = None
-        lastlineno = -1
-        for line in self.__lines:
-            if lineno:
-                lastlineno += 1
-                if line.filepath != lastfilepath or (line.lineno != lastlineno and len(line.line.rstrip().lstrip())):
-                    if line.lineno - lastlineno < 5:
-                        while lastlineno < line.lineno:
-                            lines.append('\n')
-                            lastlineno += 1
-                    else:
-                        lines.append('# %d "%s"\n' % (line.lineno, line.filepath))
-                    lastlineno = line.lineno
-                    lastfilepath = line.filepath
-            lines.append(line.line + '\n')
-        # Eliminate all empty lines before a # line directive
-        idx = 1
-        while idx < len(lines):
-            if lines[idx][0] == '#' and lines[idx][2].isdigit():
-                while lines[idx-1].rstrip() == '':
-                    del lines[idx-1]
-                    idx -= 1
-            idx += 1
-        return lines
-        
-    def preprocess(self):
-        """Executes preprocessing on the internal store of lines, expanding
-           macros and calculations as execution proceeds"""
-        lineidx = 0
-        while lineidx < len(self.__lines):
-            self.__currentline = self.__lines[lineidx]
-            try:
-                # Is this line a preprocessor command line?
-                result = preprocessor_command.match(self.__currentline.line)
-                if result is not None:
-                    try:
-                        self.time_executing.start()
-                        cmd = result.group(1)
-                        if self.__isdisabled:
-                            if cmd in self.ifcmds:
-                                try:
-                                    self.time_cmds[cmd].start()
-                                    if self.__cmds[cmd](result.group(2)):
-                                        # Munch this line
-                                        del self.__lines[lineidx]
-                                        continue
-                                finally:
-                                    self.time_cmds[cmd].stop()
-                        elif cmd in self.__cmds:
-                            try:
-                                self.time_cmds[cmd].start()
-                                if self.__cmds[cmd](result.group(2)):
-                                    # Munch this line
-                                    del self.__lines[lineidx]
-                                    continue
-                            finally:
-                                self.time_cmds[cmd].stop()
-                        else:
-                            self.cmd_warning("#"+result.group(1)+" not understood by this implementation")
-                    finally:
-                        self.time_executing.stop()
-                elif not self.__isdisabled:
-                    try:
-                        self.time_expanding_macros.start()
-                        while 1:
-                            # Expand any macros in this line
-                            try:
-                                self.__lines[lineidx].line = expand_macros(self.__lines[lineidx].line, self.__macros_sorted)
-                                break
-                            except UnfinishedMacroExpansion:
-                                # Append the next line and try again
-                                self.__lines[lineidx].line += self.__lines[lineidx + 1].line
-                                del self.__lines[lineidx + 1]
-                    finally:
-                        self.time_expanding_macros.stop()
-            except Exception as e:
-                self.cmd_error(traceback.format_exc())
-            if self.__isdisabled:
-                del self.__lines[lineidx]
+        # Determine the token type for whitespace--if any
+        self.lexer.input("  ")
+        tok = self.lexer.token()
+        if not tok or tok.value != "  ":
+            self.t_SPACE = None
+        else:
+            self.t_SPACE = tok.type
+
+        # Determine the token type for newlines
+        self.lexer.input("\n")
+        tok = self.lexer.token()
+        if not tok or tok.value != "\n":
+            self.t_NEWLINE = None
+            print("Couldn't determine token for newlines")
+        else:
+            self.t_NEWLINE = tok.type
+
+        self.t_WS = (self.t_SPACE, self.t_NEWLINE)
+
+        # Check for other characters used by the preprocessor
+        chars = [ '<','>','#','##','\\','(',')',',','.']
+        for c in chars:
+            self.lexer.input(c)
+            tok = self.lexer.token()
+            if not tok or tok.value != c:
+                print("Unable to lex '%s' required for preprocessor" % c)
+
+    # ----------------------------------------------------------------------
+    # add_path()
+    #
+    # Adds a search path to the preprocessor.  
+    # ----------------------------------------------------------------------
+
+    def add_path(self,path):
+        self.path.append(path)
+
+    # ----------------------------------------------------------------------
+    # group_lines()
+    #
+    # Given an input string, this function splits it into lines.  Trailing whitespace
+    # is removed.   Any line ending with \ is grouped with the next line.  This
+    # function forms the lowest level of the preprocessor---grouping into text into
+    # a line-by-line format.
+    # ----------------------------------------------------------------------
+
+    def group_lines(self,input,source):
+        lex = self.lexer.clone()
+        lines = [x.rstrip() for x in input.splitlines()]
+        for i in xrange(len(lines)):
+            j = i+1
+            while lines[i].endswith('\\') and (j < len(lines)):
+                lines[i] = lines[i][:-1]+lines[j]
+                lines[j] = ""
+                j += 1
+
+        input = "\n".join(lines)
+        lex.input(input)
+        lex.lineno = 1
+
+        current_line = []
+        while True:
+            tok = lex.token()
+            if not tok:
+                break
+            tok.source = source
+            current_line.append(tok)
+            if tok.type in self.t_WS and '\n' in tok.value:
+                yield current_line
+                current_line = []
+
+        if current_line:
+            yield current_line
+
+    # ----------------------------------------------------------------------
+    # tokenstrip()
+    # 
+    # Remove leading/trailing whitespace tokens from a token list
+    # ----------------------------------------------------------------------
+
+    def tokenstrip(self,tokens):
+        i = 0
+        while i < len(tokens) and tokens[i].type in self.t_WS:
+            i += 1
+        del tokens[:i]
+        i = len(tokens)-1
+        while i >= 0 and tokens[i].type in self.t_WS:
+            i -= 1
+        del tokens[i+1:]
+        return tokens
+
+
+    # ----------------------------------------------------------------------
+    # collect_args()
+    #
+    # Collects comma separated arguments from a list of tokens.   The arguments
+    # must be enclosed in parenthesis.  Returns a tuple (tokencount,args,positions)
+    # where tokencount is the number of tokens consumed, args is a list of arguments,
+    # and positions is a list of integers containing the starting index of each
+    # argument.  Each argument is represented by a list of tokens.
+    #
+    # When collecting arguments, leading and trailing whitespace is removed
+    # from each argument.  
+    #
+    # This function properly handles nested parenthesis and commas---these do not
+    # define new arguments.
+    # ----------------------------------------------------------------------
+
+    def collect_args(self,tokenlist):
+        args = []
+        positions = []
+        current_arg = []
+        nesting = 1
+        tokenlen = len(tokenlist)
+    
+        # Search for the opening '('.
+        i = 0
+        while (i < tokenlen) and (tokenlist[i].type in self.t_WS):
+            i += 1
+
+        if (i < tokenlen) and (tokenlist[i].value == '('):
+            positions.append(i+1)
+        else:
+            self.error(tokenlist[0].source,tokenlist[0].lineno,"Missing '(' in macro arguments")
+            return 0, [], []
+
+        i += 1
+
+        while i < tokenlen:
+            t = tokenlist[i]
+            if t.value == '(':
+                current_arg.append(t)
+                nesting += 1
+            elif t.value == ')':
+                nesting -= 1
+                if nesting == 0:
+                    args.append(self.tokenstrip(current_arg))
+                    positions.append(i)
+                    return i+1,args,positions
+                current_arg.append(t)
+            elif t.value == ',' and nesting == 1:
+                args.append(self.tokenstrip(current_arg))
+                positions.append(i+1)
+                current_arg = []
             else:
-                self.__currentline.processedidx = lineidx
-                lineidx += 1
-        self.__currentline = None
-        return self.return_code
+                current_arg.append(t)
+            i += 1
+    
+        # Missing end argument
+        self.error(tokenlist[-1].source,tokenlist[-1].lineno,"Missing ')' in macro arguments")
+        return 0, [],[]
+
+    # ----------------------------------------------------------------------
+    # macro_prescan()
+    #
+    # Examine the macro value (token sequence) and identify patch points
+    # This is used to speed up macro expansion later on---we'll know
+    # right away where to apply patches to the value to form the expansion
+    # ----------------------------------------------------------------------
+    
+    def macro_prescan(self,macro):
+        macro.patch     = []             # Standard macro arguments 
+        macro.str_patch = []             # String conversion expansion
+        macro.var_comma_patch = []       # Variadic macro comma patch
+        i = 0
+        while i < len(macro.value):
+            if macro.value[i].type == self.t_ID and macro.value[i].value in macro.arglist:
+                argnum = macro.arglist.index(macro.value[i].value)
+                # Conversion of argument to a string
+                j = i - 1
+                while j >= 0 and macro.value[j].type in self.t_WS:
+                    j -= 1
+                if j >= 0 and macro.value[j].value == '#':
+                    macro.value[i] = copy.copy(macro.value[i])
+                    macro.value[i].type = self.t_STRING
+                    while i > j:
+                        del macro.value[j]
+                        i -= 1
+                    macro.str_patch.append((argnum,i))
+                    continue
+                # Concatenation
+                elif (i > 0 and macro.value[i-1].value == '##'):
+                    macro.patch.append(('c',argnum,i-1))
+                    del macro.value[i-1]
+                    continue
+                elif ((i+1) < len(macro.value) and macro.value[i+1].value == '##'):
+                    macro.patch.append(('c',argnum,i))
+                    i += 1
+                    continue
+                # Standard expansion
+                else:
+                    macro.patch.append(('e',argnum,i))
+            elif macro.value[i].value == '##':
+                if macro.variadic and (i > 0) and (macro.value[i-1].value == ',') and \
+                        ((i+1) < len(macro.value)) and (macro.value[i+1].type == self.t_ID) and \
+                        (macro.value[i+1].value == macro.vararg):
+                    macro.var_comma_patch.append(i-1)
+            i += 1
+        macro.patch.sort(key=lambda x: x[2],reverse=True)
+
+    # ----------------------------------------------------------------------
+    # macro_expand_args()
+    #
+    # Given a Macro and list of arguments (each a token list), this method
+    # returns an expanded version of a macro.  The return value is a token sequence
+    # representing the replacement macro tokens
+    # ----------------------------------------------------------------------
+
+    def macro_expand_args(self,macro,args):
+        # Make a copy of the macro token sequence
+        rep = [copy.copy(_x) for _x in macro.value]
+
+        # Make string expansion patches.  These do not alter the length of the replacement sequence
+        
+        str_expansion = {}
+        for argnum, i in macro.str_patch:
+            if argnum not in str_expansion:
+                str_expansion[argnum] = ('"%s"' % "".join([x.value for x in args[argnum]])).replace("\\","\\\\")
+            rep[i] = copy.copy(rep[i])
+            rep[i].value = str_expansion[argnum]
+
+        # Make the variadic macro comma patch.  If the variadic macro argument is empty, we get rid
+        comma_patch = False
+        if macro.variadic and not args[-1]:
+            for i in macro.var_comma_patch:
+                rep[i] = None
+                comma_patch = True
+
+        # Make all other patches.   The order of these matters.  It is assumed that the patch list
+        # has been sorted in reverse order of patch location since replacements will cause the
+        # size of the replacement sequence to expand from the patch point.
+        
+        expanded = { }
+        for ptype, argnum, i in macro.patch:
+            # Concatenation.   Argument is left unexpanded
+            if ptype == 'c':
+                rep[i:i+1] = args[argnum]
+            # Normal expansion.  Argument is macro expanded first
+            elif ptype == 'e':
+                if argnum not in expanded:
+                    expanded[argnum] = self.expand_macros(args[argnum])
+                rep[i:i+1] = expanded[argnum]
+
+        # Get rid of removed comma if necessary
+        if comma_patch:
+            rep = [_i for _i in rep if _i]
+
+        return rep
+
+
+    # ----------------------------------------------------------------------
+    # expand_macros()
+    #
+    # Given a list of tokens, this function performs macro expansion.
+    # The expanded argument is a dictionary that contains macros already
+    # expanded.  This is used to prevent infinite recursion.
+    # ----------------------------------------------------------------------
+
+    def expand_macros(self,tokens,expanded=None):
+        if expanded is None:
+            expanded = {}
+        i = 0
+        while i < len(tokens):
+            t = tokens[i]
+            if t.type == self.t_ID:
+                if t.value in self.macros and t.value not in expanded:
+                    # Yes, we found a macro match
+                    expanded[t.value] = True
+                    
+                    m = self.macros[t.value]
+                    #print("Macro is", m.name, "with line", tokens)
+                    if m.arglist is None:
+                        # A simple macro
+                        ex = self.expand_macros([copy.copy(_x) for _x in m.value],expanded)
+                        for e in ex:
+                            e.lineno = t.lineno
+                        tokens[i:i+1] = ex
+                        i += len(ex)
+                    else:
+                        # A macro with arguments
+                        j = i + 1
+                        while j < len(tokens) and tokens[j].type in self.t_WS:
+                            j += 1
+                        # A function like macro without an invocation list is to be ignored
+                        if j == len(tokens) or tokens[j].value != '(':
+                            i = j
+                        else:
+                            tokcount,args,positions = self.collect_args(tokens[j:])
+                            if (not m.variadic
+                                # A no arg or single arg consuming macro is permitted to be expanded with nothing
+                                and (args != [[]] or len(m.arglist) > 1)
+                                and len(args) !=  len(m.arglist)):
+                                self.error(t.source,t.lineno,"Macro %s requires %d arguments but was passed %d" % (t.value,len(m.arglist),len(args)))
+                                i = j + tokcount
+                            elif m.variadic and len(args) < len(m.arglist)-1:
+                                if len(m.arglist) > 2:
+                                    self.error(t.source,t.lineno,"Macro %s must have at least %d arguments" % (t.value, len(m.arglist)-1))
+                                else:
+                                    self.error(t.source,t.lineno,"Macro %s must have at least %d argument" % (t.value, len(m.arglist)-1))
+                                i = j + tokcount
+                            else:
+                                if m.variadic:
+                                    if len(args) == len(m.arglist)-1:
+                                        args.append([])
+                                    else:
+                                        args[len(m.arglist)-1] = tokens[j+positions[len(m.arglist)-1]:j+tokcount-1]
+                                        del args[len(m.arglist):]
+                                else:
+                                    while len(args) < len(m.arglist):
+                                        args.append([])
+                                        
+                                # Get macro replacement text
+                                rep = self.macro_expand_args(m,args)
+                                rep = self.expand_macros(rep,expanded)
+                                for r in rep:
+                                    r.lineno = t.lineno
+                                tokens[i:j+tokcount] = rep
+                                i += len(rep)
+                    del expanded[t.value]
+                    continue
+                elif t.value == '__LINE__':
+                    t.type = self.t_INTEGER
+                    t.value = self.t_INTEGER_TYPE(t.lineno)
+                
+            i += 1
+        return tokens
+
+    # ----------------------------------------------------------------------    
+    # evalexpr()
+    # 
+    # Evaluate an expression token sequence for the purposes of evaluating
+    # integral expressions.
+    # ----------------------------------------------------------------------
+
+    def evalexpr(self,tokens):
+        # tokens = tokenize(line)
+        # Search for defined macros
+        i = 0
+        while i < len(tokens):
+            if tokens[i].type == self.t_ID and tokens[i].value == 'defined':
+                j = i + 1
+                needparen = False
+                result = "0L"
+                while j < len(tokens):
+                    if tokens[j].type in self.t_WS:
+                        j += 1
+                        continue
+                    elif tokens[j].type == self.t_ID:
+                        if tokens[j].value in self.macros:
+                            result = "1L"
+                        else:
+                            result = "0L"
+                        if not needparen: break
+                    elif tokens[j].value == '(':
+                        needparen = True
+                    elif tokens[j].value == ')':
+                        break
+                    else:
+                        self.error(tokens[i].source,tokens[i].lineno,"Malformed defined()")
+                    j += 1
+                tokens[i].type = self.t_INTEGER
+                tokens[i].value = self.t_INTEGER_TYPE(result)
+                del tokens[i+1:j+1]
+            i += 1
+        tokens = self.expand_macros(tokens)
+        for i,t in enumerate(tokens):
+            if t.type == self.t_ID:
+                tokens[i] = copy.copy(t)
+                tokens[i].type = self.t_INTEGER
+                tokens[i].value = self.t_INTEGER_TYPE("0L")
+            elif t.type == self.t_INTEGER:
+                tokens[i] = copy.copy(t)
+                # Strip off any trailing suffixes
+                tokens[i].value = str(tokens[i].value)
+                while tokens[i].value[-1] not in "0123456789abcdefABCDEF":
+                    tokens[i].value = tokens[i].value[:-1]
+        
+        expr = "".join([str(x.value) for x in tokens])
+        expr = expr.replace("&&"," and ")
+        expr = expr.replace("||"," or ")
+        expr = expr.replace("!"," not ")
+        try:
+            result = eval(expr)
+        except Exception:
+            self.error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression")
+            result = 0
+        return result
+
+    # ----------------------------------------------------------------------
+    # parsegen()
+    #
+    # Parse an input string/
+    # ----------------------------------------------------------------------
+    def parsegen(self,input,source=None):
+
+        # Replace trigraph sequences
+        t = trigraph(input)
+        lines = self.group_lines(t, source)
+
+        if not source:
+            source = ""
+            
+        self.define("__FILE__ \"%s\"" % source)
+
+        self.source = source
+        chunk = []
+        enable = True
+        iftrigger = False
+        ifstack = []
+
+        for x in lines:
+            for i,tok in enumerate(x):
+                if tok.type not in self.t_WS: break
+            if tok.value == '#':
+                # Preprocessor directive
+
+                # insert necessary whitespace instead of eaten tokens
+                for tok in x:
+                    if tok.type in self.t_WS and '\n' in tok.value:
+                        chunk.append(tok)
+                
+                dirtokens = self.tokenstrip(x[i+1:])
+                if dirtokens:
+                    name = dirtokens[0].value
+                    args = self.tokenstrip(dirtokens[1:])
+                else:
+                    name = ""
+                    args = []
+                
+                if name == 'define':
+                    if enable:
+                        for tok in self.expand_macros(chunk):
+                            yield tok
+                        chunk = []
+                        self.define(args)
+                elif name == 'include':
+                    if enable:
+                        for tok in self.expand_macros(chunk):
+                            yield tok
+                        chunk = []
+                        oldfile = self.macros['__FILE__']
+                        for tok in self.include(args):
+                            yield tok
+                        self.macros['__FILE__'] = oldfile
+                        self.source = source
+                elif name == 'undef':
+                    if enable:
+                        for tok in self.expand_macros(chunk):
+                            yield tok
+                        chunk = []
+                        self.undef(args)
+                elif name == 'ifdef':
+                    ifstack.append((enable,iftrigger))
+                    if enable:
+                        if not args[0].value in self.macros:
+                            enable = False
+                            iftrigger = False
+                        else:
+                            iftrigger = True
+                elif name == 'ifndef':
+                    ifstack.append((enable,iftrigger))
+                    if enable:
+                        if args[0].value in self.macros:
+                            enable = False
+                            iftrigger = False
+                        else:
+                            iftrigger = True
+                elif name == 'if':
+                    ifstack.append((enable,iftrigger))
+                    if enable:
+                        result = self.evalexpr(args)
+                        if not result:
+                            enable = False
+                            iftrigger = False
+                        else:
+                            iftrigger = True
+                elif name == 'elif':
+                    if ifstack:
+                        if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
+                            if enable:         # If already true, we flip enable False
+                                enable = False
+                            elif not iftrigger:   # If False, but not triggered yet, we'll check expression
+                                result = self.evalexpr(args)
+                                if result:
+                                    enable  = True
+                                    iftrigger = True
+                    else:
+                        self.error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
+                        
+                elif name == 'else':
+                    if ifstack:
+                        if ifstack[-1][0]:
+                            if enable:
+                                enable = False
+                            elif not iftrigger:
+                                enable = True
+                                iftrigger = True
+                    else:
+                        self.error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
+
+                elif name == 'endif':
+                    if ifstack:
+                        enable,iftrigger = ifstack.pop()
+                    else:
+                        self.error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
+                else:
+                    # Unknown preprocessor directive
+                    pass
+
+            else:
+                # Normal text
+                if enable:
+                    # Is this line entirely whitespace?
+                    all_ws = True
+                    for i,tok in enumerate(x):
+                        if tok.type not in self.t_WS:
+                            all_ws = False
+                            break
+                    if all_ws:
+                        # Remove preceding whitespace
+                        if len(x) > 1:
+                            x = [ x[-1] ]
+                    else:
+                        # Replace consecutive whitespace with a space except at the very front
+                        first_ws = None
+                        for n in xrange(len(x)-1, -1, -1):
+                            tok = x[n]
+                            if first_ws is None:
+                                if tok.type in self.t_SPACE:
+                                    first_ws = n
+                            else:
+                                if tok.type not in self.t_SPACE:
+                                    m = n + 1
+                                    while m != first_ws:
+                                        del x[m]
+                                        first_ws -= 1
+                                    first_ws = None
+                                    if x[m].value[0] == ' ':
+                                        x[m].value = ' ' 
+                    chunk.extend(x)
+
+        for tok in self.expand_macros(chunk):
+            yield tok
+        chunk = []
+
+    # ----------------------------------------------------------------------
+    # include()
+    #
+    # Implementation of file-inclusion
+    # ----------------------------------------------------------------------
+
+    def include(self,tokens):
+        # Try to extract the filename and then process an include file
+        if not tokens:
+            return
+        if tokens:
+            if tokens[0].value != '<' and tokens[0].type != self.t_STRING:
+                tokens = self.expand_macros(tokens)
+
+            if tokens[0].value == '<':
+                # Include <...>
+                i = 1
+                while i < len(tokens):
+                    if tokens[i].value == '>':
+                        break
+                    i += 1
+                else:
+                    self.error(tokens[0].source,tokens[0].lineno,"Malformed #include <...>")
+                    return
+                filename = "".join([x.value for x in tokens[1:i]])
+                path = self.path + [""] + self.temp_path
+            elif tokens[0].type == self.t_STRING:
+                filename = tokens[0].value[1:-1]
+                path = self.temp_path + [""] + self.path
+            else:
+                self.error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
+                return
+        for p in path:
+            iname = os.path.join(p,filename)
+            try:
+                data = open(iname,"r").read()
+                dname = os.path.dirname(iname)
+                if dname:
+                    self.temp_path.insert(0,dname)
+                for tok in self.parsegen(data,filename):
+                    yield tok
+                if dname:
+                    del self.temp_path[0]
+                break
+            except IOError:
+                pass
+        else:
+            self.error(tokens[0].source,tokens[0].lineno,"Couldn't find '%s'" % filename)
+
+    # ----------------------------------------------------------------------
+    # define()
+    #
+    # Define a new macro
+    # ----------------------------------------------------------------------
+
+    def define(self,tokens):
+        if isinstance(tokens,STRING_TYPES):
+            tokens = self.tokenize(tokens)
+
+        linetok = tokens
+        try:
+            name = linetok[0]
+            if len(linetok) > 1:
+                mtype = linetok[1]
+            else:
+                mtype = None
+            if not mtype:
+                m = Macro(name.value,[])
+                self.macros[name.value] = m
+            elif mtype.type in self.t_WS:
+                # A normal macro
+                m = Macro(name.value,self.tokenstrip(linetok[2:]))
+                self.macros[name.value] = m
+            elif mtype.value == '(':
+                # A macro with arguments
+                tokcount, args, positions = self.collect_args(linetok[1:])
+                variadic = False
+                for a in args:
+                    if variadic:
+                        self.error(name.source,name.lineno,"No more arguments may follow a variadic argument")
+                        break
+                    astr = "".join([str(_i.value) for _i in a])
+                    if astr == "...":
+                        variadic = True
+                        a[0].type = self.t_ID
+                        a[0].value = '__VA_ARGS__'
+                        variadic = True
+                        del a[1:]
+                        continue
+                    elif astr[-3:] == "..." and a[0].type == self.t_ID:
+                        variadic = True
+                        del a[1:]
+                        # If, for some reason, "." is part of the identifier, strip off the name for the purposes
+                        # of macro expansion
+                        if a[0].value[-3:] == '...':
+                            a[0].value = a[0].value[:-3]
+                        continue
+                    # Empty arguments are permitted
+                    if len(a) == 0 and len(args) == 1:
+                        continue
+                    if len(a) > 1 or a[0].type != self.t_ID:
+                        self.error(a.source,a.lineno,"Invalid macro argument")
+                        break
+                else:
+                    mvalue = self.tokenstrip(linetok[1+tokcount:])
+                    i = 0
+                    while i < len(mvalue):
+                        if i+1 < len(mvalue):
+                            if mvalue[i].type in self.t_WS and mvalue[i+1].value == '##':
+                                del mvalue[i]
+                                continue
+                            elif mvalue[i].value == '##' and mvalue[i+1].type in self.t_WS:
+                                del mvalue[i+1]
+                        i += 1
+                    m = Macro(name.value,mvalue,[x[0].value for x in args] if args != [[]] else [],variadic)
+                    self.macro_prescan(m)
+                    self.macros[name.value] = m
+            else:
+                self.error(name.source,name.lineno,"Bad macro definition")
+        #except LookupError:
+        #    print("Bad macro definition")
+        except:
+            raise
+
+    # ----------------------------------------------------------------------
+    # undef()
+    #
+    # Undefine a macro
+    # ----------------------------------------------------------------------
+
+    def undef(self,tokens):
+        id = tokens[0].value
+        try:
+            del self.macros[id]
+        except LookupError:
+            pass
+
+    # ----------------------------------------------------------------------
+    # parse()
+    #
+    # Parse input text.
+    # ----------------------------------------------------------------------
+    def parse(self,input,source=None,ignore={}):
+        self.ignore = ignore
+        self.parser = self.parsegen(input,source)
+        if source is not None:
+            dname = os.path.dirname(source)
+            if dname:
+                self.temp_path.insert(0,dname)
+        
+    # ----------------------------------------------------------------------
+    # token()
+    #
+    # Method to return individual tokens
+    # ----------------------------------------------------------------------
+    def token(self):
+        try:
+            while True:
+                tok = next(self.parser)
+                if tok.type not in self.ignore:
+                    return tok
+        except StopIteration:
+            self.parser = None
+            return None
+            
+    def write(self, oh=sys.stdout):
+        lastsource = None
+        while True:
+            emitlinedirective = False
+            tok = self.token()
+            if not tok: break
+            if tok.type in self.t_WS and tok.value[0]=='\n':
+                if hasattr(tok, 'source'):
+                    if lastsource is None:
+                        lastsource = tok.source
+                    elif lastsource != tok.source:
+                        emitlinedirective = True
+                        lastsource = tok.source
+                acc = [ tok ]
+                blanklines = tok.value.count('\n')
+                while True:
+                    tok = self.token()
+                    if not tok: break
+                    if tok.type in self.t_WS and tok.value[0]=='\n':
+                        acc.append(tok)
+                        blanklines += tok.value.count('\n')
+                    else:
+                        if blanklines > 6:
+                            # Emit # lineno instead
+                            emitlinedirective = True
+                        else:
+                            # Emit blank lines
+                            for t in acc:
+                                oh.write(t.value)
+                        break
+            if not tok: break
+            if emitlinedirective:
+                oh.write('\n# ' + str(tok.lineno + 1) + ('' if tok.source is None else (' "' + tok.source + '"' )) + '\n')
+            oh.write(tok.value)
+            #print(p.source, tok)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
+

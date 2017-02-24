@@ -1,37 +1,37 @@
-# 19 "tests/test-c/n_std.c"
-# 30 "tests/test-c/n_std.c"
-void    n_1( void);
-void    n_2( void);
-void    n_3( void);
-void    n_4( void);
-void    n_5( void);
-void    n_6( void);
-void    n_7( void);
-void    n_9( void);
-void    n_10( void);
-void    n_11( void);
-void    n_12( void);
-void    n_13( void);
-void    n_13_5( void);
-void    n_13_7( void);
-void    n_13_8( void);
-void    n_13_13( void);
-void    n_15( void);
-void    n_18( void);
-void    n_19( void);
-void    n_20( void);
-void    n_21( void);
-void    n_22( void);
-void    n_23( void);
-void    n_24( void);
-void    n_25( void);
-void    n_26( void);
-void    n_27( void);
-void    n_28( void);
-void    n_29( void);
-void    n_30( void);
-void    n_32( void);
-void    n_37( void);
+
+# 34 "tests/test-c/n_std.c"
+void n_1( void);
+void n_2( void);
+void n_3( void);
+void n_4( void);
+void n_5( void);
+void n_6( void);
+void n_7( void);
+void n_9( void);
+void n_10( void);
+void n_11( void);
+void n_12( void);
+void n_13( void);
+void n_13_5( void);
+void n_13_7( void);
+void n_13_8( void);
+void n_13_13( void);
+void n_15( void);
+void n_18( void);
+void n_19( void);
+void n_20( void);
+void n_21( void);
+void n_22( void);
+void n_23( void);
+void n_24( void);
+void n_25( void);
+void n_26( void);
+void n_27( void);
+void n_28( void);
+void n_29( void);
+void n_30( void);
+void n_32( void);
+void n_37( void);
 
 int main( void)
 {
@@ -68,24 +68,24 @@ int main( void)
     n_32();
     n_37();
     puts( "<End of \"n_std.c\">");
-    return  0;
+    return 0;
 }
 
-char    quasi_trigraph[] = { '?', '?', ' ', '?', '?', '?', ' '
+char quasi_trigraph[] = { '?', '?', ' ', '?', '?', '?', ' '
             , '?', '?', '%', ' ', '?', '?', '^', ' ', '?', '#', '\0' };
 
-void    n_2( void)
+void n_2( void)
 
 {
-    int     ab = 1, cd = 2, ef = 3, abcde = 5;
+    int ab = 1, cd = 2, ef = 3, abcde = 5;
 
 
 
 
 
     assert( ab + cd + ef == 6);
-# 122 "tests/test-c/n_std.c"
-    assert ( ab + cd + ef == 6);
+# 124 "tests/test-c/n_std.c"
+    assert (ab + cd               + ef == 6);
 
 
     assert (strcmp( "abcde", "abcde") == 0);
@@ -97,89 +97,106 @@ void    n_2( void)
 
 }
 
-void    n_3( void)
+void n_3( void)
 
 {
-    int     abcd = 4;
+    int abcd = 4;
 
 
-assert( strcmp( # abc de, "abc de") == 0);
+    assert( strcmp( "abc de", "abc de") == 0);
 # 156 "tests/test-c/n_std.c"
-    assert( abcd == 4);
+  abcd
+
+    assert(  == 4);
 }
 
-void    n_5( void)
+void n_5( void)
 
 
 
 {
-    int     abcde = 5;
+    int abcde = 5;
 
 
     assert( abcde == 5);
 }
-# 178 "tests/test-c/n_std.c"
-void    n_6( void)
+# 180 "tests/test-c/n_std.c"
+void n_6( void)
 
 {
-    int     abc = 3;
+    int abc = 3;
 
     assert( isalpha( 'a'));
-# 188 "tests/test-c/n_std.c"
+# 190 "tests/test-c/n_std.c"
     assert( abc == 3);
-# 193 "tests/test-c/n_std.c"
-    assert( abc == 3);
+
+
+
+
+    assert( MACRO_abc == 3);
 }
 
-void    n_7( void)
-
-{
-# 1234 "cpp"
-    assert( 1234 == 1234);
-    assert( strcmp( "cpp", "cpp") == 0);
-# 2345 "cpp"
-    assert( 2345 == 2345);
-    assert( strcmp( "cpp", "cpp") == 0);
-# 1234 "n_7.c"
-    assert( 1234 == 1234);
-    assert( strcmp( "n_7.c", "n_7.c") == 0);
-}
-# 218 "n_std.c"
-
-void    n_9( void)
+void n_7( void)
 
 {
 
 
-#pragma once
-#pragma who knows ?
+    assert( 202 == 1234);
+    assert( strcmp( "tests/test-c/n_std.c", "cpp") == 0);
+
+
+
+    assert( 207 == 2345);
+    assert( strcmp( "tests/test-c/n_std.c", "cpp") == 0);
+
+
+
+
+    assert( 213 == 1234);
+    assert( strcmp( "tests/test-c/n_std.c", "n_7.c") == 0);
 }
 
-void    n_10( void)
+
+
+
+void n_9( void)
 
 {
-# 238 "tests/test-c/n_std.c"
+
+
+
+
+}
+
+void n_10( void)
+
+{
+
+
+
+
+
     assert( 1);
-# 251 "tests/test-c/n_std.c"
+# 253 "tests/test-c/n_std.c"
 }
 
-void    n_11( void)
+void n_11( void)
 
 {
-    int     abc = 1, a = 0;
-# 264 "tests/test-c/n_std.c"
+    int abc = 1, a = 0;
+# 266 "tests/test-c/n_std.c"
     assert( abc);
 
 
     assert( abc);
-# 279 "tests/test-c/n_std.c"
+# 281 "tests/test-c/n_std.c"
 }
 
 
 
 
 
-void    n_12( void)
+void n_12( void)
 
 {
 
@@ -188,80 +205,65 @@ void    n_12( void)
 
 
     fputs( "Bad evaluation of long.\n", stderr);
-# 325 "tests/test-c/n_std.c"
+# 327 "tests/test-c/n_std.c"
 }
 
-void    n_13( void)
-# 343 "tests/test-c/n_std.c"
+void n_13( void)
+# 345 "tests/test-c/n_std.c"
 {
-# 363 "tests/test-c/n_std.c"
+# 362 "tests/test-c/n_std.c"
 }
 
-void    n_13_5( void)
-
-{
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
-
-void    n_13_7( void)
+void n_13_5( void)
 
 {
-# 406 "tests/test-c/n_std.c"
+# 377 "tests/test-c/n_std.c"
 }
 
-void    n_13_8( void)
+void n_13_7( void)
 
 {
-# 439 "tests/test-c/n_std.c"
+# 396 "tests/test-c/n_std.c"
 }
 
-void    n_13_13( void)
+void n_13_8( void)
 
 {
-# 466 "tests/test-c/n_std.c"
+# 417 "tests/test-c/n_std.c"
 }
 
-void    n_15( void)
+void n_13_13( void)
+
+{
+# 431 "tests/test-c/n_std.c"
+    fputs(
+    "Bad evaluation of macros expanding to operators in #if expression.\n"
+        , stderr);
+# 444 "tests/test-c/n_std.c"
+}
+
+void n_15( void)
 
 {
 
 
 
     assert( 1);
-# 483 "tests/test-c/n_std.c"
+# 461 "tests/test-c/n_std.c"
     assert( 1);
 
 }
 
-void    n_18( void)
+void n_18( void)
 
 
 
 
 {
-    int     c = 3;
+    int c = 3;
 
 
     assert( (1-1) == 0);
-
 
 
 
@@ -273,22 +275,16 @@ void    n_18( void)
     assert( strcmp( "n1:n2", "n1:n2") == 0);
 }
 
-void    n_19( void)
+void n_19( void)
 
 {
-    int     c = 1;
-
-
-
-
-
-
-
-
-    assert( ( c ) == 1);
+    int c = 1;
+# 498 "tests/test-c/n_std.c"
+ )
+    assert( (                             c == 1);
 }
 
-void    n_20( void)
+void n_20( void)
 
 {
 
@@ -297,123 +293,108 @@ void    n_20( void)
     assert( sizeof fl == sizeof (double));
 }
 
-void    n_21( void)
+void n_21( void)
 
 {
-    int     a = 1, x = 2, y = -3;
+    int a = 1, x = 2, y = -3;
 
 
 
     assert( ---a == -1);
-
-
-
-
-
-
-    assert( x- -y == -1);
+# 525 "tests/test-c/n_std.c"
+    assert( x--y == -1);
 }
 
-void    n_22( void)
+void n_22( void)
+
+{
+# 539 "tests/test-c/n_std.c"
+    assert( strcmp( "12+1", "12+1") == 0);
+}
+
+void n_23( void)
+
+{
+    int xy = 1;
+
+
+    assert( xy == 1);
+
+
+
+
+    assert( .12e+2 == 12.0);
+}
+
+void n_24( void)
 
 {
 
+    assert( strcmp( "a+b", "a+b") == 0);
+
+
+
+    assert( strcmp( "ab +
+        cd", "ab + cd") == 0);
+
+
+
+    assert( strcmp( "'"' + "' \\""", "'\"' + \"' \\\"\"") == 0);
+
+
+
+    assert( strcmp( ""abc"", "\"abc\"") == 0);
 
 
 
 
 
-
-
-
-
-    assert( strcmp( # 12+1, "12+1") == 0);
+    assert( strcmp( "x-y", "x-y") == 0);
 }
 
-void    n_23( void)
-
-{
-    int     xy = 1;
-
-
-    assert( x ## y == 1);
-
-
-
-
-    assert( .12e+ ## 2 == 12.0);
-}
-
-void    n_24( void)
-
-{
-
-    assert( strcmp( # a+b, "a+b") == 0);
-
-
-
-assert( strcmp( # ab + cd , "ab + cd") == 0);
-
-
-
-
-    assert( strcmp( # '"' + "' \"", "'\"' + \"' \\\"\"") == 0);
-
-
-
-    assert( strcmp( # "abc", "\"abc\"") == 0);
-
-
-
-
-
-    assert( strcmp( # x-y, "x-y") == 0);
-}
-
-void    n_25( void)
+void n_25( void)
 
 
 
 {
-    int     a = 1, b = 2, abc = 3, MACRO_0MACRO_1 = 2;
-
-
-
-
-
-
-    assert( ( a,b - 1) == 1);
+    int a = 1, b = 2, abc = 3, MACRO_0MACRO_1 = 2;
+# 594 "tests/test-c/n_std.c"
+    assert( (a,b - 1) == 1);
 
 
     assert( ( - a) == -1);
 
 
-    assert( glue( a, b) ## c == 3);
+    assert( abc == 3);
 
 
-    assert( 0 ## 1 == 2);
+    assert( 01 == 2);
 
 
-    assert( strcmp( # , "ZERO_TOKEN") == 0);
-}
-# 648 "tests/test-c/n_std.c"
-int     f( int a)
-{
-    return  a;
-}
-
-int     g( int a)
-{
-    return  a * 2;
+    assert( strcmp( "ZERO_TOKEN", "ZERO_TOKEN") == 0);
 }
 
 
-void    n_26( void)
+
+
+
+int f( int a)
+{
+    return a;
+}
+
+int g( int a)
+{
+    return a * 2;
+}
+
+
+void n_26( void)
 
 {
-    int     x = 1;
-    int     AB = 1;
-    int     Z[1];
+    int x = 1;
+    int AB = 1;
+    int Z[1];
     Z[0] = 1;
 
 
@@ -430,7 +411,7 @@ void    n_26( void)
 
 
 
-    assert( x + f( x) == 2);
+    assert( x + f(x) == 2);
 
 
 
@@ -440,65 +421,55 @@ void    n_26( void)
 
 
 
-    assert( Z[0] + f( Z[0]) == 2);
+    assert( Z[0][0] + f(Z[0][0]) == 2);
 }
 
-void    n_27( void)
+void n_27( void)
 
 
 
 
 {
-    int     a = 1, b = 2, c, m = 1, n = 2;
-# 711 "tests/test-c/n_std.c"
+    int a = 1, b = 2, c, m = 1, n = 2;
+# 687 "tests/test-c/n_std.c"
     assert( 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 == 36);
+# 694 "tests/test-c/n_std.c"
+    assert( (1) + (1 + 2) + 1 + 2 + 1 + 2 + 3 + 1 + 2 + 3 + 4 == 23);
 
 
+    assert( MACRO_1 == 1);
+# 704 "tests/test-c/n_std.c"
+    assert( ((a) - (b)) == -1);
 
 
-
-
-    assert( ( 1) + ( NEST1 + 2) + NEST2 + NEST2 + 3 + NEST2 + 3 + 4 == 23);
-
-
-    assert( MACRO_ ## 1 == 1);
-
-
-
-
-
-
-    assert( ( ( a) - ( b)) == -1);
-
-
-    c = ( a - b );
+    c = sub( a,b );
     assert( c == -1);
 
 
 
 
 
-    assert( n == 2);
+    assert( n( n) == 2);
 }
 
-void    n_28( void)
+void n_28( void)
 
 
 {
-    char * date = "Feb 17 2017";
+    char * date = "Feb 24 2017";
 
 
-    assert( strcmp( "n_std.c", "n_std.c") == 0);
+    assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
 
 
-    assert( 751 == 779);
+    assert( 726 == 779);
 
 
-    assert( strlen( "Feb 17 2017") == 11);
+    assert( strlen( "Feb 24 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "18:31:41") == 8);
+    assert( strlen( "14:43:14") == 8);
 
 
     assert( 1);
@@ -509,18 +480,21 @@ void    n_28( void)
 
 
 
+
 {
-    char * file = "tests/test-c/line.h";
+
+# 5 "line.h"
+    char * file = "line.h";
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
-}
-# 768 "tests/test-c/n_std.c"
-}
+}}
 
-void    n_29( void)
+
+# 746 "tests/test-c/n_std.c"
+void n_29( void)
 
 {
-    int     DEFINED = 1;
+    int DEFINED = 1;
 
 
 
@@ -531,63 +505,39 @@ void    n_29( void)
 
 }
 
-void    n_30( void)
-
-
-
-
-
-
+void n_30( void)
+# 767 "tests/test-c/n_std.c"
 {
 
 
 
-    int     a = 1, b = 2, c = 3;
+    int a = 1, b = 2, c = 3;
 
 
     assert
     (
-        FUNC
-        (
-            a,
-            b,
-            c
-        )
+        a + b + c
         == 6
     );
 }
 
-void    n_32( void)
+void n_32( void)
 
 {
-
-
-    fputs( "Bad evaluation of octal escape sequence.\n", stderr);
-
-
-
-
-
-
+# 798 "tests/test-c/n_std.c"
 }
 
-void    n_37( void)
+void n_37( void)
 
 {
-
-
-
-
-
-
-    int     ABCDEFGHIJKLMNOPQRSTUVWXYZabcde = 31;
-    int     ABCDEFGHIJKLMNOPQRSTUVWXYZabcd_ = 30;
-    int     nest = 0;
+# 809 "tests/test-c/n_std.c"
+    int ABCDEFGHIJKLMNOPQRSTUVWXYZabcde = 31;
+    int ABCDEFGHIJKLMNOPQRSTUVWXYZabcd_ = 30;
+    int nest = 0;
 
 
     assert(
-         A## B## C## D## E## F## G## H## I## J## K## L## M## N## O## P## Q## R ## S## T## U## V## W## X## -y## Z[0]## A## B## C## D## E
-
+        ABCDEFGHIJKLMNOPQRSTUVWX-yZ[0]abcde
         == 31);
 
 
@@ -596,73 +546,87 @@ void    n_37( void)
 
 
     nest = 0;
-# 865 "tests/test-c/n_std.c"
+# 841 "tests/test-c/n_std.c"
                                 nest = 8;
-# 874 "tests/test-c/n_std.c"
+# 850 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
     nest = 0;
 
 
+
     nest = 1;
 
 
 
+
+# 4 "nest2.h"
     nest = 2;
 
 
 
+
+# 4 "nest3.h"
     nest = 3;
 
 
 
+
+# 4 "nest4.h"
     nest = 4;
 
 
 
+
+# 4 "nest5.h"
     nest = 5;
 
 
 
+
+# 4 "nest6.h"
     nest = 6;
 
 
 
+
+# 4 "nest7.h"
     nest = 7;
 
 
 
 
+
+# 5 "nest8.h"
     nest = 8;
-# 879 "tests/test-c/n_std.c"
+
+
+
+
+# 855 "tests/test-c/n_std.c"
     assert( nest == 8);
-
-
-
-
-
-
+# 862 "tests/test-c/n_std.c"
     nest = 32;
 
     assert( nest == 32);
 
 
     {
-        char *  extremely_long_string =
+        char * extremely_long_string =
 "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567"
-# 901 "tests/test-c/n_std.c"
+# 877 "tests/test-c/n_std.c"
         ;
         assert( strlen( extremely_long_string) == 507);
     }
 
 
     {
-    int a123456789012345678901234567890 = 123450;       int b123456789012345678901234567890 = 123451;       int c123456789012345678901234567890 = 123452;       int d123456789012345678901234567890 = 123453;       int e123456789012345678901234567890 = 123454;       int f123456789012345678901234567890 = 123455;       int A123456789012345678901234567890 = 123456;       int B123456789012345678901234567890 = 123457;       int C123456789012345678901234567890 = 123458;       int D1234567890123456789012 = 123459;
-# 917 "tests/test-c/n_std.c"
+    int a123456789012345678901234567890 = 123450; int b123456789012345678901234567890 = 123451; int c123456789012345678901234567890 = 123452; int d123456789012345678901234567890 = 123453; int e123456789012345678901234567890 = 123454; int f123456789012345678901234567890 = 123455; int A123456789012345678901234567890 = 123456; int B123456789012345678901234567890 = 123457; int C123456789012345678901234567890 = 123458; int D1234567890123456789012 = 123459;
+# 893 "tests/test-c/n_std.c"
         assert( a123456789012345678901234567890 == 123450
             && D1234567890123456789012 == 123459);
     }
-# 927 "tests/test-c/n_std.c"
+# 903 "tests/test-c/n_std.c"
     assert( 1);
 }
