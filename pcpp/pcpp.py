@@ -151,6 +151,8 @@ class Macro(object):
         if variadic:
             self.vararg = arglist[-1]
         self.source = None
+    def __repr__(self):
+        return "%s(%s)=%s" % (self.name, self.arglist, self.value)
 
 # ------------------------------------------------------------------
 # Preprocessor object
@@ -455,7 +457,7 @@ class Preprocessor(object):
         str_expansion = {}
         for argnum, i in macro.str_patch:
             if argnum not in str_expansion:
-                str_expansion[argnum] = ('"%s"' % "".join([x.value for x in args[argnum]])).replace("\\","\\\\")
+                str_expansion[argnum] = '"'+('%s' % "".join([x.value for x in args[argnum]])).replace("\\","\\\\").replace('"', '\\"')+'"'
             rep[i] = copy.copy(rep[i])
             rep[i].value = str_expansion[argnum]
 
@@ -508,7 +510,6 @@ class Preprocessor(object):
                     expanded[t.value] = True
                     
                     m = self.macros[t.value]
-                    #print("Macro is", m.name, "with line", tokens)
                     if m.arglist is None:
                         # A simple macro
                         ex = self.expand_macros([copy.copy(_x) for _x in m.value],expanded)
@@ -554,6 +555,7 @@ class Preprocessor(object):
                                 rep = self.expand_macros(rep,expanded)
                                 for r in rep:
                                     r.lineno = t.lineno
+                                #print("Expanding macro", m, "into", rep, "replacing", tokens[i:j+tokcount])
                                 tokens[i:j+tokcount] = rep
                                 i += len(rep)
                     del expanded[t.value]
@@ -750,33 +752,6 @@ class Preprocessor(object):
             else:
                 # Normal text
                 if enable:
-                    # Is this line entirely whitespace?
-                    all_ws = True
-                    for i,tok in enumerate(x):
-                        if tok.type not in self.t_WS:
-                            all_ws = False
-                            break
-                    if all_ws:
-                        # Remove preceding whitespace
-                        if len(x) > 1:
-                            x = [ x[-1] ]
-                    else:
-                        # Replace consecutive whitespace with a space except at the very front
-                        first_ws = None
-                        for n in xrange(len(x)-1, -1, -1):
-                            tok = x[n]
-                            if first_ws is None:
-                                if tok.type in self.t_SPACE:
-                                    first_ws = n
-                            else:
-                                if tok.type not in self.t_SPACE:
-                                    m = n + 1
-                                    while m != first_ws:
-                                        del x[m]
-                                        first_ws -= 1
-                                    first_ws = None
-                                    if x[m].value[0] == ' ':
-                                        x[m].value = ' ' 
                     chunk.extend(x)
 
         for tok in self.expand_macros(chunk):
@@ -950,39 +925,69 @@ class Preprocessor(object):
             
     def write(self, oh=sys.stdout):
         lastsource = None
-        while True:
+        done = False
+        blankacc = []
+        blanklines = 0
+        while not done:
             emitlinedirective = False
-            tok = self.token()
-            if not tok: break
-            if tok.type in self.t_WS and tok.value[0]=='\n':
-                if hasattr(tok, 'source'):
-                    if lastsource is None:
-                        lastsource = tok.source
-                    elif lastsource != tok.source:
-                        emitlinedirective = True
-                        lastsource = tok.source
-                acc = [ tok ]
-                blanklines = tok.value.count('\n')
-                while True:
-                    tok = self.token()
-                    if not tok: break
-                    if tok.type in self.t_WS and tok.value[0]=='\n':
-                        acc.append(tok)
-                        blanklines += tok.value.count('\n')
-                    else:
-                        if blanklines > 6:
-                            # Emit # lineno instead
-                            emitlinedirective = True
-                        else:
-                            # Emit blank lines
-                            for t in acc:
-                                oh.write(t.value)
-                        break
-            if not tok: break
+            toks = []
+            all_ws = True
+            # Accumulate a line
+            while not done:
+                tok = self.token()
+                if not tok:
+                    done = True
+                    break
+                toks.append(tok)
+                if tok.value[0] == '\n':
+                    break
+                if tok.type not in self.t_WS:
+                    all_ws = False
+            if not toks:
+                break
+            if all_ws:
+                # Remove preceding whitespace so it becomes just a LF
+                if len(toks) > 1:
+                    tok = toks[-1]
+                    toks = [ tok ]
+                blankacc.append(toks)
+                blanklines += toks[0].value.count('\n')
+                continue
+            # The line in toks is not all whitespace
+            emitlinedirective = (blanklines > 6)
+            if hasattr(toks[0], 'source'):
+                if lastsource is None:
+                    lastsource = toks[0].source
+                elif lastsource != toks[0].source:
+                    emitlinedirective = True
+                    lastsource = toks[0].source
+            # Replace consecutive whitespace in output with a single space except at any indent
+            first_ws = None
+            for n in xrange(len(toks)-1, -1, -1):
+                tok = toks[n]
+                if first_ws is None:
+                    if tok.type in self.t_SPACE or len(tok.value) == 0:
+                        first_ws = n
+                else:
+                    if tok.type not in self.t_SPACE and len(tok.value) > 0:
+                        m = n + 1
+                        while m != first_ws:
+                            del toks[m]
+                            first_ws -= 1
+                        first_ws = None
+                        # Collapse a token of many whitespace into single
+                        if toks[m].value[0] == ' ':
+                            toks[m].value = ' '
             if emitlinedirective:
-                oh.write('\n# ' + str(tok.lineno + 1) + ('' if tok.source is None else (' "' + tok.source + '"' )) + '\n')
-            oh.write(tok.value)
-            #print(p.source, tok)
+                oh.write('# ' + str(toks[0].lineno - 1) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            elif blanklines > 0:
+                for line in blankacc:
+                    for tok in line:
+                        oh.write(tok.value)
+            blankacc = []
+            blanklines = 0
+            for tok in toks:
+                oh.write(tok.value)
 
 if __name__ == "__main__":
     import doctest
