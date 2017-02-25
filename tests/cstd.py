@@ -86,3 +86,30 @@ fprintf(stderr, "Flag");
 fprintf(stderr, "X = %d\n", x);
 puts("The first, second, and third items.");
 ((x>y)?puts("x>y"):printf( "x is %d but y is %d", x, y));"""
+
+class std5(unittest.TestCase, runner):
+    input = r"""#define Z   Z[0]
+    assert( Z == 1);
+#define AB  BA
+#define BA  AB
+    assert( AB == 1);
+#define f(a)    a + f(a)
+    assert( f( x) == 2);
+#define g(a)    a + h( a)
+#define h(a)    a + g( a)
+    assert( g( x) == 4);
+    assert( f( Z) == 2);
+"""
+    output = r"""
+
+    assert( Z[0] == 1);
+
+
+    assert( AB == 1);
+
+    assert( x + f(x) == 2);
+
+
+    assert( x + x + g( x) == 4);
+    assert( Z[0] + f(Z[0]) == 2);
+    """

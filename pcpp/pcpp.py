@@ -348,7 +348,7 @@ class Preprocessor(object):
     # define new arguments.
     # ----------------------------------------------------------------------
 
-    def collect_args(self,tokenlist):
+    def collect_args(self,tokenlist,ignore_errors=False):
         args = []
         positions = []
         current_arg = []
@@ -363,7 +363,8 @@ class Preprocessor(object):
         if (i < tokenlen) and (tokenlist[i].value == '('):
             positions.append(i+1)
         else:
-            self.error(tokenlist[0].source,tokenlist[0].lineno,"Missing '(' in macro arguments")
+            if not ignore_errors:
+                self.error(tokenlist[0].source,tokenlist[0].lineno,"Missing '(' in macro arguments")
             return 0, [], []
 
         i += 1
@@ -389,7 +390,8 @@ class Preprocessor(object):
             i += 1
     
         # Missing end argument
-        self.error(tokenlist[-1].source,tokenlist[-1].lineno,"Missing ')' in macro arguments")
+        if not ignore_errors:
+            self.error(tokenlist[-1].source,tokenlist[-1].lineno,"Missing ')' in macro arguments")
         return 0, [],[]
 
     # ----------------------------------------------------------------------
@@ -494,29 +496,38 @@ class Preprocessor(object):
     # expand_macros()
     #
     # Given a list of tokens, this function performs macro expansion.
-    # The expanded argument is a dictionary that contains macros already
-    # expanded.  This is used to prevent infinite recursion.
     # ----------------------------------------------------------------------
 
-    def expand_macros(self,tokens,expanded=None):
-        if expanded is None:
-            expanded = {}
+    def expand_macros(self,tokens):
+        # Each token needs to track from which macros it has been expanded from to prevent recursion
+        for tok in tokens:
+            if not hasattr(tok, 'expanded_from'):
+                tok.expanded_from = []
         i = 0
+        #print "*** EXPAND MACROS in", "".join([t.value for t in tokens])
+        #print tokens
+        #print [(t.value, t.expanded_from) for t in tokens]
         while i < len(tokens):
             t = tokens[i]
             if t.type == self.t_ID:
-                if t.value in self.macros and t.value not in expanded:
+                if t.value in self.macros and t.value not in t.expanded_from:
                     # Yes, we found a macro match
-                    expanded[t.value] = True
-                    
                     m = self.macros[t.value]
                     if m.arglist is None:
                         # A simple macro
-                        ex = self.expand_macros([copy.copy(_x) for _x in m.value],expanded)
+                        rep = [copy.copy(_x) for _x in m.value]
+                        for r in rep:
+                            if not hasattr(r, 'expanded_from'):
+                                r.expanded_from = []
+                            r.expanded_from.append(t.value)
+                        ex = self.expand_macros(rep)
+                        #print "\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:i+1]
                         for e in ex:
                             e.lineno = t.lineno
+                            if not hasattr(e, 'expanded_from'):
+                                e.expanded_from = []
+                            e.expanded_from.append(t.value)
                         tokens[i:i+1] = ex
-                        i += len(ex)
                     else:
                         # A macro with arguments
                         j = i + 1
@@ -526,7 +537,10 @@ class Preprocessor(object):
                         if j == len(tokens) or tokens[j].value != '(':
                             i = j
                         else:
-                            tokcount,args,positions = self.collect_args(tokens[j:])
+                            tokcount,args,positions = self.collect_args(tokens[j:], True)
+                            if tokcount == 0:
+                                # Unclosed parameter list, just bail out
+                                break
                             if (not m.variadic
                                 # A no arg or single arg consuming macro is permitted to be expanded with nothing
                                 and (args != [[]] or len(m.arglist) > 1)
@@ -547,18 +561,24 @@ class Preprocessor(object):
                                         args[len(m.arglist)-1] = tokens[j+positions[len(m.arglist)-1]:j+tokcount-1]
                                         del args[len(m.arglist):]
                                 else:
+                                    # If we called a single arg macro with empty, fake extend args
                                     while len(args) < len(m.arglist):
                                         args.append([])
                                         
                                 # Get macro replacement text
                                 rep = self.macro_expand_args(m,args)
-                                rep = self.expand_macros(rep,expanded)
                                 for r in rep:
-                                    r.lineno = t.lineno
-                                #print("Expanding macro", m, "into", rep, "replacing", tokens[i:j+tokcount])
-                                tokens[i:j+tokcount] = rep
-                                i += len(rep)
-                    del expanded[t.value]
+                                    if not hasattr(r, 'expanded_from'):
+                                        r.expanded_from = []
+                                    r.expanded_from.append(t.value)
+                                ex = self.expand_macros(rep)
+                                for e in ex:
+                                    e.lineno = t.lineno
+                                    if not hasattr(e, 'expanded_from'):
+                                        e.expanded_from = []
+                                    e.expanded_from.append(t.value)
+                                #print "\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:j+tokcount]
+                                tokens[i:j+tokcount] = ex
                     continue
                 elif t.value == '__LINE__':
                     t.type = self.t_INTEGER
