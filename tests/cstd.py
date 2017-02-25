@@ -101,7 +101,6 @@ class std5(unittest.TestCase, runner):
     assert( f( Z) == 2);
 """
     output = r"""
-
     assert( Z[0] == 1);
 
 
@@ -111,5 +110,84 @@ class std5(unittest.TestCase, runner):
 
 
     assert( x + x + g( x) == 4);
-    assert( Z[0] + f(Z[0]) == 2);
-    """
+    assert( Z[0] + f(Z[0]) == 2);"""
+
+
+class std6(unittest.TestCase, runner):
+    input = r"""#define MACRO_0         0
+#define MACRO_1         1
+#define glue( a, b)     a ## b
+    assert( glue( MACRO_0, MACRO_1) == 2);
+"""
+    output = r"""
+
+
+    assert( MACRO_0MACRO_1 == 2);"""
+
+
+class std7(unittest.TestCase, runner):
+    input = r"""#define MACRO_abcd  /*
+    in comment
+    */  abcd
+MACRO_abcd
+"""
+    output = r"""
+abcd"""
+
+
+class std8(unittest.TestCase, runner):
+    input = r"""#if 0
+niall
+#elif 0
+douglas
+#elif 1
+foo
+#endif
+"""
+    output = r"""
+
+
+
+
+foo"""
+
+
+class std9(unittest.TestCase, runner):
+    input = r'''#define str(x) # x
+str(    niall  is      a   /* comment */
+   pretty      boy           )
+'''
+    output = r'''
+"niall is a pretty boy"'''
+
+
+class std10(unittest.TestCase, runner):
+    input = r"""#define MACRO_0         0
+#define MACRO_1         1
+#define glue( a, b)     a ## b
+    assert( glue( MACRO_, 1) == 1);
+"""
+    output = r"""
+
+
+    assert( 1 == 1);"""
+
+class std11(unittest.TestCase, runner):
+    input = r"""#define FUNC( a, b, c)      a + b + c
+        FUNC
+        (
+            a,
+            b,
+            c
+        )
+        == 6
+"""
+    output = r"""
+        a + b + c
+
+
+
+
+
+        == 6"""
+

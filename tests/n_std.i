@@ -137,7 +137,9 @@ void n_6( void)
 
 
 
-    assert( MACRO_abc == 3);
+
+
+    assert( abc == 3);
 }
 
 void n_7( void)
@@ -327,7 +329,16 @@ void n_21( void)
 void n_22( void)
 
 {
-# 537 "tests/test-c/n_std.c"
+
+
+
+    assert( strcmp( "12E+1", "12E+EXP") == 0);
+
+
+    assert( strcmp( ".2e-1", ".2e-EXP") == 0);
+
+
+
     assert( strcmp( "12+1", "12+1") == 0);
 }
 
@@ -353,8 +364,7 @@ void n_24( void)
 
 
 
-    assert( strcmp( "ab      +
-        cd", "ab + cd") == 0);
+    assert( strcmp( "ab + cd", "ab + cd") == 0);
 
 
 
@@ -445,7 +455,7 @@ void n_26( void)
 
 
 
-    assert( Z[0][0] + f(Z[0][0]) == 2);
+    assert( Z[0] + f(Z[0]) == 2);
 }
 
 void n_27( void)
@@ -455,7 +465,7 @@ void n_27( void)
 
 {
     int a = 1, b = 2, c, m = 1, n = 2;
-# 685 "tests/test-c/n_std.c"
+# 687 "tests/test-c/n_std.c"
     assert( 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 == 36);
 
 
@@ -476,34 +486,34 @@ void n_27( void)
     assert( ((a) - (b)) == -1);
 
 
-    c = sub( a,b );
+    c = (a - b);
     assert( c == -1);
 
 
 
 
 
-    assert( n( n) == 2);
+    assert( n == 2);
 }
 
 void n_28( void)
 
 
 {
-    char * date = "Feb 24 2017";
+    char * date = "Feb 25 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
 
 
-    assert( 726 == 779);
+    assert( 728 == 779);
 
 
-    assert( strlen( "Feb 24 2017") == 11);
+    assert( strlen( "Feb 25 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "23:34:27") == 8);
+    assert( strlen( "16:55:57") == 8);
 
 
     assert( 1);
@@ -516,7 +526,7 @@ void n_28( void)
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
 }}
-# 744 "tests/test-c/n_std.c"
+# 746 "tests/test-c/n_std.c"
 void n_29( void)
 
 {
@@ -555,7 +565,7 @@ void n_30( void)
 void n_32( void)
 
 {
-# 796 "tests/test-c/n_std.c"
+# 798 "tests/test-c/n_std.c"
 }
 
 void n_37( void)
@@ -582,9 +592,9 @@ void n_37( void)
 
 
     nest = 0;
-# 839 "tests/test-c/n_std.c"
+# 841 "tests/test-c/n_std.c"
                                 nest = 8;
-# 848 "tests/test-c/n_std.c"
+# 850 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
@@ -605,7 +615,7 @@ void n_37( void)
     nest = 7;
 # 3 "nest8.h"
     nest = 8;
-# 853 "tests/test-c/n_std.c"
+# 855 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
@@ -621,7 +631,7 @@ void n_37( void)
     {
         char * extremely_long_string =
 "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567"
-# 875 "tests/test-c/n_std.c"
+# 877 "tests/test-c/n_std.c"
         ;
         assert( strlen( extremely_long_string) == 507);
     }
@@ -629,10 +639,10 @@ void n_37( void)
 
     {
     int a123456789012345678901234567890 = 123450; int b123456789012345678901234567890 = 123451; int c123456789012345678901234567890 = 123452; int d123456789012345678901234567890 = 123453; int e123456789012345678901234567890 = 123454; int f123456789012345678901234567890 = 123455; int A123456789012345678901234567890 = 123456; int B123456789012345678901234567890 = 123457; int C123456789012345678901234567890 = 123458; int D1234567890123456789012 = 123459;
-# 891 "tests/test-c/n_std.c"
+# 893 "tests/test-c/n_std.c"
         assert( a123456789012345678901234567890 == 123450
             && D1234567890123456789012 == 123459);
     }
-# 901 "tests/test-c/n_std.c"
+# 903 "tests/test-c/n_std.c"
     assert( 1);
 }

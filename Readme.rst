@@ -75,6 +75,17 @@ Still to implement:
 - :c:`#warning`
 - :c:`#pragma` (ignored)
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE`
+- Conformance failures:
+
+  - Multiline comments in macro definitions are not eliminated e.g.:
+  
+  #define MACRO_abcd  /*
+    in comment
+    */  abcd
+    
+  - #if ... #endif isn't emitting blank lines for removed sections
+  - Failing to whitespace collapse before stringisation
+  - Failing to whitespace unary operators e.g. '---a' => '- - -a'
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------

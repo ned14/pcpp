@@ -455,11 +455,24 @@ class Preprocessor(object):
         rep = [copy.copy(_x) for _x in macro.value]
 
         # Make string expansion patches.  These do not alter the length of the replacement sequence
-        
         str_expansion = {}
         for argnum, i in macro.str_patch:
             if argnum not in str_expansion:
-                str_expansion[argnum] = '"'+('%s' % "".join([x.value for x in args[argnum]])).replace("\\","\\\\").replace('"', '\\"')+'"'
+                # Strip all non-space whitespace before stringization
+                tokens = copy.copy(args[argnum])
+                for j in xrange(len(tokens)):
+                    if tokens[j].type in self.t_WS:
+                        tokens[j].value = ' '
+                # Collapse all multiple whitespace too
+                j = 0
+                while j < len(tokens) - 1:
+                    if tokens[j].type in self.t_WS and tokens[j+1].type in self.t_WS:
+                        del tokens[j+1]
+                    else:
+                        j += 1
+                str = "".join([x.value for x in tokens])
+                str = str.replace("\\","\\\\").replace('"', '\\"')
+                str_expansion[argnum] = '"' + str + '"'
             rep[i] = copy.copy(rep[i])
             rep[i].value = str_expansion[argnum]
 
@@ -498,29 +511,25 @@ class Preprocessor(object):
     # Given a list of tokens, this function performs macro expansion.
     # ----------------------------------------------------------------------
 
-    def expand_macros(self,tokens):
+    def expand_macros(self,tokens,expanding_from=[]):
         # Each token needs to track from which macros it has been expanded from to prevent recursion
         for tok in tokens:
             if not hasattr(tok, 'expanded_from'):
                 tok.expanded_from = []
         i = 0
-        #print "*** EXPAND MACROS in", "".join([t.value for t in tokens])
+        #print "*** EXPAND MACROS in", "".join([t.value for t in tokens]), "expanding_from=", expanding_from
         #print tokens
         #print [(t.value, t.expanded_from) for t in tokens]
         while i < len(tokens):
             t = tokens[i]
             if t.type == self.t_ID:
-                if t.value in self.macros and t.value not in t.expanded_from:
+                if t.value in self.macros and t.value not in t.expanded_from and t.value not in expanding_from:
                     # Yes, we found a macro match
                     m = self.macros[t.value]
                     if m.arglist is None:
                         # A simple macro
                         rep = [copy.copy(_x) for _x in m.value]
-                        for r in rep:
-                            if not hasattr(r, 'expanded_from'):
-                                r.expanded_from = []
-                            r.expanded_from.append(t.value)
-                        ex = self.expand_macros(rep)
+                        ex = self.expand_macros(rep, expanding_from + [t.value])
                         #print "\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:i+1]
                         for e in ex:
                             e.lineno = t.lineno
@@ -567,11 +576,7 @@ class Preprocessor(object):
                                         
                                 # Get macro replacement text
                                 rep = self.macro_expand_args(m,args)
-                                for r in rep:
-                                    if not hasattr(r, 'expanded_from'):
-                                        r.expanded_from = []
-                                    r.expanded_from.append(t.value)
-                                ex = self.expand_macros(rep)
+                                ex = self.expand_macros(rep, expanding_from + [t.value])
                                 for e in ex:
                                     e.lineno = t.lineno
                                     if not hasattr(e, 'expanded_from'):
@@ -790,7 +795,7 @@ class Preprocessor(object):
             return
         if tokens:
             if tokens[0].value != '<' and tokens[0].type != self.t_STRING:
-                tokens = self.expand_macros(tokens)
+                tokens = self.tokenstrip(self.expand_macros(tokens))
 
             if tokens[0].value == '<':
                 # Include <...>
