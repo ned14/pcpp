@@ -177,11 +177,7 @@ void n_9( void)
 void n_10( void)
 
 {
-
-
-
-
-
+# 238 "tests/test-c/n_std.c"
     assert( 1);
 # 251 "tests/test-c/n_std.c"
 }
@@ -190,12 +186,7 @@ void n_11( void)
 
 {
     int abc = 1, a = 0;
-
-
-
-
-
-
+# 264 "tests/test-c/n_std.c"
     assert( abc);
 
 
@@ -260,12 +251,7 @@ void n_15( void)
 
 
     assert( 1);
-
-
-
-
-
-
+# 459 "tests/test-c/n_std.c"
     assert( 1);
 
 }
@@ -280,6 +266,7 @@ void n_18( void)
 
 
     assert( (1-1) == 0);
+
 
 
 
@@ -407,11 +394,7 @@ void n_25( void)
 
     assert( strcmp( "ZERO_TOKEN", "ZERO_TOKEN") == 0);
 }
-
-
-
-
-
+# 624 "tests/test-c/n_std.c"
 int f( int a)
 {
     return a;
@@ -513,7 +496,7 @@ void n_28( void)
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "14:48:27") == 8);
+    assert( strlen( "14:56:08") == 8);
 
 
     assert( 1);

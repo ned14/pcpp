@@ -149,7 +149,8 @@ foo
 
 
 
-foo"""
+foo
+"""
 
 
 class std9(unittest.TestCase, runner):

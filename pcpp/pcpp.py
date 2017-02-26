@@ -785,6 +785,15 @@ class Preprocessor(object):
                 # Normal text
                 if enable:
                     chunk.extend(x)
+                else:
+                    # Need to extend with the same number of blank lines
+                    i = 0
+                    while i < len(x):
+                        if x[i].type not in self.t_WS:
+                            del x[i]
+                        else:
+                            i += 1
+                    chunk.extend(x)
 
         for tok in self.expand_macros(chunk):
             yield tok
