@@ -424,11 +424,11 @@ class Preprocessor(object):
                     continue
                 # Concatenation
                 elif (i > 0 and macro.value[i-1].value == '##'):
-                    macro.patch.append(('c',argnum,i-1))
+                    macro.patch.append(('l',argnum,i-1))
                     del macro.value[i-1]
                     continue
                 elif ((i+1) < len(macro.value) and macro.value[i+1].value == '##'):
-                    macro.patch.append(('c',argnum,i))
+                    macro.patch.append(('r',argnum,i))
                     i += 1
                     continue
                 # Standard expansion
@@ -488,10 +488,17 @@ class Preprocessor(object):
         # size of the replacement sequence to expand from the patch point.
         
         expanded = { }
+        #print "***", macro
+        #print macro.patch
         for ptype, argnum, i in macro.patch:
             # Concatenation.   Argument is left unexpanded
-            if ptype == 'c':
+            if ptype == 'l':
                 rep[i:i+1] = args[argnum]
+            elif ptype == 'r':
+                rep[i:i+1] = args[argnum]
+                if len(rep) > i+1:
+                    rep[i].value += rep[i+1].value
+                    del rep[i+1]
             # Normal expansion.  Argument is macro expanded first
             elif ptype == 'e':
                 if argnum not in expanded:

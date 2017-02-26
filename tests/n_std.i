@@ -402,7 +402,7 @@ void n_25( void)
     assert( abc == 3);
 
 
-    assert( 01 == 2);
+    assert( MACRO_0MACRO_1 == 2);
 
 
     assert( strcmp( "ZERO_TOKEN", "ZERO_TOKEN") == 0);
@@ -476,7 +476,7 @@ void n_27( void)
     assert( (1) + (1 + 2) + 1 + 2 + 1 + 2 + 3 + 1 + 2 + 3 + 4 == 23);
 
 
-    assert( MACRO_1 == 1);
+    assert( 1 == 1);
 
 
 
@@ -500,7 +500,7 @@ void n_28( void)
 
 
 {
-    char * date = "Feb 25 2017";
+    char * date = "Feb 26 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -509,11 +509,11 @@ void n_28( void)
     assert( 728 == 779);
 
 
-    assert( strlen( "Feb 25 2017") == 11);
+    assert( strlen( "Feb 26 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "16:55:57") == 8);
+    assert( strlen( "14:48:27") == 8);
 
 
     assert( 1);
