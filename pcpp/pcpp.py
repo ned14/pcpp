@@ -70,8 +70,8 @@ def t_CPP_COMMENT1(t):
     r'(/\*(.|\n)*?\*/)'
     ncr = t.value.count("\n")
     t.lexer.lineno += ncr
-    # replace with one space or a number of '\n'
-    t.type = 'CPP_WS'; t.value = '\n' * ncr if ncr else ' '
+    # replace with one space
+    t.type = 'CPP_WS'; t.value = ' '
     return t
 
 # Line comment
@@ -965,6 +965,7 @@ class Preprocessor(object):
             return None
             
     def write(self, oh=sys.stdout):
+        lastlineno = 0
         lastsource = None
         done = False
         blankacc = []
@@ -1019,16 +1020,28 @@ class Preprocessor(object):
                         # Collapse a token of many whitespace into single
                         if toks[m].value[0] == ' ':
                             toks[m].value = ' '
+            if not emitlinedirective:
+                newlinesneeded = toks[0].lineno - lastlineno - 1
+                if newlinesneeded > 6:
+                    emitlinedirective = True
+                else:
+                    while newlinesneeded:
+                        oh.write('\n')
+                        newlinesneeded -= 1
+            lastlineno = toks[0].lineno
             if emitlinedirective:
-                oh.write('# ' + str(toks[0].lineno - 1) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
-            elif blanklines > 0:
-                for line in blankacc:
-                    for tok in line:
-                        oh.write(tok.value)
+                oh.write('# ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            #elif blanklines > 0:
+            #    for line in blankacc:
+            #        for tok in line:
+            #            oh.write(tok.value)
             blankacc = []
             blanklines = 0
+            #print toks[0].lineno, 
             for tok in toks:
+                #print tok.value,
                 oh.write(tok.value)
+            #print ''
 
 if __name__ == "__main__":
     import doctest

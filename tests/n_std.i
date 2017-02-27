@@ -1,4 +1,4 @@
-# 32 "tests/test-c/n_std.c"
+# 33 "tests/test-c/n_std.c"
 void n_1( void);
 void n_2( void);
 void n_3( void);
@@ -34,10 +34,8 @@ void n_37( void);
 
 int main( void)
 {
-
     n_2();
     n_3();
-
     n_5();
     n_6();
     n_7();
@@ -83,7 +81,7 @@ void n_2( void)
 
 
     assert( ab + cd + ef == 6);
-# 122 "tests/test-c/n_std.c"
+# 123 "tests/test-c/n_std.c"
     assert (ab + cd + ef == 6);
 
 
@@ -103,10 +101,8 @@ void n_3( void)
 
 
     assert( strcmp( "abc de", "abc de") == 0);
-# 154 "tests/test-c/n_std.c"
-  abcd
-
-    assert( == 4);
+# 157 "tests/test-c/n_std.c"
+    assert( abcd == 4);
 }
 
 void n_5( void)
@@ -119,7 +115,7 @@ void n_5( void)
 
     assert( abcde == 5);
 }
-# 178 "tests/test-c/n_std.c"
+# 179 "tests/test-c/n_std.c"
 void n_6( void)
 
 {
@@ -130,11 +126,7 @@ void n_6( void)
 
 
 
-
-
     assert( abc == 3);
-
-
 
 
 
@@ -177,21 +169,21 @@ void n_9( void)
 void n_10( void)
 
 {
-# 238 "tests/test-c/n_std.c"
+# 239 "tests/test-c/n_std.c"
     assert( 1);
-# 251 "tests/test-c/n_std.c"
+# 252 "tests/test-c/n_std.c"
 }
 
 void n_11( void)
 
 {
     int abc = 1, a = 0;
-# 264 "tests/test-c/n_std.c"
+# 265 "tests/test-c/n_std.c"
     assert( abc);
 
 
     assert( abc);
-# 279 "tests/test-c/n_std.c"
+# 280 "tests/test-c/n_std.c"
 }
 
 
@@ -207,41 +199,41 @@ void n_12( void)
 
 
     fputs( "Bad evaluation of long.\n", stderr);
-# 325 "tests/test-c/n_std.c"
+# 326 "tests/test-c/n_std.c"
 }
 
 void n_13( void)
-# 343 "tests/test-c/n_std.c"
+# 344 "tests/test-c/n_std.c"
 {
-# 360 "tests/test-c/n_std.c"
+# 361 "tests/test-c/n_std.c"
 }
 
 void n_13_5( void)
 
 {
-# 375 "tests/test-c/n_std.c"
+# 376 "tests/test-c/n_std.c"
 }
 
 void n_13_7( void)
 
 {
-# 394 "tests/test-c/n_std.c"
+# 395 "tests/test-c/n_std.c"
 }
 
 void n_13_8( void)
 
 {
-# 415 "tests/test-c/n_std.c"
+# 416 "tests/test-c/n_std.c"
 }
 
 void n_13_13( void)
 
 {
-# 429 "tests/test-c/n_std.c"
+# 430 "tests/test-c/n_std.c"
     fputs(
     "Bad evaluation of macros expanding to operators in #if expression.\n"
         , stderr);
-# 442 "tests/test-c/n_std.c"
+# 443 "tests/test-c/n_std.c"
 }
 
 void n_15( void)
@@ -251,7 +243,7 @@ void n_15( void)
 
 
     assert( 1);
-# 459 "tests/test-c/n_std.c"
+# 460 "tests/test-c/n_std.c"
     assert( 1);
 
 }
@@ -282,9 +274,8 @@ void n_19( void)
 
 {
     int c = 1;
-# 496 "tests/test-c/n_std.c"
- )
-    assert( ( c == 1);
+# 498 "tests/test-c/n_std.c"
+    assert( ( c ) == 1);
 }
 
 void n_20( void)
@@ -355,6 +346,7 @@ void n_24( void)
 
 
 
+
     assert( strcmp( "'\"' + \"' \\\"\"", "'\"' + \"' \\\"\"") == 0);
 
 
@@ -394,7 +386,7 @@ void n_25( void)
 
     assert( strcmp( "ZERO_TOKEN", "ZERO_TOKEN") == 0);
 }
-# 624 "tests/test-c/n_std.c"
+# 625 "tests/test-c/n_std.c"
 int f( int a)
 {
     return a;
@@ -448,7 +440,7 @@ void n_27( void)
 
 {
     int a = 1, b = 2, c, m = 1, n = 2;
-# 687 "tests/test-c/n_std.c"
+# 688 "tests/test-c/n_std.c"
     assert( 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 == 36);
 
 
@@ -483,7 +475,7 @@ void n_28( void)
 
 
 {
-    char * date = "Feb 26 2017";
+    char * date = "Feb 27 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -492,24 +484,24 @@ void n_28( void)
     assert( 728 == 779);
 
 
-    assert( strlen( "Feb 26 2017") == 11);
+    assert( strlen( "Feb 27 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "14:56:08") == 8);
+    assert( strlen( "23:40:23") == 8);
 
 
     assert( 1);
 
 
     assert( 199901L >= 199409L);
-# 2 "line.h"
+# 3 "line.h"
 {
     char * file = "line.h";
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
 }}
-# 746 "tests/test-c/n_std.c"
+# 747 "tests/test-c/n_std.c"
 void n_29( void)
 
 {
@@ -541,6 +533,11 @@ void n_30( void)
     assert
     (
         a + b + c
+
+
+
+
+
         == 6
     );
 }
@@ -548,7 +545,7 @@ void n_30( void)
 void n_32( void)
 
 {
-# 798 "tests/test-c/n_std.c"
+# 799 "tests/test-c/n_std.c"
 }
 
 void n_37( void)
@@ -567,6 +564,7 @@ void n_37( void)
 
     assert(
         ABCDEFGHIJKLMNOPQRSTUVWX-yZ[0]abcde
+
         == 31);
 
 
@@ -575,30 +573,30 @@ void n_37( void)
 
 
     nest = 0;
-# 841 "tests/test-c/n_std.c"
+# 842 "tests/test-c/n_std.c"
                                 nest = 8;
-# 850 "tests/test-c/n_std.c"
+# 851 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
     nest = 0;
-# 2 "nest1.h"
+# 3 "nest1.h"
     nest = 1;
-# 2 "nest2.h"
+# 3 "nest2.h"
     nest = 2;
-# 2 "nest3.h"
+# 3 "nest3.h"
     nest = 3;
-# 2 "nest4.h"
+# 3 "nest4.h"
     nest = 4;
-# 2 "nest5.h"
+# 3 "nest5.h"
     nest = 5;
-# 2 "nest6.h"
+# 3 "nest6.h"
     nest = 6;
-# 2 "nest7.h"
+# 3 "nest7.h"
     nest = 7;
-# 3 "nest8.h"
+# 4 "nest8.h"
     nest = 8;
-# 855 "tests/test-c/n_std.c"
+# 856 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
@@ -614,7 +612,7 @@ void n_37( void)
     {
         char * extremely_long_string =
 "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567"
-# 877 "tests/test-c/n_std.c"
+# 878 "tests/test-c/n_std.c"
         ;
         assert( strlen( extremely_long_string) == 507);
     }
@@ -622,10 +620,10 @@ void n_37( void)
 
     {
     int a123456789012345678901234567890 = 123450; int b123456789012345678901234567890 = 123451; int c123456789012345678901234567890 = 123452; int d123456789012345678901234567890 = 123453; int e123456789012345678901234567890 = 123454; int f123456789012345678901234567890 = 123455; int A123456789012345678901234567890 = 123456; int B123456789012345678901234567890 = 123457; int C123456789012345678901234567890 = 123458; int D1234567890123456789012 = 123459;
-# 893 "tests/test-c/n_std.c"
+# 894 "tests/test-c/n_std.c"
         assert( a123456789012345678901234567890 == 123450
             && D1234567890123456789012 == 123459);
     }
-# 903 "tests/test-c/n_std.c"
+# 904 "tests/test-c/n_std.c"
     assert( 1);
 }
