@@ -11,7 +11,7 @@
 
 from __future__ import generators
 
-import sys
+import sys, traceback
 
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
@@ -259,6 +259,20 @@ class Preprocessor(object):
             self.t_NEWLINE = tok.type
 
         self.t_WS = (self.t_SPACE, self.t_NEWLINE)
+
+        self.lexer.input("?")
+        tok = self.lexer.token()
+        if not tok or tok.value != "?":
+            print("Couldn't determine token for ternary operator")
+        else:
+            self.t_TERNARY = tok.type
+
+        self.lexer.input(":")
+        tok = self.lexer.token()
+        if not tok or tok.value != ":":
+            print("Couldn't determine token for ternary operator")
+        else:
+            self.t_COLON = tok.type
 
         # Check for other characters used by the preprocessor
         chars = [ '<','>','#','##','\\','(',')',',','.']
@@ -648,15 +662,61 @@ class Preprocessor(object):
                 tokens[i].value = str(tokens[i].value)
                 while tokens[i].value[-1] not in "0123456789abcdefABCDEF":
                     tokens[i].value = tokens[i].value[:-1]
+            elif t.type == self.t_COLON:
+                # Find the expression before the colon
+                cs = ce = i - 1
+                while cs > 0 and tokens[cs].type in self.t_WS:
+                    cs -= 1
+                if cs > 0 and tokens[cs].value == ')':
+                    cs -= 1
+                    brackets = 1
+                    while cs > 0:
+                        if tokens[cs].value == ')':
+                            brackets += 1
+                        elif tokens[cs].value == '(':
+                            brackets -= 1
+                            if brackets == 0:
+                                break
+                        cs -= 1
+                while cs > 0 and tokens[cs].type != self.t_TERNARY:
+                    cs -= 1
+                ternary = cs
+                cs += 1
+                # Find the expression before the ternary
+                es = ee = ternary - 1
+                while es > 0 and tokens[es].type in self.t_WS:
+                    es -= 1
+                if es > 0 and tokens[es].value == ')':
+                    es -= 1
+                    brackets = 1
+                    while es > 0:
+                        if tokens[es].value == ')':
+                            brackets += 1
+                        elif tokens[es].value == '(':
+                            brackets -= 1
+                            if brackets == 0:
+                                break
+                        es -= 1
+                else:
+                    while es > 0 and tokens[es].type not in self.t_WS:
+                        es -= 1
+                    if tokens[es].value == '(':
+                        es += 1
+                # Swap the pre-ternary and post-ternary expressions
+                tokens[ternary].value = ' if '
+                tokens[i].value = ' else '
+                # Note this is identical length
+                tokens = tokens[:es] + tokens[cs:ce+1] + tokens[ternary:ternary+1] + tokens[es:ee+1] + tokens[i:]
         
         expr = "".join([str(x.value) for x in tokens])
         expr = expr.replace("&&"," and ")
         expr = expr.replace("||"," or ")
+        expr = expr.replace("!="," <> ")
         expr = expr.replace("!"," not ")
         try:
             result = eval(expr)
         except Exception:
-            self.error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression")
+            self.error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc())
             result = 0
         return result
 

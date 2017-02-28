@@ -229,10 +229,6 @@ void n_13_8( void)
 void n_13_13( void)
 
 {
-# 430 "tests/test-c/n_std.c"
-    fputs(
-    "Bad evaluation of macros expanding to operators in #if expression.\n"
-        , stderr);
 # 443 "tests/test-c/n_std.c"
 }
 
@@ -475,7 +471,7 @@ void n_28( void)
 
 
 {
-    char * date = "Feb 27 2017";
+    char * date = "Feb 28 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -484,11 +480,11 @@ void n_28( void)
     assert( 728 == 779);
 
 
-    assert( strlen( "Feb 27 2017") == 11);
+    assert( strlen( "Feb 28 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "23:40:23") == 8);
+    assert( strlen( "00:51:58") == 8);
 
 
     assert( 1);
@@ -545,7 +541,15 @@ void n_30( void)
 void n_32( void)
 
 {
-# 799 "tests/test-c/n_std.c"
+
+
+    fputs( "Bad evaluation of octal escape sequence.\n", stderr);
+
+
+
+
+
+
 }
 
 void n_37( void)

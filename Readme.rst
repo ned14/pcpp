@@ -17,9 +17,14 @@ undefined macros as if 0). This aids easy generation of low compile time single 
 includes for some header only library.
 
 ``pcpp`` passes a modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_ unit
-test suite. Modifications done were to clarify ternary operators with extra brackets
-and to disable the digraph and trigraph tests, plus those testing the unusual special
-quirks in expression evaluation (see detailed description below).
+test suite. Modifications done were to clarify ternary operators with extra brackets,
+plus those testing the unusual special quirks in expression evaluation (see detailed
+description below). It also passes the list of "preprocessor torture" expansion fragments
+in the C11 standard, correctly expanding some very complex recursive macro expansions
+where expansions cause new macro expansions to be formed. In this, it handily beats
+the MSVC preprocessor and ought to handle most simple C99 preprocessor metaprogramming.
+If you compare its output side-by-side to that of GCC or clang's preprocessor, results
+are extremely close indeed with blank line collapsing being the only difference.
 
 The most non-conforming part is :c:`#if` expression
 parsing (donations of a proper yacc based parser for executing :c:`#if` expressions based on
@@ -29,17 +34,26 @@ group subexpressions so Python's :c:`eval()` executes right will fix it.
 
 A full, detailed list of known non-conformance with the C99 standard is below.
 
+Note that most of this preprocessor was written originally by David Beazley to show
+off his excellent Python Lex-Yacc library PLY (http://www.dabeaz.com/ply/) and is
+hidden in there without being at all obvious given the number of Stackoverflow
+questions which have asked for a pure Python C preprocessor implementation. This
+implementation fixes a lot of conformance bugs (the original was never intended to
+rigidly adhere to the C standard) and adds in a test suite based on the C11 preprocessor
+torture samples plus the mcpp preprocessor test suite. Still, this project would
+not be possible without David's work, so please take off your hat towards him.
+
 What's working:
 ---------------
 - Digraphs and Trigraphs
 - line continuation operator '``\``'
-- C99 correct elimination of comments
+- C99 correct elimination of comments and maintenance of whitespace in output.
 - :c:`__DATE__`, :c:`__TIME__`, :c:`__FILE__`, :c:`__LINE__`. Note that :c:`__STDC__` et al are NOT defined by
   default, you need to define those manually before starting preprocessing.
 - Object :c:`#define`
 - Function :c:`#define macro(...)`
 
-  - currently retokenisation and reexpansion after expansion is not implemented
+  - Retokenisation and reexpansion after expansion is C99 compliant.
 
 - :c:`#undef`
 - :c:`#include "path"`, :c:`<path>` and :c:`PATH`
@@ -75,24 +89,9 @@ Still to implement:
 - :c:`#warning`
 - :c:`#pragma` (ignored)
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE`
-- Conformance failures:
-
-  - Multiline comments in macro definitions are not eliminated e.g.:
-  
-  #define MACRO_abcd  /*
-    in comment
-    */  abcd
-    
-  - #if ... #endif isn't emitting blank lines for removed sections
-  - Failing to whitespace collapse before stringisation
-  - Failing to whitespace unary operators e.g. '---a' => '- - -a'
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
-**Function macro expansion is wrong**
- This is tricky to get right, after all MSVC's preprocessor gets it wrong.
- **Work to fix this is in progress**.
-
 **Expression evaluation is a bit broken**
  Currently :c:`#if` expressions are evaluated by converting them into Python
  expressions and calling :c:`eval()` on them. This works surprisingly well
@@ -110,7 +109,7 @@ Known bugs (ordered from worst to least worst):
    evaluated as true under this implementation. To be honest
    if your preprocessor logic is relying on those sorts of behaviours, you should rewrite it.
    For reference, unsigneds are mapped to long (signed) integers in Python, as are long longs.
- - Without a back tracking tokenising lexer, the C ternary operator is hard to accurately
+ - Without a back tracking parser, the C ternary operator is hard to accurately
    convert into a Python ternary operation, so you need to help it by using one
    of these two forms:
 
