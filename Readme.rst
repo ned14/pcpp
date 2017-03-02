@@ -85,10 +85,17 @@ Implementable by overriding :c:`PreprocessorHooks`:
 - :c:`#pragma` (ignored)
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE` (no default implementation, so ignored)
 
-This is the default `PreprocessorHooks`, simply subclass `Preprocessor` to override with your own:
+This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to override with your own:
 
 .. code-block:: python
 
+  class OutputDirective(Exception):
+      """Raise this exception to abort processing of a preprocessor directive and
+      to instead output it as is into the output"""
+      pass
+
+  class PreprocessorHooks(object):
+  
     def on_error(self,file,line,msg):
         """Called when the preprocessor has encountered an error, e.g. malformed input.
         The default simply prints to stderr and increments the return code.
@@ -97,13 +104,16 @@ This is the default `PreprocessorHooks`, simply subclass `Preprocessor` to overr
         self.return_code += 1
         
     def on_include_not_found(self,is_system_include,curdir,includepath):
-        """Called when a #include wasn't found. Return None to ignore, raise
-        OutputDirective to pass through, else return a suitable path. Remember
-        that Preprocessor.add_path() lets you add search paths."""
+        """Called when a #include wasn't found.
+        
+        Return None to ignore, raise OutputDirective to pass through, else return
+        a suitable path. Remember that Preprocessor.add_path() lets you add search
+        paths."""
         self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
         
     def on_unknown_macro_in_expr(self,tok):
         """Called when an expression passed to an #if contained something unknown.
+        
         Return what value it should be, raise OutputDirective to pass through,
         or None to pass through the mostly expanded #if expression apart from the
         unknown item."""
@@ -113,7 +123,9 @@ This is the default `PreprocessorHooks`, simply subclass `Preprocessor` to overr
     
     def on_directive_handle(self,directive,toks):
         """Called when there is one of
+        
         define, include, undef, ifdef, ifndef, if, elif, else, endif
+        
         Return True to ignore, raise OutputDirective to pass through, else execute
         the directive"""
         self.lastdirective = directive
