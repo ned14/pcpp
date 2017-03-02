@@ -471,7 +471,7 @@ void n_28( void)
 
 
 {
-    char * date = "Feb 28 2017";
+    char * date = "Mar 02 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -480,11 +480,11 @@ void n_28( void)
     assert( 728 == 779);
 
 
-    assert( strlen( "Feb 28 2017") == 11);
+    assert( strlen( "Mar 02 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "00:51:58") == 8);
+    assert( strlen( "17:04:13") == 8);
 
 
     assert( 1);

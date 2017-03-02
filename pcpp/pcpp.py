@@ -155,14 +155,74 @@ class Macro(object):
         return "%s(%s)=%s" % (self.name, self.arglist, self.value)
 
 # ------------------------------------------------------------------
+# Preprocessor event hooks
+#
+# Override these to customise preprocessing
+# ------------------------------------------------------------------
+
+class OutputDirective(Exception):
+    """Raise this exception to abort processing of a preprocessor directive and
+    to instead output it as is into the output"""
+    pass
+
+class PreprocessorHooks(object):
+    """Override these in your subclass of Preprocessor to customise preprocessing"""
+    def __init__(self):
+        self.lastdirective = None
+
+    def on_error(self,file,line,msg):
+        """Called when the preprocessor has encountered an error, e.g. malformed input.
+        The default simply prints to stderr and increments the return code.
+        """
+        print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+        self.return_code += 1
+        
+    def on_include_not_found(self,is_system_include,curdir,includepath):
+        """Called when a #include wasn't found. Return None to ignore, raise
+        OutputDirective to pass through, else return a suitable path. Remember
+        that Preprocessor.add_path() lets you add search paths."""
+        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+        
+    def on_unknown_macro_in_expr(self,tok):
+        """Called when an expression passed to an #if contained something unknown.
+        Return what value it should be, raise OutputDirective to pass through,
+        or None to pass through the mostly expanded #if expression apart from the
+        unknown item."""
+        tok.type = self.t_INTEGER
+        tok.value = self.t_INTEGER_TYPE("0L")
+        return tok
+    
+    def on_directive_handle(self,directive,toks):
+        """Called when there is one of
+        define, include, undef, ifdef, ifndef, if, elif, else, endif
+        Return True to ignore, raise OutputDirective to pass through, else execute
+        the directive"""
+        self.lastdirective = directive
+        
+    def on_directive_unknown(self,directive,toks):
+        """Called when the preprocessor encounters a #directive it doesn't understand.
+        This is actually quite an extensive list as it currently only understands:
+        define, include, undef, ifdef, ifndef, if, elif, else, endif
+        
+        The default handles #error and #warning here simply by printing to stderr
+        and ignores everything else. You can raise OutputDirective to pass it through.
+        """
+        if directive.value == 'error':
+            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toke))
+            self.return_code += 1
+        elif directive.value == 'warning':
+            print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+
+# ------------------------------------------------------------------
 # Preprocessor object
 #
 # Object representing a preprocessor.  Contains macro definitions,
 # include directories, and other information
 # ------------------------------------------------------------------
 
-class Preprocessor(object):
+class Preprocessor(PreprocessorHooks):    
     def __init__(self,lexer=None):
+        super(Preprocessor, self).__init__()
         if lexer is None:
             import ply.lex as lex
             lexer = lex.lex()
@@ -178,6 +238,7 @@ class Preprocessor(object):
         tm = time.localtime()
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
         self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
+        self.countermacro = 0
         self.parser = None
 
     # -----------------------------------------------------------------------------
@@ -194,16 +255,6 @@ class Preprocessor(object):
             if not tok: break
             tokens.append(tok)
         return tokens
-
-    # ---------------------------------------------------------------------
-    # error()
-    #
-    # Report a preprocessor error/warning of some kind
-    # ----------------------------------------------------------------------
-
-    def error(self,file,line,msg):
-        print("%s:%d %s" % (file,line,msg))
-        self.return_code += 1
 
     # ----------------------------------------------------------------------
     # lexprobe()
@@ -378,7 +429,7 @@ class Preprocessor(object):
             positions.append(i+1)
         else:
             if not ignore_errors:
-                self.error(tokenlist[0].source,tokenlist[0].lineno,"Missing '(' in macro arguments")
+                self.on_error(tokenlist[0].source,tokenlist[0].lineno,"Missing '(' in macro arguments")
             return 0, [], []
 
         i += 1
@@ -405,7 +456,7 @@ class Preprocessor(object):
     
         # Missing end argument
         if not ignore_errors:
-            self.error(tokenlist[-1].source,tokenlist[-1].lineno,"Missing ')' in macro arguments")
+            self.on_error(tokenlist[-1].source,tokenlist[-1].lineno,"Missing ')' in macro arguments")
         return 0, [],[]
 
     # ----------------------------------------------------------------------
@@ -575,13 +626,13 @@ class Preprocessor(object):
                                 # A no arg or single arg consuming macro is permitted to be expanded with nothing
                                 and (args != [[]] or len(m.arglist) > 1)
                                 and len(args) !=  len(m.arglist)):
-                                self.error(t.source,t.lineno,"Macro %s requires %d arguments but was passed %d" % (t.value,len(m.arglist),len(args)))
+                                self.on_error(t.source,t.lineno,"Macro %s requires %d arguments but was passed %d" % (t.value,len(m.arglist),len(args)))
                                 i = j + tokcount
                             elif m.variadic and len(args) < len(m.arglist)-1:
                                 if len(m.arglist) > 2:
-                                    self.error(t.source,t.lineno,"Macro %s must have at least %d arguments" % (t.value, len(m.arglist)-1))
+                                    self.on_error(t.source,t.lineno,"Macro %s must have at least %d arguments" % (t.value, len(m.arglist)-1))
                                 else:
-                                    self.error(t.source,t.lineno,"Macro %s must have at least %d argument" % (t.value, len(m.arglist)-1))
+                                    self.on_error(t.source,t.lineno,"Macro %s must have at least %d argument" % (t.value, len(m.arglist)-1))
                                 i = j + tokcount
                             else:
                                 if m.variadic:
@@ -609,6 +660,10 @@ class Preprocessor(object):
                 elif t.value == '__LINE__':
                     t.type = self.t_INTEGER
                     t.value = self.t_INTEGER_TYPE(t.lineno)
+                elif t.value == '__COUNTER__':
+                    t.type = self.t_INTEGER
+                    t.value = self.t_INTEGER_TYPE(self.countermacro)
+                    self.countermacro += 1
                 
             i += 1
         return tokens
@@ -623,6 +678,7 @@ class Preprocessor(object):
     def evalexpr(self,tokens):
         # tokens = tokenize(line)
         # Search for defined macros
+        evalvars = {}
         i = 0
         while i < len(tokens):
             if tokens[i].type == self.t_ID and tokens[i].value == 'defined':
@@ -644,7 +700,7 @@ class Preprocessor(object):
                     elif tokens[j].value == ')':
                         break
                     else:
-                        self.error(tokens[i].source,tokens[i].lineno,"Malformed defined()")
+                        self.on_error(tokens[i].source,tokens[i].lineno,"Malformed defined()")
                     j += 1
                 tokens[i].type = self.t_INTEGER
                 tokens[i].value = self.t_INTEGER_TYPE(result)
@@ -653,9 +709,12 @@ class Preprocessor(object):
         tokens = self.expand_macros(tokens)
         for i,t in enumerate(tokens):
             if t.type == self.t_ID:
-                tokens[i] = copy.copy(t)
-                tokens[i].type = self.t_INTEGER
-                tokens[i].value = self.t_INTEGER_TYPE("0L")
+                repl = self.on_unknown_macro_in_expr(copy.copy(t))
+                if repl is None:
+                    # Add this identifier to a dictionary of variables
+                    evalvars[t.value] = 0
+                else:
+                    tokens[i] = repl
             elif t.type == self.t_INTEGER:
                 tokens[i] = copy.copy(t)
                 # Strip off any trailing suffixes
@@ -714,11 +773,11 @@ class Preprocessor(object):
         expr = expr.replace("!="," <> ")
         expr = expr.replace("!"," not ")
         try:
-            result = eval(expr)
+            result = eval(expr, {}, evalvars)
         except Exception:
-            self.error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc())
+            self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc())
             result = 0
-        return result
+        return (result, tokens) if evalvars else (result, None)
 
     # ----------------------------------------------------------------------
     # parsegen()
@@ -740,108 +799,142 @@ class Preprocessor(object):
         chunk = []
         enable = True
         iftrigger = False
+        ifpassthru = False
         ifstack = []
 
         for x in lines:
             for i,tok in enumerate(x):
                 if tok.type not in self.t_WS: break
+            output_directive = True
             if tok.value == '#':
-                # Preprocessor directive
-
-                # insert necessary whitespace instead of eaten tokens
-                for tok in x:
-                    if tok.type in self.t_WS and '\n' in tok.value:
-                        chunk.append(tok)
-                
-                dirtokens = self.tokenstrip(x[i+1:])
-                if dirtokens:
-                    name = dirtokens[0].value
-                    args = self.tokenstrip(dirtokens[1:])
-                else:
-                    name = ""
-                    args = []
-                
-                if name == 'define':
-                    if enable:
-                        for tok in self.expand_macros(chunk):
-                            yield tok
-                        chunk = []
-                        self.define(args)
-                elif name == 'include':
-                    if enable:
-                        for tok in self.expand_macros(chunk):
-                            yield tok
-                        chunk = []
-                        oldfile = self.macros['__FILE__']
-                        for tok in self.include(args):
-                            yield tok
-                        self.macros['__FILE__'] = oldfile
-                        self.source = source
-                elif name == 'undef':
-                    if enable:
-                        for tok in self.expand_macros(chunk):
-                            yield tok
-                        chunk = []
-                        self.undef(args)
-                elif name == 'ifdef':
-                    ifstack.append((enable,iftrigger))
-                    if enable:
-                        if not args[0].value in self.macros:
-                            enable = False
-                            iftrigger = False
-                        else:
-                            iftrigger = True
-                elif name == 'ifndef':
-                    ifstack.append((enable,iftrigger))
-                    if enable:
-                        if args[0].value in self.macros:
-                            enable = False
-                            iftrigger = False
-                        else:
-                            iftrigger = True
-                elif name == 'if':
-                    ifstack.append((enable,iftrigger))
-                    if enable:
-                        result = self.evalexpr(args)
-                        if not result:
-                            enable = False
-                            iftrigger = False
-                        else:
-                            iftrigger = True
-                elif name == 'elif':
-                    if ifstack:
-                        if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
-                            if enable:         # If already true, we flip enable False
-                                enable = False
-                            elif not iftrigger:   # If False, but not triggered yet, we'll check expression
-                                result = self.evalexpr(args)
-                                if result:
-                                    enable  = True
-                                    iftrigger = True
+                output_directive = False
+                try:
+                    # Preprocessor directive      
+                    i += 1
+                    while x[i].type in self.t_WS:
+                        i += 1                    
+                    dirtokens = self.tokenstrip(x[i:])
+                    if dirtokens:
+                        name = dirtokens[0].value
+                        args = self.tokenstrip(dirtokens[1:])
                     else:
-                        self.error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
-                        
-                elif name == 'else':
-                    if ifstack:
-                        if ifstack[-1][0]:
-                            if enable:
+                        name = ""
+                        args = []
+                    
+                    if self.on_directive_handle(dirtokens[0],args):
+                        pass  # He asked for this to be ignored
+                    elif name == 'define':
+                        if enable:
+                            for tok in self.expand_macros(chunk):
+                                yield tok
+                            chunk = []
+                            self.define(args)
+                    elif name == 'include':
+                        if enable:
+                            for tok in self.expand_macros(chunk):
+                                yield tok
+                            chunk = []
+                            oldfile = self.macros['__FILE__']
+                            for tok in self.include(args):
+                                yield tok
+                            self.macros['__FILE__'] = oldfile
+                            self.source = source
+                    elif name == 'undef':
+                        if enable:
+                            for tok in self.expand_macros(chunk):
+                                yield tok
+                            chunk = []
+                            self.undef(args)
+                    elif name == 'ifdef':
+                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if enable:
+                            if not args[0].value in self.macros:
                                 enable = False
-                            elif not iftrigger:
-                                enable = True
+                                iftrigger = False
+                            else:
                                 iftrigger = True
-                    else:
-                        self.error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
+                    elif name == 'ifndef':
+                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if enable:
+                            if args[0].value in self.macros:
+                                enable = False
+                                iftrigger = False
+                            else:
+                                iftrigger = True
+                    elif name == 'if':
+                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if enable:
+                            result, rewritten = self.evalexpr(args)
+                            if rewritten is not None:
+                                x = x[:i+2] + rewritten + [x[-1]]
+                                ifpassthru = True
+                                raise OutputDirective()
+                            if not result:
+                                enable = False
+                                iftrigger = False
+                            else:
+                                iftrigger = True
+                    elif name == 'elif':
+                        if ifstack:
+                            if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
+                                if enable and not ifpassthru:         # If already true, we flip enable False
+                                    enable = False
+                                elif not iftrigger:   # If False, but not triggered yet, we'll check expression
+                                    result, rewritten = self.evalexpr(args)
+                                    if rewritten is not None:
+                                        enable = True
+                                        if not ifpassthru:
+                                            # This is a passthru #elif after a False #if, so convert to an #if
+                                            x[i].value = 'if'
+                                        x = x[:i+2] + rewritten + [x[-1]]
+                                        ifpassthru = True
+                                        raise OutputDirective()
+                                    if ifpassthru:
+                                        # If this elif can only ever be true, simulate that
+                                        if result:
+                                            newtok = copy.copy(x[i+3])
+                                            newtok.type = self.t_INTEGER
+                                            newtok.value = self.t_INTEGER_TYPE(result)
+                                            x = x[:i+2] + [newtok] + [x[-1]]
+                                            raise OutputDirective()
+                                        # Otherwise elide
+                                        enable = False
+                                    elif result:
+                                        enable  = True
+                                        iftrigger = True
+                        else:
+                            self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
+                            
+                    elif name == 'else':
+                        if ifstack:
+                            if ifstack[-1][0]:
+                                if ifpassthru:
+                                    enable = True
+                                    raise OutputDirective()
+                                if enable:
+                                    enable = False
+                                elif not iftrigger:
+                                    enable = True
+                                    iftrigger = True
+                        else:
+                            self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
 
-                elif name == 'endif':
-                    if ifstack:
-                        enable,iftrigger = ifstack.pop()
+                    elif name == 'endif':
+                        if ifstack:
+                            oldifpassthru = ifpassthru
+                            enable,iftrigger,ifpassthru = ifstack.pop()
+                            if oldifpassthru:
+                                raise OutputDirective()
+                        else:
+                            self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
                     else:
-                        self.error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
-                else:
-                    # Unknown preprocessor directive
-                    pass
+                        # Unknown preprocessor directive
+                        self.on_directive_unknown(dirtokens[0], args)
 
-            else:
+                except OutputDirective:
+                    output_directive = True
+
+            if output_directive:
                 # Normal text
                 if enable:
                     chunk.extend(x)
@@ -873,7 +966,9 @@ class Preprocessor(object):
             if tokens[0].value != '<' and tokens[0].type != self.t_STRING:
                 tokens = self.tokenstrip(self.expand_macros(tokens))
 
+            is_system_include = False
             if tokens[0].value == '<':
+                is_system_include = True
                 # Include <...>
                 i = 1
                 while i < len(tokens):
@@ -881,7 +976,7 @@ class Preprocessor(object):
                         break
                     i += 1
                 else:
-                    self.error(tokens[0].source,tokens[0].lineno,"Malformed #include <...>")
+                    self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include <...>")
                     return
                 filename = "".join([x.value for x in tokens[1:i]])
                 path = self.path + [""] + self.temp_path
@@ -889,24 +984,28 @@ class Preprocessor(object):
                 filename = tokens[0].value[1:-1]
                 path = self.temp_path + [""] + self.path
             else:
-                self.error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
+                self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
                 return
-        for p in path:
-            iname = os.path.join(p,filename)
-            try:
-                data = open(iname,"r").read()
-                dname = os.path.dirname(iname)
-                if dname:
-                    self.temp_path.insert(0,dname)
-                for tok in self.parsegen(data,filename):
-                    yield tok
-                if dname:
-                    del self.temp_path[0]
-                break
-            except IOError:
-                pass
-        else:
-            self.error(tokens[0].source,tokens[0].lineno,"Couldn't find '%s'" % filename)
+        while True:
+            for p in path:
+                iname = os.path.join(p,filename)
+                try:
+                    data = open(iname,"r").read()
+                    dname = os.path.dirname(iname)
+                    if dname:
+                        self.temp_path.insert(0,dname)
+                    for tok in self.parsegen(data,filename):
+                        yield tok
+                    if dname:
+                        del self.temp_path[0]
+                    return
+                except IOError:
+                    pass
+            else:
+                p = self.on_include_not_found(is_system_include,self.temp_path[0],filename)
+                if p is None:
+                    return
+                path.append(p)
 
     # ----------------------------------------------------------------------
     # define()
@@ -938,7 +1037,7 @@ class Preprocessor(object):
                 variadic = False
                 for a in args:
                     if variadic:
-                        self.error(name.source,name.lineno,"No more arguments may follow a variadic argument")
+                        self.on_error(name.source,name.lineno,"No more arguments may follow a variadic argument")
                         break
                     astr = "".join([str(_i.value) for _i in a])
                     if astr == "...":
@@ -960,7 +1059,7 @@ class Preprocessor(object):
                     if len(a) == 0 and len(args) == 1:
                         continue
                     if len(a) > 1 or a[0].type != self.t_ID:
-                        self.error(a.source,a.lineno,"Invalid macro argument")
+                        self.on_error(a.source,a.lineno,"Invalid macro argument")
                         break
                 else:
                     mvalue = self.tokenstrip(linetok[1+tokcount:])
@@ -977,7 +1076,7 @@ class Preprocessor(object):
                     self.macro_prescan(m)
                     self.macros[name.value] = m
             else:
-                self.error(name.source,name.lineno,"Bad macro definition")
+                self.on_error(name.source,name.lineno,"Bad macro definition")
         #except LookupError:
         #    print("Bad macro definition")
         except:

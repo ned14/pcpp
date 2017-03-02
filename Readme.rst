@@ -50,6 +50,7 @@ What's working:
 - C99 correct elimination of comments and maintenance of whitespace in output.
 - :c:`__DATE__`, :c:`__TIME__`, :c:`__FILE__`, :c:`__LINE__`. Note that :c:`__STDC__` et al are NOT defined by
   default, you need to define those manually before starting preprocessing.
+- :c:`__COUNTER__`, a very common extension
 - Object :c:`#define`
 - Function :c:`#define macro(...)`
 
@@ -57,12 +58,6 @@ What's working:
 
 - :c:`#undef`
 - :c:`#include "path"`, :c:`<path>` and :c:`PATH`
-
-  - Handler :c:`include_not_found(system_include, curdir, includepath)`
-    is called to find non-curdir headers, this includes any system headers
-    which are NOT found automatically
-
-- :c:`#error`
 - :c:`defined` operator
 - C operators:
 
@@ -83,12 +78,58 @@ What's working:
 - Stringizing operator #
 - Token pasting operator ##
 
-Still to implement:
--------------------
-- :c:`__COUNTER__`
-- :c:`#warning`
+Implementable by overriding :c:`PreprocessorHooks`:
+---------------------------------------------------
+- :c:`#error` (default implementation prints to stderr)
+- :c:`#warning` (default implementation prints to stderr)
 - :c:`#pragma` (ignored)
-- :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE`
+- :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE` (no default implementation, so ignored)
+
+This is the default `PreprocessorHooks`, simply subclass `Preprocessor` to override with your own:
+
+    def on_error(self,file,line,msg):
+        """Called when the preprocessor has encountered an error, e.g. malformed input.
+        The default simply prints to stderr and increments the return code.
+        """
+        print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+        self.return_code += 1
+        
+    def on_include_not_found(self,is_system_include,curdir,includepath):
+        """Called when a #include wasn't found. Return None to ignore, raise
+        OutputDirective to pass through, else return a suitable path. Remember
+        that Preprocessor.add_path() lets you add search paths."""
+        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+        
+    def on_unknown_macro_in_expr(self,tok):
+        """Called when an expression passed to an #if contained something unknown.
+        Return what value it should be, raise OutputDirective to pass through,
+        or None to pass through the mostly expanded #if expression apart from the
+        unknown item."""
+        tok.type = self.t_INTEGER
+        tok.value = self.t_INTEGER_TYPE("0L")
+        return tok
+    
+    def on_directive_handle(self,directive,toks):
+        """Called when there is one of
+        define, include, undef, ifdef, ifndef, if, elif, else, endif
+        Return True to ignore, raise OutputDirective to pass through, else execute
+        the directive"""
+        self.lastdirective = directive
+        
+    def on_directive_unknown(self,directive,toks):
+        """Called when the preprocessor encounters a #directive it doesn't understand.
+        This is actually quite an extensive list as it currently only understands:
+        define, include, undef, ifdef, ifndef, if, elif, else, endif
+        
+        The default handles #error and #warning here simply by printing to stderr
+        and ignores everything else. You can raise OutputDirective to pass it through.
+        """
+        if directive.value == 'error':
+            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toke))
+            self.return_code += 1
+        elif directive.value == 'warning':
+            print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
