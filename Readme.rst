@@ -85,9 +85,8 @@ Implementable by overriding :c:`PreprocessorHooks`:
 - :c:`#pragma` (ignored)
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE` (no default implementation, so ignored)
 
-This is the default `PreprocessorHooks`, simply subclass `Preprocessor` to override with your own:
+This is the default `PreprocessorHooks`, simply subclass `Preprocessor` to override with your own::
 
-.. code-block:: python
     def on_error(self,file,line,msg):
         """Called when the preprocessor has encountered an error, e.g. malformed input.
         The default simply prints to stderr and increments the return code.
