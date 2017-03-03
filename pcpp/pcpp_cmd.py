@@ -30,6 +30,7 @@ class CmdPreprocessor(Preprocessor):
 
         self.args = args[0]
         super(CmdPreprocessor, self).__init__()
+        self.debugout = open("pcpp_debug.log", "wt")
 
         if self.args.defines:
             for d in self.args.defines:
@@ -48,13 +49,20 @@ class CmdPreprocessor(Preprocessor):
     def on_include_not_found(self,is_system_include,curdir,includepath):
         if self.args.passthru:
             raise OutputDirective()
-        return super(CmdPreprocessor, self).on_include_not_found(is_system_include,curdir,includepath)
+        super(CmdPreprocessor, self).on_include_not_found(is_system_include,curdir,includepath)
+        raise OutputDirective()
 
     def on_unknown_macro_in_expr(self,tok):
         if self.args.passthru:
             return None  # Pass through as expanded as possible
         return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
         
+    def on_directive_handle(self,directive,toks,ifpassthru):
+#        if ifpassthru:
+#            if directive.value == 'error' or directive.value == 'warning':
+#                raise OutputDirective()
+        return super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
+
     def on_directive_unknown(self,directive,toks,ifpassthru):
         if not ifpassthru:
             if directive.value == 'error' or directive.value == 'warning':

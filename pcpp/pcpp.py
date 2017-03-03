@@ -231,6 +231,7 @@ class Preprocessor(PreprocessorHooks):
         self.path = []
         self.temp_path = []
         self.return_code = 0
+        self.debugout = None
 
         # Probe the lexer for selected tokens
         self.lexprobe()
@@ -310,6 +311,13 @@ class Preprocessor(PreprocessorHooks):
             self.t_NEWLINE = tok.type
 
         self.t_WS = (self.t_SPACE, self.t_NEWLINE)
+
+        self.lexer.input("##")
+        tok = self.lexer.token()
+        if not tok or tok.value != "##":
+            print("Couldn't determine token for token pasting operator")
+        else:
+            self.t_DPOUND = tok.type
 
         self.lexer.input("?")
         tok = self.lexer.token()
@@ -472,6 +480,7 @@ class Preprocessor(PreprocessorHooks):
         macro.str_patch = []             # String conversion expansion
         macro.var_comma_patch = []       # Variadic macro comma patch
         i = 0
+        #print "BEFORE", macro.value
         while i < len(macro.value):
             if macro.value[i].type == self.t_ID and macro.value[i].value in macro.arglist:
                 argnum = macro.arglist.index(macro.value[i].value)
@@ -489,11 +498,11 @@ class Preprocessor(PreprocessorHooks):
                     continue
                 # Concatenation
                 elif (i > 0 and macro.value[i-1].value == '##'):
-                    macro.patch.append(('l',argnum,i-1))
-                    del macro.value[i-1]
+                    macro.patch.append(('t',argnum,i))
+                    i += 1
                     continue
                 elif ((i+1) < len(macro.value) and macro.value[i+1].value == '##'):
-                    macro.patch.append(('r',argnum,i))
+                    macro.patch.append(('t',argnum,i))
                     i += 1
                     continue
                 # Standard expansion
@@ -506,6 +515,7 @@ class Preprocessor(PreprocessorHooks):
                     macro.var_comma_patch.append(i-1)
             i += 1
         macro.patch.sort(key=lambda x: x[2],reverse=True)
+        #print "AFTER", macro.value
 
     # ----------------------------------------------------------------------
     # macro_expand_args()
@@ -557,13 +567,8 @@ class Preprocessor(PreprocessorHooks):
         #print macro.patch
         for ptype, argnum, i in macro.patch:
             # Concatenation.   Argument is left unexpanded
-            if ptype == 'l':
+            if ptype == 't':
                 rep[i:i+1] = args[argnum]
-            elif ptype == 'r':
-                rep[i:i+1] = args[argnum]
-                if len(rep) > i+1:
-                    rep[i].value += rep[i+1].value
-                    del rep[i+1]
             # Normal expansion.  Argument is macro expanded first
             elif ptype == 'e':
                 if argnum not in expanded:
@@ -573,7 +578,27 @@ class Preprocessor(PreprocessorHooks):
         # Get rid of removed comma if necessary
         if comma_patch:
             rep = [_i for _i in rep if _i]
+            
+        # Do a token concatenation pass, stitching any tokens separated by ## into a single token
+        while len(rep) and rep[0].type == self.t_DPOUND:
+            del rep[0]
+        while len(rep) and rep[-1].type == self.t_DPOUND:
+            del rep[-1]
+        i = 1
+        while i < len(rep) - 1:
+            if rep[i].type == self.t_DPOUND:
+                j = i + 1
+                while rep[j].type == self.t_DPOUND:
+                    j += 1
+                rep[i-1].type = self.t_ID
+                rep[i-1].value += rep[j].value
+                while j >= i:
+                    del rep[i]
+                    j -= 1
+            else:
+                i += 1
 
+        #print rep
         return rep
 
 
@@ -604,6 +629,7 @@ class Preprocessor(PreprocessorHooks):
                         ex = self.expand_macros(rep, expanding_from + [t.value])
                         #print "\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:i+1]
                         for e in ex:
+                            e.source = t.source
                             e.lineno = t.lineno
                             if not hasattr(e, 'expanded_from'):
                                 e.expanded_from = []
@@ -650,6 +676,7 @@ class Preprocessor(PreprocessorHooks):
                                 rep = self.macro_expand_args(m,args)
                                 ex = self.expand_macros(rep, expanding_from + [t.value])
                                 for e in ex:
+                                    e.source = t.source
                                     e.lineno = t.lineno
                                     if not hasattr(e, 'expanded_from'):
                                         e.expanded_from = []
@@ -767,7 +794,7 @@ class Preprocessor(PreprocessorHooks):
                 # Note this is identical length
                 tokens = tokens[:es] + tokens[cs:ce+1] + tokens[ternary:ternary+1] + tokens[es:ee+1] + tokens[i:]
         
-        expr = "".join([str(x.value) for x in tokens])
+        expr = origexpr = "".join([str(x.value) for x in tokens])
         expr = expr.replace("&&"," and ")
         expr = expr.replace("||"," or ")
         expr = expr.replace("!="," <> ")
@@ -775,7 +802,8 @@ class Preprocessor(PreprocessorHooks):
         try:
             result = eval(expr, {}, evalvars)
         except Exception:
-            self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc())
+            self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
+            + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
             result = 0
         return (result, tokens) if evalvars else (result, None)
 
@@ -821,6 +849,9 @@ class Preprocessor(PreprocessorHooks):
                         name = ""
                         args = []
                     
+                    if self.debugout is not None:
+                        print >> self.debugout, "%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]))
+
                     if self.on_directive_handle(dirtokens[0],args,ifpassthru):
                         pass  # He asked for this to be ignored
                     elif name == 'define':
@@ -849,6 +880,9 @@ class Preprocessor(PreprocessorHooks):
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
                             if not args[0].value in self.macros:
+                                if self.on_unknown_macro_in_expr(args[0]) is None:
+                                    ifpassthru = True
+                                    raise OutputDirective()
                                 enable = False
                                 iftrigger = False
                             else:
@@ -860,6 +894,9 @@ class Preprocessor(PreprocessorHooks):
                                 enable = False
                                 iftrigger = False
                             else:
+                                if self.on_unknown_macro_in_expr(args[0]) is None:
+                                    ifpassthru = True
+                                    raise OutputDirective()
                                 iftrigger = True
                     elif name == 'if':
                         ifstack.append((enable,iftrigger,ifpassthru))
@@ -927,7 +964,7 @@ class Preprocessor(PreprocessorHooks):
                                 raise OutputDirective()
                         else:
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
-                    else:
+                    elif enable:
                         # Unknown preprocessor directive
                         self.on_directive_unknown(dirtokens[0], args, ifpassthru)
 
@@ -1190,7 +1227,7 @@ class Preprocessor(PreprocessorHooks):
                 if newlinesneeded > 6:
                     emitlinedirective = True
                 else:
-                    while newlinesneeded:
+                    while newlinesneeded > 0:
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
