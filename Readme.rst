@@ -7,14 +7,14 @@ A C99 preprocessor written in pure Python
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp
 
-A pure Python v2 C preprocessor implementation very useful for preprocessing header only
+A pure Python v2 C (pre-)preprocessor implementation very useful for pre-preprocessing header only
 C++ libraries into single file includes and other such build or packaging stage malarky.
 The implementation can be used as a Python module or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
 Extensive ability to hook and customise the preprocessing is provided, for example one
 can pass through preprocessor logic if any inputs are undefined (instead of treating
 undefined macros as if 0). This aids easy generation of low compile time single file
-includes for some header only library.
+includes for some header only library, thus making ``pcpp`` a "pre-pre-processor".
 
 ``pcpp`` passes a modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_ unit
 test suite. Modifications done were to clarify ternary operators with extra brackets,
@@ -121,7 +121,7 @@ This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to o
         tok.value = self.t_INTEGER_TYPE("0L")
         return tok
     
-    def on_directive_handle(self,directive,toks):
+    def on_directive_handle(self,directive,toks,ifpassthru):
         """Called when there is one of
         
         define, include, undef, ifdef, ifndef, if, elif, else, endif
@@ -130,7 +130,7 @@ This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to o
         the directive"""
         self.lastdirective = directive
         
-    def on_directive_unknown(self,directive,toks):
+    def on_directive_unknown(self,directive,toks,ifpassthru):
         """Called when the preprocessor encounters a #directive it doesn't understand.
         This is actually quite an extensive list as it currently only understands:
         define, include, undef, ifdef, ifndef, if, elif, else, endif

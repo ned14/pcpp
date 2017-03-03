@@ -192,14 +192,14 @@ class PreprocessorHooks(object):
         tok.value = self.t_INTEGER_TYPE("0L")
         return tok
     
-    def on_directive_handle(self,directive,toks):
+    def on_directive_handle(self,directive,toks,ifpassthru):
         """Called when there is one of
         define, include, undef, ifdef, ifndef, if, elif, else, endif
         Return True to ignore, raise OutputDirective to pass through, else execute
         the directive"""
         self.lastdirective = directive
         
-    def on_directive_unknown(self,directive,toks):
+    def on_directive_unknown(self,directive,toks,ifpassthru):
         """Called when the preprocessor encounters a #directive it doesn't understand.
         This is actually quite an extensive list as it currently only understands:
         define, include, undef, ifdef, ifndef, if, elif, else, endif
@@ -208,7 +208,7 @@ class PreprocessorHooks(object):
         and ignores everything else. You can raise OutputDirective to pass it through.
         """
         if directive.value == 'error':
-            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toke))
+            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
             self.return_code += 1
         elif directive.value == 'warning':
             print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
@@ -821,7 +821,7 @@ class Preprocessor(PreprocessorHooks):
                         name = ""
                         args = []
                     
-                    if self.on_directive_handle(dirtokens[0],args):
+                    if self.on_directive_handle(dirtokens[0],args,ifpassthru):
                         pass  # He asked for this to be ignored
                     elif name == 'define':
                         if enable:
@@ -929,7 +929,7 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
                     else:
                         # Unknown preprocessor directive
-                        self.on_directive_unknown(dirtokens[0], args)
+                        self.on_directive_unknown(dirtokens[0], args, ifpassthru)
 
                 except OutputDirective:
                     output_directive = True
@@ -1089,6 +1089,8 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def undef(self,tokens):
+        if isinstance(tokens,STRING_TYPES):
+            tokens = self.tokenize(tokens)
         id = tokens[0].value
         try:
             del self.macros[id]
@@ -1101,6 +1103,10 @@ class Preprocessor(PreprocessorHooks):
     # Parse input text.
     # ----------------------------------------------------------------------
     def parse(self,input,source=None,ignore={}):
+        if isinstance(input, file):
+            if source is None:
+                source = input.name
+            input = input.read()
         self.ignore = ignore
         self.parser = self.parsegen(input,source)
         if source is not None:
