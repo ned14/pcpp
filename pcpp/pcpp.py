@@ -1016,14 +1016,15 @@ class Preprocessor(PreprocessorHooks):
                     self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include <...>")
                     return
                 filename = "".join([x.value for x in tokens[1:i]])
-                path = self.path + [""] + self.temp_path
+                path = self.path
             elif tokens[0].type == self.t_STRING:
                 filename = tokens[0].value[1:-1]
-                path = self.temp_path + [""] + self.path
+                path = self.temp_path + self.path
             else:
                 self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
                 return
         while True:
+            #print path
             for p in path:
                 iname = os.path.join(p,filename)
                 try:
@@ -1039,7 +1040,7 @@ class Preprocessor(PreprocessorHooks):
                 except IOError:
                     pass
             else:
-                p = self.on_include_not_found(is_system_include,self.temp_path[0],filename)
+                p = self.on_include_not_found(is_system_include,self.temp_path[0] if self.temp_path else '',filename)
                 if p is None:
                     return
                 path.append(p)
@@ -1148,8 +1149,7 @@ class Preprocessor(PreprocessorHooks):
         self.parser = self.parsegen(input,source)
         if source is not None:
             dname = os.path.dirname(source)
-            if dname:
-                self.temp_path.insert(0,dname)
+            self.temp_path.insert(0,dname)
         
     # ----------------------------------------------------------------------
     # token()

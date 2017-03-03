@@ -24,7 +24,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru', dest = 'passthru', action = 'store_true', help = 'Undefined macros or unfound includes cause preprocessor logic to be passed through instead of treated as 0L')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
-        print(args)
+        #print(args)
         for arg in args[1]:
             print("NOTE: Argument %s not known, ignoring!" % arg, file = sys.stderr)
 
