@@ -35,8 +35,8 @@ class runner(object):
         end = time.clock()
         print("Preprocessed test in", end-start, "seconds")
         if oh.getvalue() != self.output:
-            print("Should be:\n" + self.output, file = sys.stderr)
-            print("\n\nWas:\n" + oh.getvalue(), file = sys.stderr)
+            print("Should be:\n" + self.output + "EOF\n", file = sys.stderr)
+            print("\nWas:\n" + oh.getvalue()+"EOF\n", file = sys.stderr)
         else:
             self.assertEqual(p.return_code, 0)
             self.assertEqual(oh.getvalue(), self.output)
@@ -247,5 +247,6 @@ class test11(unittest.TestCase, runner):
 
 #define BOOSTLITE_CONSTEXPR constexpr
 
-#endif"""
+#endif
+"""
 
