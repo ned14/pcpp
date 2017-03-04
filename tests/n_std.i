@@ -138,32 +138,32 @@ void n_7( void)
 
 {
 
-
+#line 1234 "cpp"
     assert( 202 == 1234);
     assert( strcmp( "tests/test-c/n_std.c", "cpp") == 0);
 
 
-
+#line 2345
     assert( 207 == 2345);
     assert( strcmp( "tests/test-c/n_std.c", "cpp") == 0);
 
 
 
-
+#line 1234 "n_7.c"
     assert( 213 == 1234);
     assert( strcmp( "tests/test-c/n_std.c", "n_7.c") == 0);
 }
 
 
-
+#line 218 "n_std.c"
 
 void n_9( void)
 
 {
 
 
-
-
+#pragma once
+#pragma who knows ?
 }
 
 void n_10( void)
@@ -471,7 +471,7 @@ void n_28( void)
 
 
 {
-    char * date = "Mar 03 2017";
+    char * date = "Mar 04 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -480,11 +480,11 @@ void n_28( void)
     assert( 728 == 779);
 
 
-    assert( strlen( "Mar 03 2017") == 11);
+    assert( strlen( "Mar 04 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "18:12:57") == 8);
+    assert( strlen( "18:32:47") == 8);
 
 
     assert( 1);

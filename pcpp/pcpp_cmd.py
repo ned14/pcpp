@@ -49,26 +49,34 @@ class CmdPreprocessor(Preprocessor):
     def on_include_not_found(self,is_system_include,curdir,includepath):
         if self.args.passthru:
             raise OutputDirective()
-        super(CmdPreprocessor, self).on_include_not_found(is_system_include,curdir,includepath)
-        raise OutputDirective()
+        return super(CmdPreprocessor, self).on_include_not_found(is_system_include,curdir,includepath)
 
+    def on_unknown_macro_in_defined_expr(self,tok):
+        if self.args.undefines:
+            if tok.value in self.args.undefines[0]:
+                return False
+        if self.args.passthru:
+            return None  # Pass through as expanded as possible
+        return super(CmdPreprocessor, self).on_unknown_macro_in_defined_expr(tok)
+        
     def on_unknown_macro_in_expr(self,tok):
+        if self.args.undefines:
+            if tok.value in self.args.undefines[0]:
+                return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
         if self.args.passthru:
             return None  # Pass through as expanded as possible
         return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
         
     def on_directive_handle(self,directive,toks,ifpassthru):
-#        if ifpassthru:
-#            if directive.value == 'error' or directive.value == 'warning':
-#                raise OutputDirective()
+        if self.args.passthru:
+            super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
+            return None  # Pass through where possible
         return super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
 
     def on_directive_unknown(self,directive,toks,ifpassthru):
-        if not ifpassthru:
-            if directive.value == 'error' or directive.value == 'warning':
-                return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru)
-        if self.args.passthru:
-            raise OutputDirective()        
+        #if self.args.passthru:
+        #    return None  # Pass through
+        return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru)
 
 
 def main():

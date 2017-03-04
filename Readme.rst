@@ -95,54 +95,90 @@ This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to o
       pass
 
   class PreprocessorHooks(object):
-  
-    def on_error(self,file,line,msg):
-        """Called when the preprocessor has encountered an error, e.g. malformed input.
-        The default simply prints to stderr and increments the return code.
-        """
-        print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
-        self.return_code += 1
-        
-    def on_include_not_found(self,is_system_include,curdir,includepath):
-        """Called when a #include wasn't found.
-        
-        Return None to ignore, raise OutputDirective to pass through, else return
-        a suitable path. Remember that Preprocessor.add_path() lets you add search
-        paths."""
-        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
-        
-    def on_unknown_macro_in_expr(self,tok):
-        """Called when an expression passed to an #if contained something unknown.
-        
-        Return what value it should be, raise OutputDirective to pass through,
-        or None to pass through the mostly expanded #if expression apart from the
-        unknown item."""
-        tok.type = self.t_INTEGER
-        tok.value = self.t_INTEGER_TYPE("0L")
-        return tok
-    
-    def on_directive_handle(self,directive,toks,ifpassthru):
-        """Called when there is one of
-        
-        define, include, undef, ifdef, ifndef, if, elif, else, endif
-        
-        Return True to ignore, raise OutputDirective to pass through, else execute
-        the directive"""
-        self.lastdirective = directive
-        
-    def on_directive_unknown(self,directive,toks,ifpassthru):
-        """Called when the preprocessor encounters a #directive it doesn't understand.
-        This is actually quite an extensive list as it currently only understands:
-        define, include, undef, ifdef, ifndef, if, elif, else, endif
-        
-        The default handles #error and #warning here simply by printing to stderr
-        and ignores everything else. You can raise OutputDirective to pass it through.
-        """
-        if directive.value == 'error':
-            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toke))
-            self.return_code += 1
-        elif directive.value == 'warning':
-            print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+      """Override these in your subclass of Preprocessor to customise preprocessing"""
+      def __init__(self):
+          self.lastdirective = None
+
+      def on_error(self,file,line,msg):
+          """Called when the preprocessor has encountered an error, e.g. malformed input.
+          
+          The default simply prints to stderr and increments the return code.
+          """
+          print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+          self.return_code += 1
+          
+      def on_include_not_found(self,is_system_include,curdir,includepath):
+          """Called when a #include wasn't found.
+          
+          Return None to ignore, raise OutputDirective to pass through, else return
+          a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
+          
+          The default calls self.on_error() with a suitable error message about the
+          include file not found and returns None (ignore).
+          """
+          self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+          return None
+          
+      def on_unknown_macro_in_defined_expr(self,tok):
+          """Called when an expression passed to an #if contained a defined operator
+          performed on something unknown.
+          
+          Return True if to treat it as defined, False if to treat it as undefined,
+          raise OutputDirective to pass through without execution, or return None to
+          pass through the mostly expanded #if expression apart from the unknown defined.
+          
+          The default returns False, as per the C standard.
+          """
+          return False
+
+      def on_unknown_macro_in_expr(self,tok):
+          """Called when an expression passed to an #if contained something unknown.
+          
+          Return what value it should be, raise OutputDirective to pass through
+          without execution, or return None to pass through the mostly expanded #if
+          expression apart from the unknown item.
+          
+          The default returns a token for an integer 0L, as per the C standard.
+          """
+          tok.type = self.t_INTEGER
+          tok.value = self.t_INTEGER_TYPE("0L")
+          return tok
+      
+      def on_directive_handle(self,directive,toks,ifpassthru):
+          """Called when there is one of
+          
+          define, include, undef, ifdef, ifndef, if, elif, else, endif
+          
+          Return True to execute and remove from the output, return False to
+          remove from the output, raise OutputDirective to pass through without
+          execution, or return None to execute AND pass through to the output
+          (this only works for #define, #undef).
+          
+          The default returns True (execute and remove from the output).
+          """
+          self.lastdirective = directive
+          return True
+          
+      def on_directive_unknown(self,directive,toks,ifpassthru):
+          """Called when the preprocessor encounters a #directive it doesn't understand.
+          This is actually quite an extensive list as it currently only understands:
+          
+          define, include, undef, ifdef, ifndef, if, elif, else, endif
+          
+          Return True or False to remove from the output, or else raise OutputDirective
+          or return None to pass through into the output.
+          
+          The default handles #error and #warning by printing to stderr and returning True
+          (remove from output). For everything else it returns None (pass through into output).
+          """
+          if directive.value == 'error':
+              print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+              self.return_code += 1
+              return True
+          elif directive.value == 'warning':
+              print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+              return True
+          return None
 
 
 Known bugs (ordered from worst to least worst):

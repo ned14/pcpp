@@ -172,46 +172,84 @@ class PreprocessorHooks(object):
 
     def on_error(self,file,line,msg):
         """Called when the preprocessor has encountered an error, e.g. malformed input.
+        
         The default simply prints to stderr and increments the return code.
         """
         print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
         self.return_code += 1
         
     def on_include_not_found(self,is_system_include,curdir,includepath):
-        """Called when a #include wasn't found. Return None to ignore, raise
-        OutputDirective to pass through, else return a suitable path. Remember
-        that Preprocessor.add_path() lets you add search paths."""
-        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+        """Called when a #include wasn't found.
         
+        Return None to ignore, raise OutputDirective to pass through, else return
+        a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
+        
+        The default calls self.on_error() with a suitable error message about the
+        include file not found and raises OutputDirective (pass through).
+        """
+        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+        raise OutputDirective()
+        
+    def on_unknown_macro_in_defined_expr(self,tok):
+        """Called when an expression passed to an #if contained a defined operator
+        performed on something unknown.
+        
+        Return True if to treat it as defined, False if to treat it as undefined,
+        raise OutputDirective to pass through without execution, or return None to
+        pass through the mostly expanded #if expression apart from the unknown defined.
+        
+        The default returns False, as per the C standard.
+        """
+        return False
+
     def on_unknown_macro_in_expr(self,tok):
         """Called when an expression passed to an #if contained something unknown.
-        Return what value it should be, raise OutputDirective to pass through,
-        or None to pass through the mostly expanded #if expression apart from the
-        unknown item."""
+        
+        Return what value it should be, raise OutputDirective to pass through
+        without execution, or return None to pass through the mostly expanded #if
+        expression apart from the unknown item.
+        
+        The default returns a token for an integer 0L, as per the C standard.
+        """
         tok.type = self.t_INTEGER
         tok.value = self.t_INTEGER_TYPE("0L")
         return tok
     
     def on_directive_handle(self,directive,toks,ifpassthru):
         """Called when there is one of
+        
         define, include, undef, ifdef, ifndef, if, elif, else, endif
-        Return True to ignore, raise OutputDirective to pass through, else execute
-        the directive"""
+        
+        Return True to execute and remove from the output, return False to
+        remove from the output, raise OutputDirective to pass through without
+        execution, or return None to execute AND pass through to the output
+        (this only works for #define, #undef).
+        
+        The default returns True (execute and remove from the output).
+        """
         self.lastdirective = directive
+        return True
         
     def on_directive_unknown(self,directive,toks,ifpassthru):
         """Called when the preprocessor encounters a #directive it doesn't understand.
         This is actually quite an extensive list as it currently only understands:
+        
         define, include, undef, ifdef, ifndef, if, elif, else, endif
         
-        The default handles #error and #warning here simply by printing to stderr
-        and ignores everything else. You can raise OutputDirective to pass it through.
+        Return True or False to remove from the output, or else raise OutputDirective
+        or return None to pass through into the output.
+        
+        The default handles #error and #warning by printing to stderr and returning True
+        (remove from output). For everything else it returns None (pass through into output).
         """
         if directive.value == 'error':
             print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
             self.return_code += 1
+            return True
         elif directive.value == 'warning':
             print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+            return True
+        return None
 
 # ------------------------------------------------------------------
 # Preprocessor object
@@ -705,6 +743,7 @@ class Preprocessor(PreprocessorHooks):
     def evalexpr(self,tokens):
         # tokens = tokenize(line)
         # Search for defined macros
+        evalfuncts = {'defined' : lambda x: True}
         evalvars = {}
         i = 0
         while i < len(tokens):
@@ -720,7 +759,13 @@ class Preprocessor(PreprocessorHooks):
                         if tokens[j].value in self.macros:
                             result = "1L"
                         else:
-                            result = "0L"
+                            repl = self.on_unknown_macro_in_defined_expr(tokens[j])
+                            if repl is None:
+                                # Add this identifier to a dictionary of variables
+                                evalvars[tokens[j].value] = 0
+                                result = 'defined('+tokens[j].value+')'
+                            else:
+                                result = "1L" if repl else "0L"
                         if not needparen: break
                     elif tokens[j].value == '(':
                         needparen = True
@@ -729,8 +774,12 @@ class Preprocessor(PreprocessorHooks):
                     else:
                         self.on_error(tokens[i].source,tokens[i].lineno,"Malformed defined()")
                     j += 1
-                tokens[i].type = self.t_INTEGER
-                tokens[i].value = self.t_INTEGER_TYPE(result)
+                if result.startswith('defined'):
+                    tokens[i].type = self.t_ID
+                    tokens[i].value = result
+                else:
+                    tokens[i].type = self.t_INTEGER
+                    tokens[i].value = self.t_INTEGER_TYPE(result)
                 del tokens[i+1:j+1]
             i += 1
         tokens = self.expand_macros(tokens)
@@ -800,7 +849,7 @@ class Preprocessor(PreprocessorHooks):
         expr = expr.replace("!="," <> ")
         expr = expr.replace("!"," not ")
         try:
-            result = eval(expr, {}, evalvars)
+            result = eval(expr, evalfuncts, evalvars)
         except Exception:
             self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
             + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
@@ -852,14 +901,18 @@ class Preprocessor(PreprocessorHooks):
                     if self.debugout is not None:
                         print >> self.debugout, "%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]))
 
-                    if self.on_directive_handle(dirtokens[0],args,ifpassthru):
-                        pass  # He asked for this to be ignored
+                    handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
+                    if handling == False:
+                        pass
                     elif name == 'define':
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
                             self.define(args)
+                            if handling is None:
+                                for tok in x:
+                                    yield tok
                     elif name == 'include':
                         if enable:
                             for tok in self.expand_macros(chunk):
@@ -876,31 +929,46 @@ class Preprocessor(PreprocessorHooks):
                                 yield tok
                             chunk = []
                             self.undef(args)
+                            if handling is None:
+                                for tok in x:
+                                    yield tok
                     elif name == 'ifdef':
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
+                            ifpassthru = False
                             if not args[0].value in self.macros:
-                                if self.on_unknown_macro_in_expr(args[0]) is None:
+                                res = self.on_unknown_macro_in_defined_expr(args[0])
+                                if res is None:
                                     ifpassthru = True
                                     raise OutputDirective()
-                                enable = False
-                                iftrigger = False
+                                elif res is True:
+                                    iftrigger = True
+                                else:
+                                    enable = False
+                                    iftrigger = False
                             else:
                                 iftrigger = True
                     elif name == 'ifndef':
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
+                            ifpassthru = False
                             if args[0].value in self.macros:
                                 enable = False
                                 iftrigger = False
                             else:
-                                if self.on_unknown_macro_in_expr(args[0]) is None:
+                                res = self.on_unknown_macro_in_defined_expr(args[0])
+                                if res is None:
                                     ifpassthru = True
                                     raise OutputDirective()
-                                iftrigger = True
+                                elif res is True:
+                                    enable = False
+                                    iftrigger = False
+                                else:
+                                    iftrigger = True
                     elif name == 'if':
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
+                            ifpassthru = False
                             result, rewritten = self.evalexpr(args)
                             if rewritten is not None:
                                 x = x[:i+2] + rewritten + [x[-1]]
@@ -966,7 +1034,7 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
                     elif enable:
                         # Unknown preprocessor directive
-                        self.on_directive_unknown(dirtokens[0], args, ifpassthru)
+                        output_directive = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
 
                 except OutputDirective:
                     output_directive = True
@@ -1054,6 +1122,8 @@ class Preprocessor(PreprocessorHooks):
     def define(self,tokens):
         if isinstance(tokens,STRING_TYPES):
             tokens = self.tokenize(tokens)
+        else:
+            tokens = [copy.copy(tok) for tok in tokens]
 
         linetok = tokens
         try:
