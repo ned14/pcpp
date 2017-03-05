@@ -3,9 +3,15 @@ A C99 preprocessor written in pure Python
 .. role:: c(code)
    :language: c
 
+.. |travis| image:: https://travis-ci.org/ned14/pcpp.svg?branch=master
+    :align: middle
+    :target: https://travis-ci.org/ned14/pcpp
+
 \(C) 2017 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp
+
+Travis master branch all tests passing: |travis|
 
 A pure Python v2 C (pre-)preprocessor implementation very useful for pre-preprocessing header only
 C++ libraries into single file includes and other such build or packaging stage malarky.
