@@ -4,6 +4,8 @@ from .pcpp import Preprocessor, OutputDirective
 
 version='1.0'
 
+__all__ = []
+
 class CmdPreprocessor(Preprocessor):
     def __init__(self, argv):
         argp = argparse.ArgumentParser(prog='pcpp',

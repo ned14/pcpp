@@ -11,6 +11,8 @@
 
 from __future__ import generators
 
+__all__ = ['Preprocessor', 'OutputDirective']
+
 import sys, traceback
 
 # Some Python 3 compatibility shims
@@ -272,7 +274,7 @@ class Preprocessor(PreprocessorHooks):
         self.debugout = None
 
         # Probe the lexer for selected tokens
-        self.lexprobe()
+        self.__lexprobe()
 
         tm = time.localtime()
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
@@ -287,6 +289,7 @@ class Preprocessor(PreprocessorHooks):
     # -----------------------------------------------------------------------------
 
     def tokenize(self,text):
+        """Utility function. Given a string of text, tokenize into a list of tokens"""
         tokens = []
         self.lexer.input(text)
         while True:
@@ -296,7 +299,7 @@ class Preprocessor(PreprocessorHooks):
         return tokens
 
     # ----------------------------------------------------------------------
-    # lexprobe()
+    # __lexprobe()
     #
     # This method probes the preprocessor lexer object to discover
     # the token types of symbols that are important to the preprocessor.
@@ -304,7 +307,7 @@ class Preprocessor(PreprocessorHooks):
     # with any suitable lexer regardless of how tokens have been named.
     # ----------------------------------------------------------------------
 
-    def lexprobe(self):
+    def __lexprobe(self):
 
         # Determine the token type for identifiers
         self.lexer.input("identifier")
@@ -386,6 +389,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def add_path(self,path):
+        """Adds a search path to the preprocessor. """
         self.path.append(path)
 
     # ----------------------------------------------------------------------
@@ -398,6 +402,11 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def group_lines(self,input,source):
+        """Given an input string, this function splits it into lines.  Trailing whitespace
+        is removed.   Any line ending with \ is grouped with the next line.  This
+        function forms the lowest level of the preprocessor---grouping into text into
+        a line-by-line format.
+        """
         lex = self.lexer.clone()
         lines = [x.rstrip() for x in input.splitlines()]
         for i in xrange(len(lines)):
@@ -432,6 +441,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def tokenstrip(self,tokens):
+        """Remove leading/trailing whitespace tokens from a token list"""
         i = 0
         while i < len(tokens) and tokens[i].type in self.t_WS:
             i += 1
@@ -460,6 +470,17 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def collect_args(self,tokenlist,ignore_errors=False):
+        """Collects comma separated arguments from a list of tokens.   The arguments
+        must be enclosed in parenthesis.  Returns a tuple (tokencount,args,positions)
+        where tokencount is the number of tokens consumed, args is a list of arguments,
+        and positions is a list of integers containing the starting index of each
+        argument.  Each argument is represented by a list of tokens.
+        
+        When collecting arguments, leading and trailing whitespace is removed
+        from each argument.  
+        
+        This function properly handles nested parenthesis and commas---these do not
+        define new arguments."""
         args = []
         positions = []
         current_arg = []
@@ -514,6 +535,9 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
     
     def macro_prescan(self,macro):
+        """Examine the macro value (token sequence) and identify patch points
+        This is used to speed up macro expansion later on---we'll know
+        right away where to apply patches to the value to form the expansion"""
         macro.patch     = []             # Standard macro arguments 
         macro.str_patch = []             # String conversion expansion
         macro.var_comma_patch = []       # Variadic macro comma patch
@@ -564,6 +588,9 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def macro_expand_args(self,macro,args):
+        """Given a Macro and list of arguments (each a token list), this method
+        returns an expanded version of a macro.  The return value is a token sequence
+        representing the replacement macro tokens"""
         # Make a copy of the macro token sequence
         rep = [copy.copy(_x) for _x in macro.value]
 
@@ -647,6 +674,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def expand_macros(self,tokens,expanding_from=[]):
+        """Given a list of tokens, this function performs macro expansion."""
         # Each token needs to track from which macros it has been expanded from to prevent recursion
         for tok in tokens:
             if not hasattr(tok, 'expanded_from'):
@@ -741,6 +769,8 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def evalexpr(self,tokens):
+        """Evaluate an expression token sequence for the purposes of evaluating
+        integral expressions."""
         # tokens = tokenize(line)
         # Search for defined macros
         evalfuncts = {'defined' : lambda x: True}
@@ -859,9 +889,10 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
     # parsegen()
     #
-    # Parse an input string/
+    # Parse an input string
     # ----------------------------------------------------------------------
     def parsegen(self,input,source=None):
+        """Parse an input string"""
 
         # Replace trigraph sequences
         t = trigraph(input)
@@ -1064,6 +1095,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def include(self,tokens):
+        """Implementation of file-inclusion"""
         # Try to extract the filename and then process an include file
         if not tokens:
             return
@@ -1120,6 +1152,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def define(self,tokens):
+        """Define a new macro"""
         if isinstance(tokens,STRING_TYPES):
             tokens = self.tokenize(tokens)
         else:
@@ -1197,6 +1230,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def undef(self,tokens):
+        """Undefine a macro"""
         if isinstance(tokens,STRING_TYPES):
             tokens = self.tokenize(tokens)
         id = tokens[0].value
@@ -1211,6 +1245,7 @@ class Preprocessor(PreprocessorHooks):
     # Parse input text.
     # ----------------------------------------------------------------------
     def parse(self,input,source=None,ignore={}):
+        """Parse input text."""
         if isinstance(input, file):
             if source is None:
                 source = input.name
@@ -1227,6 +1262,7 @@ class Preprocessor(PreprocessorHooks):
     # Method to return individual tokens
     # ----------------------------------------------------------------------
     def token(self):
+        """Method to return individual tokens"""
         try:
             while True:
                 tok = next(self.parser)
@@ -1237,6 +1273,7 @@ class Preprocessor(PreprocessorHooks):
             return None
             
     def write(self, oh=sys.stdout):
+        """Calls token() repeatedly, expanding tokens to their text and writing to the file like stream oh"""
         lastlineno = 0
         lastsource = None
         done = False

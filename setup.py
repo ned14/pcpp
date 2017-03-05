@@ -14,7 +14,7 @@ setup(
     version=pcpp.version,
     description='A C99 preprocessor written in pure Python',
     long_description=long_description,
-    author='Niall Douglas',
+    author='Niall Douglas and David Beazley',
     url='http://pypi.python.org/pypi/pcpp',
     packages=['pcpp'],
     test_suite='tests',
