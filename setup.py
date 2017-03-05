@@ -18,7 +18,6 @@ setup(
     url='http://pypi.python.org/pypi/pcpp',
     packages=['pcpp'],
     test_suite='tests',
-    use_2to3=True,
     entry_points={
         'console_scripts': [ 'pcpp=pcpp:main' ]
     },

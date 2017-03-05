@@ -12,7 +12,9 @@ env:
  - __="Build"
  - __="Test"
  - __="Install"
- 
+
+install: "pip install -r requirements.txt"
+
 script:
  -
    if [ "$__" = "Build" ]; then

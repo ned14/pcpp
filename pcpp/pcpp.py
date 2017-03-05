@@ -9,7 +9,7 @@
 # This edition substantially improves on standards conforming output,
 # getting quite close to what clang or GCC outputs.
 
-from __future__ import generators
+from __future__ import generators, print_function
 
 __all__ = ['Preprocessor', 'OutputDirective']
 
@@ -180,10 +180,7 @@ class PreprocessorHooks(object):
         
         The default simply prints to stderr and increments the return code.
         """
-        if sys.version_info.major < 3:
-            print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
-        else:
-            print("%s:%d error: %s" % (file,line,msg), file = sys.stderr)
+        print("%s:%d error: %s" % (file,line,msg), file = sys.stderr)
         self.return_code += 1
         
     def on_include_not_found(self,is_system_include,curdir,includepath):
@@ -251,11 +248,11 @@ class PreprocessorHooks(object):
         (remove from output). For everything else it returns None (pass through into output).
         """
         if directive.value == 'error':
-            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+            print("%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
             self.return_code += 1
             return True
         elif directive.value == 'warning':
-            print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+            print("%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
             return True
         return None
 
@@ -940,7 +937,7 @@ class Preprocessor(PreprocessorHooks):
                         args = []
                     
                     if self.debugout is not None:
-                        print >> self.debugout, "%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]))
+                        print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
 
                     handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
                     if handling == False:
