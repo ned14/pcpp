@@ -18,9 +18,12 @@ import sys, traceback
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
     STRING_TYPES = (str, unicode)
+    FILE_TYPES = file
 else:
     STRING_TYPES = str
     xrange = range
+    import io
+    FILE_TYPES = io.IOBase
 
 # -----------------------------------------------------------------------------
 # Default preprocessor lexer definitions.   These tokens are enough to get
@@ -177,7 +180,10 @@ class PreprocessorHooks(object):
         
         The default simply prints to stderr and increments the return code.
         """
-        print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+        if sys.version_info.major < 3:
+            print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+        else:
+            print("%s:%d error: %s" % (file,line,msg), file = sys.stderr)
         self.return_code += 1
         
     def on_include_not_found(self,is_system_include,curdir,includepath):
@@ -820,13 +826,16 @@ class Preprocessor(PreprocessorHooks):
                     # Add this identifier to a dictionary of variables
                     evalvars[t.value] = 0
                 else:
-                    tokens[i] = repl
-            elif t.type == self.t_INTEGER:
+                    tokens[i] = t = repl
+            if t.type == self.t_INTEGER:
                 tokens[i] = copy.copy(t)
                 # Strip off any trailing suffixes
                 tokens[i].value = str(tokens[i].value)
                 while tokens[i].value[-1] not in "0123456789abcdefABCDEF":
                     tokens[i].value = tokens[i].value[:-1]
+                if sys.version_info.major >= 3:
+                    if len(tokens[i].value) > 1 and tokens[i].value[0] == '0' and tokens[i].value[1] >= '0' and tokens[i].value[1] <= '7':
+                        tokens[i].value = '0o' + tokens[i].value[1:]
             elif t.type == self.t_COLON:
                 # Find the expression before the colon
                 cs = ce = i - 1
@@ -878,6 +887,7 @@ class Preprocessor(PreprocessorHooks):
         expr = expr.replace("||"," or ")
         expr = expr.replace("!="," <> ")
         expr = expr.replace("!"," not ")
+        expr = expr.replace(" <> ", " != ")
         try:
             result = eval(expr, evalfuncts, evalvars)
         except Exception:
@@ -1128,7 +1138,9 @@ class Preprocessor(PreprocessorHooks):
             for p in path:
                 iname = os.path.join(p,filename)
                 try:
-                    data = open(iname,"r").read()
+                    ih = open(iname,"r")
+                    data = ih.read()
+                    ih.close()
                     dname = os.path.dirname(iname)
                     if dname:
                         self.temp_path.insert(0,dname)
@@ -1246,7 +1258,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
     def parse(self,input,source=None,ignore={}):
         """Parse input text."""
-        if isinstance(input, file):
+        if isinstance(input, FILE_TYPES):
             if source is None:
                 source = input.name
             input = input.read()

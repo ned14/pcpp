@@ -1,6 +1,9 @@
 from __future__ import absolute_import, print_function
 import unittest
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class runner(object):
     def runTest(self):
