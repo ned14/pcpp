@@ -9,16 +9,17 @@ A C99 preprocessor written in pure Python
 
 \(C) 2017 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 
-PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp
+PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
-Travis master branch all tests passing: |travis|
+Travis master branch all tests passing for Python v2 and v3: |travis|
 
-A pure Python v2 C (pre-)preprocessor implementation very useful for pre-preprocessing header only
+A pure universal Python C (pre-)preprocessor implementation very useful for pre-preprocessing header only
 C++ libraries into single file includes and other such build or packaging stage malarky.
-The implementation can be used as a Python module or as a command line tool ``pcpp`` which
+The implementation can be used as a Python module (`see API reference <https://ned14.github.io/pcpp/>`_)
+or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
 Extensive ability to hook and customise the preprocessing is provided, for example one
-can pass through preprocessor logic if any inputs are undefined (instead of treating
+can pass through preprocessor logic if any macros are undefined (instead of treating
 undefined macros as if 0). This aids easy generation of low compile time single file
 includes for some header only library, thus making ``pcpp`` a "pre-pre-processor".
 
@@ -28,7 +29,7 @@ plus those testing the unusual special quirks in expression evaluation (see deta
 description below). It also passes the list of "preprocessor torture" expansion fragments
 in the C11 standard, correctly expanding some very complex recursive macro expansions
 where expansions cause new macro expansions to be formed. In this, it handily beats
-the MSVC preprocessor and ought to handle most simple C99 preprocessor metaprogramming.
+the MSVC preprocessor and ought to handle most C99 preprocessor metaprogramming.
 If you compare its output side-by-side to that of GCC or clang's preprocessor, results
 are extremely close indeed with blank line collapsing being the only difference.
 
@@ -47,8 +48,106 @@ questions which have asked for a pure Python C preprocessor implementation. This
 implementation fixes a lot of conformance bugs (the original was never intended to
 rigidly adhere to the C standard) and adds in a test suite based on the C11 preprocessor
 torture samples plus the mcpp preprocessor test suite. Still, this project would
-not be possible without David's work, so please take off your hat towards him.
+not be possible without David's work, so please take off your hat and give a bow towards him.
 
+Command line tool ``pcpp``:
+---------------------------
+The help from the command line tool ``pcpp``::
+
+    usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-I path]
+                [--passthru] [--version]
+                [input]
+
+    A pure Python v2 C (pre-)preprocessor implementation very useful for pre-
+    preprocessing header only C++ libraries into single file includes and other
+    such build or packaging stage malarky.
+
+    positional arguments:
+      input           File to preprocess
+
+    optional arguments:
+      -h, --help      show this help message and exit
+      -o [path]       Output to a file
+      -D macro[=val]  Predefine name as a macro [with value]
+      -U macro        Undefine name as a macro
+      -I path         Path to search for unfound #include's
+      --passthru      Undefined macros or unfound includes cause preprocessor
+                      logic to be passed through instead of treated as 0L
+      --version       show program's version number and exit
+
+    Note that so pcpp can stand in for other preprocessor tooling, it ignores any
+    arguments it does not understand and any files it cannot open.
+
+Pass through mode passes through any #define's and #undef's plus any #if logic
+where any macro in the expression is unknown. In this mode, -U macro means that
+that macro is to be assumed to be undefined and expanding to `0L` i.e. don't
+perform pass through on that macro because it is undefined.
+
+Let us look at an example for pass through mode. Here is the original:
+
+.. code-block:: c
+
+    #if !defined(__cpp_constexpr)
+    #if __cplusplus >= 201402L
+    #define __cpp_constexpr 201304  // relaxed constexpr
+    #else
+    #define __cpp_constexpr 190000
+    #endif
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #if __cpp_constexpr >= 201304
+    #define BOOSTLITE_CONSTEXPR constexpr
+    #endif
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #define BOOSTLITE_CONSTEXPR
+    #endif
+
+Pass through mode will output:
+
+.. code-block:: c
+
+    #if !defined(__cpp_constexpr)
+    #if __cplusplus >= 201402
+    #define __cpp_constexpr 201304
+    #else
+    #define __cpp_constexpr 190000
+    #endif
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    
+    
+    
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #define BOOSTLITE_CONSTEXPR
+    #endif
+    
+This is because the ``#define __cpp_constexpr 190000`` was executed as
+`__cpp_constexpr` was not defined and is less than `201402`. Let's see the effect
+of `-U BOOSTLITE_CONSTEXPR`:
+
+.. code-block:: c
+
+    #if !defined(__cpp_constexpr)
+    #if __cplusplus >= 201402
+    #define __cpp_constexpr 201304
+    #else
+    #define __cpp_constexpr 190000
+    #endif
+    #endif
+    
+    
+    
+    
+    
+    
+    #define BOOSTLITE_CONSTEXPR
+    
+Because `BOOSTLITE_CONSTEXPR` is no longer passed through, its #if is executed and
+removed from the output. That leaves the ``#define BOOSTLITE_CONSTEXPR`` as the earlier
+logic is also executed and removed due to being fully known to the preprocessor.
+        
 What's working:
 ---------------
 - Digraphs and Trigraphs
@@ -91,101 +190,9 @@ Implementable by overriding :c:`PreprocessorHooks`:
 - :c:`#pragma` (ignored)
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE` (no default implementation, so ignored)
 
-This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to override with your own:
-
-.. code-block:: python
-
-  class OutputDirective(Exception):
-      """Raise this exception to abort processing of a preprocessor directive and
-      to instead output it as is into the output"""
-      pass
-
-  class PreprocessorHooks(object):
-      """Override these in your subclass of Preprocessor to customise preprocessing"""
-      def __init__(self):
-          self.lastdirective = None
-
-      def on_error(self,file,line,msg):
-          """Called when the preprocessor has encountered an error, e.g. malformed input.
-          
-          The default simply prints to stderr and increments the return code.
-          """
-          print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
-          self.return_code += 1
-          
-      def on_include_not_found(self,is_system_include,curdir,includepath):
-          """Called when a #include wasn't found.
-          
-          Return None to ignore, raise OutputDirective to pass through, else return
-          a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
-          
-          The default calls self.on_error() with a suitable error message about the
-          include file not found and returns None (ignore).
-          """
-          self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
-          return None
-          
-      def on_unknown_macro_in_defined_expr(self,tok):
-          """Called when an expression passed to an #if contained a defined operator
-          performed on something unknown.
-          
-          Return True if to treat it as defined, False if to treat it as undefined,
-          raise OutputDirective to pass through without execution, or return None to
-          pass through the mostly expanded #if expression apart from the unknown defined.
-          
-          The default returns False, as per the C standard.
-          """
-          return False
-
-      def on_unknown_macro_in_expr(self,tok):
-          """Called when an expression passed to an #if contained something unknown.
-          
-          Return what value it should be, raise OutputDirective to pass through
-          without execution, or return None to pass through the mostly expanded #if
-          expression apart from the unknown item.
-          
-          The default returns a token for an integer 0L, as per the C standard.
-          """
-          tok.type = self.t_INTEGER
-          tok.value = self.t_INTEGER_TYPE("0L")
-          return tok
-      
-      def on_directive_handle(self,directive,toks,ifpassthru):
-          """Called when there is one of
-          
-          define, include, undef, ifdef, ifndef, if, elif, else, endif
-          
-          Return True to execute and remove from the output, return False to
-          remove from the output, raise OutputDirective to pass through without
-          execution, or return None to execute AND pass through to the output
-          (this only works for #define, #undef).
-          
-          The default returns True (execute and remove from the output).
-          """
-          self.lastdirective = directive
-          return True
-          
-      def on_directive_unknown(self,directive,toks,ifpassthru):
-          """Called when the preprocessor encounters a #directive it doesn't understand.
-          This is actually quite an extensive list as it currently only understands:
-          
-          define, include, undef, ifdef, ifndef, if, elif, else, endif
-          
-          Return True or False to remove from the output, or else raise OutputDirective
-          or return None to pass through into the output.
-          
-          The default handles #error and #warning by printing to stderr and returning True
-          (remove from output). For everything else it returns None (pass through into output).
-          """
-          if directive.value == 'error':
-              print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
-              self.return_code += 1
-              return True
-          elif directive.value == 'warning':
-              print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
-              return True
-          return None
-
+This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to override with
+your own behaviours (`see API reference <https://ned14.github.io/pcpp/>`_). If you need an example, the command line tool overrides the hooks to provide
+partial pre-preprocessing.
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
@@ -205,7 +212,6 @@ Known bugs (ordered from worst to least worst):
    is supposed to be evaluated as false in the C preprocessor, but it will be
    evaluated as true under this implementation. To be honest
    if your preprocessor logic is relying on those sorts of behaviours, you should rewrite it.
-   For reference, unsigneds are mapped to long (signed) integers in Python, as are long longs.
  - Without a back tracking parser, the C ternary operator is hard to accurately
    convert into a Python ternary operation, so you need to help it by using one
    of these two forms:
@@ -219,3 +225,9 @@ Known bugs (ordered from worst to least worst):
 **_Pragma used to emit preprocessor calculated #pragma is not implemented.**
  It would not be hard to add, it was simply a case of the author having no need of it.
  Patches adding support are welcome.
+
+Customising your own preprocessor:
+----------------------------------
+See the API reference docs at https://ned14.github.io/pcpp/
+
+You can find an example of overriding the `on_*()` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcpp_cmd.py
