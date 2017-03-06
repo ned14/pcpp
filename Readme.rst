@@ -54,8 +54,9 @@ Command line tool ``pcpp``:
 ---------------------------
 The help from the command line tool ``pcpp``::
 
-    usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-I path]
-                [--passthru] [--version]
+    usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-N macro] [-I path]
+                [--passthru-defines] [--passthru-unfound-includes]
+                [--passthru-undefined-exprs] [--version]
                 [input]
 
     A pure Python v2 C (pre-)preprocessor implementation very useful for pre-
@@ -63,21 +64,28 @@ The help from the command line tool ``pcpp``::
     such build or packaging stage malarky.
 
     positional arguments:
-      input           File to preprocess
+      input                 File to preprocess
 
     optional arguments:
-      -h, --help      show this help message and exit
-      -o [path]       Output to a file
-      -D macro[=val]  Predefine name as a macro [with value]
-      -U macro        Undefine name as a macro
-      -I path         Path to search for unfound #include's
-      --passthru      Undefined macros or unfound includes cause preprocessor
-                      logic to be passed through instead of treated as 0L
-      --version       show program's version number and exit
+      -h, --help            show this help message and exit
+      -o [path]             Output to a file instead of stdout
+      -D macro[=val]        Predefine name as a macro [with value]
+      -U macro              Pre-undefine name as a macro
+      -N macro              Never define name as a macro, even if defined during
+                            the preprocessing.
+      -I path               Path to search for unfound #include's
+      --passthru-defines    Pass through but still execute #defines and #undefs if
+                            not always removed by preprocessor logic
+      --passthru-unfound-includes
+                            Pass through #includes not found without execution
+      --passthru-undefined-exprs
+                            Undefined macros in expressions cause preprocessor
+                            logic to be passed through instead of executed by
+                            treating undefined macros as 0L
+      --version             show program's version number and exit
 
-    Note that so pcpp can stand in for other preprocessor tooling, it ignores any
-    arguments it does not understand and any files it cannot open.
-
+Note that so pcpp can stand in for other preprocessor tooling, it ignores any
+arguments it does not understand and any files it cannot open.
 Pass through mode passes through any #define's and #undef's plus any #if logic
 where any macro in the expression is unknown. In this mode, -U macro means that
 that macro is to be assumed to be undefined and expanding to `0L` i.e. don't
