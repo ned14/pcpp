@@ -84,6 +84,7 @@ def t_CPP_COMMENT2(t):
     r'(//.*?(\n|$))'
     # replace with '/n'
     t.type = 'CPP_WS'; t.value = '\n'
+    t.lexer.lineno += 1
     return t
     
 def t_error(t):
@@ -282,6 +283,7 @@ class Preprocessor(PreprocessorHooks):
         tm = time.localtime()
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
         self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
+        self.define("__PCPP__ 1")
         self.countermacro = 0
         self.parser = None
 
@@ -886,7 +888,7 @@ class Preprocessor(PreprocessorHooks):
         expr = expr.replace("!"," not ")
         expr = expr.replace(" <> ", " != ")
         try:
-            result = eval(expr, evalfuncts, evalvars)
+            result = int(eval(expr, evalfuncts, evalvars))
         except Exception:
             self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
             + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
@@ -920,9 +922,10 @@ class Preprocessor(PreprocessorHooks):
         for x in lines:
             for i,tok in enumerate(x):
                 if tok.type not in self.t_WS: break
-            output_directive = True
+            output_and_expand_line = True
+            output_unexpanded_line = False
             if tok.value == '#':
-                output_directive = False
+                output_and_expand_line = False
                 try:
                     # Preprocessor directive      
                     i += 1
@@ -937,7 +940,8 @@ class Preprocessor(PreprocessorHooks):
                         args = []
                     
                     if self.debugout is not None:
-                        print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
+                        print("%d:%d:%d %s:%d #%s %s (ifstack=%s)" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]), repr(ifstack)), file = self.debugout)
+                        #print(ifstack)
 
                     handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
                     if handling == False:
@@ -948,6 +952,8 @@ class Preprocessor(PreprocessorHooks):
                                 yield tok
                             chunk = []
                             self.define(args)
+                            if self.debugout is not None:
+                                print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
                             if handling is None:
                                 for tok in x:
                                     yield tok
@@ -1072,15 +1078,22 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
                     elif enable:
                         # Unknown preprocessor directive
-                        output_directive = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
+                        output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
 
                 except OutputDirective:
-                    output_directive = True
+                    output_unexpanded_line = True
 
-            if output_directive:
+            if output_and_expand_line or output_unexpanded_line:
                 # Normal text
                 if enable:
-                    chunk.extend(x)
+                    if output_and_expand_line:
+                        chunk.extend(x)
+                    elif output_unexpanded_line:
+                        for tok in self.expand_macros(chunk):
+                            yield tok
+                        chunk = []
+                        for tok in x:
+                            yield tok
                 else:
                     # Need to extend with the same number of blank lines
                     i = 0

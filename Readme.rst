@@ -155,6 +155,8 @@ of `-U BOOSTLITE_CONSTEXPR`:
 Because `BOOSTLITE_CONSTEXPR` is no longer passed through, its #if is executed and
 removed from the output. That leaves the ``#define BOOSTLITE_CONSTEXPR`` as the earlier
 logic is also executed and removed due to being fully known to the preprocessor.
+
+Todo: __PCPP_ALWAYS_FALSE__ and __PCPP_ALWAYS_TRUE__
         
 What's working:
 ---------------

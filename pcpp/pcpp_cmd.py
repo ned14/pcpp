@@ -10,7 +10,7 @@ class CmdPreprocessor(Preprocessor):
     def __init__(self, argv):
         argp = argparse.ArgumentParser(prog='pcpp',
             description=
-    '''A pure Python v2 C (pre-)preprocessor implementation very useful for
+    '''A pure universal Python C (pre-)preprocessor implementation very useful for
     pre-preprocessing header only C++ libraries into single file includes and
     other such build or packaging stage malarky.''',
             epilog=
@@ -35,18 +35,27 @@ class CmdPreprocessor(Preprocessor):
 
         self.args = args[0]
         super(CmdPreprocessor, self).__init__()
+        self.define("__PCPP_VERSION__ " + version)
+        self.define("__PCPP_ALWAYS_FALSE__ 0")
+        self.define("__PCPP_ALWAYS_TRUE__ 1")
         self.debugout = open("pcpp_debug.log", "wt")
+        self.bypass_ifpassthru = False
 
         if self.args.defines:
+            self.args.defines = [x[0] for x in self.args.defines]
             for d in self.args.defines:
-                d = d[0].replace('=', ' ')
+                d = d.replace('=', ' ')
                 self.define(d)
         if self.args.undefines:
+            self.args.undefines = [x[0] for x in self.args.undefines]
             for d in self.args.undefines:
-                self.undef(d[0])
+                self.undef(d)
+        if self.args.nevers:
+            self.args.nevers = [x[0] for x in self.args.nevers]
         if self.args.includes:
+            self.args.includes = [x[0] for x in self.args.includes]
             for d in self.args.includes:
-                self.add_path(d[0])
+                self.add_path(d)
 
         self.parse(self.args.input)
         self.write(self.args.output)
@@ -58,7 +67,7 @@ class CmdPreprocessor(Preprocessor):
 
     def on_unknown_macro_in_defined_expr(self,tok):
         if self.args.undefines:
-            if tok.value in self.args.undefines[0]:
+            if tok.value in self.args.undefines:
                 return False
         if self.args.passthru_undefined_exprs:
             return None  # Pass through as expanded as possible
@@ -66,16 +75,20 @@ class CmdPreprocessor(Preprocessor):
         
     def on_unknown_macro_in_expr(self,tok):
         if self.args.undefines:
-            if tok.value in self.args.undefines[0]:
+            if tok.value in self.args.undefines:
                 return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
         if self.args.passthru_undefined_exprs:
             return None  # Pass through as expanded as possible
         return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
         
     def on_directive_handle(self,directive,toks,ifpassthru):
-        if directive.value == 'define' and self.args.nevers:
-            if toks[0].value in self.args.nevers[0]:
-                print(directive.value, toks[0].value, self.args.nevers)
+        if ifpassthru:
+            if directive.value == 'if' or directive.value == 'elif' or directive.value == 'endif':
+                self.bypass_ifpassthru = len([tok for tok in toks if tok.value == '__PCPP_ALWAYS_FALSE__' or tok.value == '__PCPP_ALWAYS_TRUE__']) > 0
+            if not self.bypass_ifpassthru and (directive.value == 'define' or directive.value == 'undef'):
+                raise OutputDirective()  # Don't execute anything with effects when inside an #if expr with undefined macro
+        if (directive.value == 'define' or directive.value == 'undef') and self.args.nevers:
+            if toks[0].value in self.args.nevers:
                 raise OutputDirective()
         if self.args.passthru_defines:
             super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
@@ -83,8 +96,8 @@ class CmdPreprocessor(Preprocessor):
         return super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
 
     def on_directive_unknown(self,directive,toks,ifpassthru):
-        #if self.args.passthru:
-        #    return None  # Pass through
+        if ifpassthru:
+            return None  # Pass through
         return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru)
 
 
