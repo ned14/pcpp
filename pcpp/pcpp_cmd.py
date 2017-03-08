@@ -83,7 +83,7 @@ class CmdPreprocessor(Preprocessor):
         
     def on_directive_handle(self,directive,toks,ifpassthru):
         if ifpassthru:
-            if directive.value == 'if' or directive.value == 'elif' or directive.value == 'endif':
+            if directive.value == 'if' or directive.value == 'elif' or directive == 'else' or directive.value == 'endif':
                 self.bypass_ifpassthru = len([tok for tok in toks if tok.value == '__PCPP_ALWAYS_FALSE__' or tok.value == '__PCPP_ALWAYS_TRUE__']) > 0
             if not self.bypass_ifpassthru and (directive.value == 'define' or directive.value == 'undef'):
                 raise OutputDirective()  # Don't execute anything with effects when inside an #if expr with undefined macro

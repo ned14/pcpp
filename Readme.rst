@@ -111,7 +111,7 @@ Let us look at an example for pass through mode. Here is the original:
     #define BOOSTLITE_CONSTEXPR
     #endif
 
-Pass through mode will output:
+``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs`` will output:
 
 .. code-block:: c
 
@@ -123,40 +123,95 @@ Pass through mode will output:
     #endif
     #endif
     #ifndef BOOSTLITE_CONSTEXPR
-    
-    
-    
+    #if __cpp_constexpr >= 201304
+    #define BOOSTLITE_CONSTEXPR constexpr
+    #endif
     #endif
     #ifndef BOOSTLITE_CONSTEXPR
     #define BOOSTLITE_CONSTEXPR
     #endif
     
-This is because the ``#define __cpp_constexpr 190000`` was executed as
-`__cpp_constexpr` was not defined and is less than `201402`. Let's see the effect
-of `-U BOOSTLITE_CONSTEXPR`:
+This is because ``__cpp_constexpr`` was not defined, so because of the ``--passthru-undefined-exprs`` flag
+we pass through everything inside that if block **unexecuted** i.e. defines and undefs are NOT executed by
+``pcpp``. Let's define ``__cpp_constexpr``:
+
+``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs -D __cpp_constexpr=1``
+
+.. code-block:: c
+
+    # 8 "test.h"
+    #ifndef BOOSTLITE_CONSTEXPR
+
+
+
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #define BOOSTLITE_CONSTEXPR
+    #endif
+    
+So, big difference now. We execute the entire first if block as ``__cpp_constexpr`` is now defined, thus
+leaving whitespace. Let's try setting ``__cpp_constexpr`` a bit higher:
+
+``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs -D __cpp_constexpr=201304``
+
+.. code-block:: c
+
+    # 8 "test.h"
+    #ifndef BOOSTLITE_CONSTEXPR
+
+    #define BOOSTLITE_CONSTEXPR constexpr
+
+    #endif
+
+As you can see, the lines related to the known ``__cpp_constexpr`` are executed and removed, passing through
+any if blocks with unknown macros in the expression.
+
+Sometimes it can be useful to have part of an if block being passed through to also be executed in addition to the pass through.
+For this use ``__PCPP_ALWAYS_FALSE__`` or ``__PCPP_ALWAYS_TRUE__`` which tells ``pcpp`` to temporarily
+start executing the passed through preprocessor commands e.g.
+
+.. code-block:: c
+
+    #if !defined(__cpp_constexpr)
+    #if __cplusplus >= 201402L 
+    #define __cpp_constexpr 201304  // relaxed constexpr
+    #elif !__PCPP_ALWAYS_FALSE__
+    #define __cpp_constexpr 190000
+    #endif
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #if __cpp_constexpr >= 201304
+    #define BOOSTLITE_CONSTEXPR constexpr
+    #endif
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #define BOOSTLITE_CONSTEXPR
+    #endif
+
+Note that ``__PCPP_ALWAYS_FALSE__`` will always be false in any other preprocessor, and it is also
+false in ``pcpp``. However it causes ``pcpp`` to execute the following define of ``__cpp_constexpr``:
+
+``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs``
 
 .. code-block:: c
 
     #if !defined(__cpp_constexpr)
     #if __cplusplus >= 201402
     #define __cpp_constexpr 201304
-    #else
+    #elif 1
     #define __cpp_constexpr 190000
     #endif
     #endif
-    
-    
-    
-    
-    
-    
-    #define BOOSTLITE_CONSTEXPR
-    
-Because `BOOSTLITE_CONSTEXPR` is no longer passed through, its #if is executed and
-removed from the output. That leaves the ``#define BOOSTLITE_CONSTEXPR`` as the earlier
-logic is also executed and removed due to being fully known to the preprocessor.
+    #ifndef BOOSTLITE_CONSTEXPR
 
-Todo: __PCPP_ALWAYS_FALSE__ and __PCPP_ALWAYS_TRUE__
+
+
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #define BOOSTLITE_CONSTEXPR
+    #endif
+    
+Which means the following use of ``__cpp_constexpr`` is now fully defined, and therefore executed.
         
 What's working:
 ---------------
