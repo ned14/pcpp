@@ -446,6 +446,10 @@ class Preprocessor(PreprocessorHooks):
                 current_line = []
 
         if current_line:
+            nltok = copy.copy(current_line[-1])
+            nltok.type = self.t_NEWLINE
+            nltok.value = '\n'
+            current_line.append(nltok)
             yield current_line
 
     # ----------------------------------------------------------------------
