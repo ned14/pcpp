@@ -56,12 +56,13 @@ The help from the command line tool ``pcpp``::
 
     usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-N macro] [-I path]
                 [--passthru-defines] [--passthru-unfound-includes]
-                [--passthru-undefined-exprs] [--version]
+                [--passthru-undefined-exprs] [--disable-auto-pragma-once]
+                [--version]
                 [input]
 
-    A pure Python v2 C (pre-)preprocessor implementation very useful for pre-
-    preprocessing header only C++ libraries into single file includes and other
-    such build or packaging stage malarky.
+    A pure universal Python C (pre-)preprocessor implementation very useful for
+    pre-preprocessing header only C++ libraries into single file includes and
+    other such build or packaging stage malarky.
 
     positional arguments:
       input                 File to preprocess
@@ -82,10 +83,15 @@ The help from the command line tool ``pcpp``::
                             Undefined macros in expressions cause preprocessor
                             logic to be passed through instead of executed by
                             treating undefined macros as 0L
+      --disable-auto-pragma-once
+                            Disable the heuristics which auto apply #pragma once
+                            to #include files wholly wrapped in an obvious include
+                            guard macro
       --version             show program's version number and exit
 
-Note that so pcpp can stand in for other preprocessor tooling, it ignores any
-arguments it does not understand and any files it cannot open.
+    Note that so pcpp can stand in for other preprocessor tooling, it ignores any
+    arguments it does not understand and any files it cannot open.
+
 Pass through mode passes through any #define's and #undef's plus any #if logic
 where any macro in the expression is unknown. In this mode, -U macro means that
 that macro is to be assumed to be undefined and expanding to `0L` i.e. don't
@@ -247,6 +253,7 @@ What's working:
 - :c:`#if`, :c:`#ifdef`, :c:`#ifndef`, :c:`#elif`, :c:`#else`, :c:`#endif`
 - Stringizing operator #
 - Token pasting operator ##
+- #pragma once
 
 Implementable by overriding :c:`PreprocessorHooks`:
 ---------------------------------------------------
@@ -256,8 +263,8 @@ Implementable by overriding :c:`PreprocessorHooks`:
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE` (no default implementation, so ignored)
 
 This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to override with
-your own behaviours (`see API reference <https://ned14.github.io/pcpp/>`_). If you need an example, the command line tool overrides the hooks to provide
-partial pre-preprocessing.
+your own behaviours (`see API reference <https://ned14.github.io/pcpp/>`_). If you need an example,
+the command line tool overrides the hooks to provide partial pre-preprocessing.
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------

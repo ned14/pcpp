@@ -1,5 +1,5 @@
 from __future__ import absolute_import, print_function
-import sys, argparse
+import sys, argparse, traceback
 from .pcpp import Preprocessor, OutputDirective
 
 version='1.0'
@@ -27,6 +27,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru-defines', dest = 'passthru_defines', action = 'store_true', help = 'Pass through but still execute #defines and #undefs if not always removed by preprocessor logic')
         argp.add_argument('--passthru-unfound-includes', dest = 'passthru_unfound_includes', action = 'store_true', help = 'Pass through #includes not found without execution')
         argp.add_argument('--passthru-undefined-exprs', dest = 'passthru_undefined_exprs', action = 'store_true', help = 'Undefined macros in expressions cause preprocessor logic to be passed through instead of executed by treating undefined macros as 0L')
+        argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)
@@ -35,11 +36,17 @@ class CmdPreprocessor(Preprocessor):
 
         self.args = args[0]
         super(CmdPreprocessor, self).__init__()
+        
+        # Override Preprocessor instance variables
         self.define("__PCPP_VERSION__ " + version)
         self.define("__PCPP_ALWAYS_FALSE__ 0")
         self.define("__PCPP_ALWAYS_TRUE__ 1")
         self.debugout = open("pcpp_debug.log", "wt")
+        self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
+        
+        # My own instance variables
         self.bypass_ifpassthru = False
+        self.potential_include_guard = None
 
         if self.args.defines:
             self.args.defines = [x[0] for x in self.args.defines]
@@ -57,8 +64,14 @@ class CmdPreprocessor(Preprocessor):
             for d in self.args.includes:
                 self.add_path(d)
 
-        self.parse(self.args.input)
-        self.write(self.args.output)
+        try:
+            self.parse(self.args.input)
+            self.write(self.args.output)
+        except:
+            print(traceback.print_exc(10), file = sys.stderr)
+            print("\nINTERNAL PREPROCESSOR ERROR AT AROUND %s:%d, FATALLY EXITING NOW\n"
+                % (self.lastdirective.source, self.lastdirective.lineno), file = sys.stderr)
+            sys.exit(-99)
         
     def on_include_not_found(self,is_system_include,curdir,includepath):
         if self.args.passthru_unfound_includes:
@@ -86,7 +99,8 @@ class CmdPreprocessor(Preprocessor):
             if directive.value == 'if' or directive.value == 'elif' or directive == 'else' or directive.value == 'endif':
                 self.bypass_ifpassthru = len([tok for tok in toks if tok.value == '__PCPP_ALWAYS_FALSE__' or tok.value == '__PCPP_ALWAYS_TRUE__']) > 0
             if not self.bypass_ifpassthru and (directive.value == 'define' or directive.value == 'undef'):
-                raise OutputDirective()  # Don't execute anything with effects when inside an #if expr with undefined macro
+                if toks[0].value != self.potential_include_guard:
+                    raise OutputDirective()  # Don't execute anything with effects when inside an #if expr with undefined macro
         if (directive.value == 'define' or directive.value == 'undef') and self.args.nevers:
             if toks[0].value in self.args.nevers:
                 raise OutputDirective()
@@ -100,6 +114,9 @@ class CmdPreprocessor(Preprocessor):
             return None  # Pass through
         return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru)
 
+    def on_potential_include_guard(self,macro):
+        self.potential_include_guard = macro
+        return super(CmdPreprocessor, self).on_potential_include_guard(macro)
 
 def main():
     p = CmdPreprocessor(sys.argv)

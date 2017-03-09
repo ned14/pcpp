@@ -38,7 +38,7 @@ literals = "+-*/%|&~^<>=!?()[]{}.,;:\\\'\""
 
 # Whitespace, but don't match past the end of a line
 def t_CPP_WS(t):
-    r'([ \t]+\r?\n?|\r?\n)'
+    r'([ \t]+|\n)'
     t.lexer.lineno += t.value.count("\n")
     return t
 
@@ -256,6 +256,13 @@ class PreprocessorHooks(object):
             print("%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
             return True
         return None
+        
+    def on_potential_include_guard(self,macro):
+        """Called when the preprocessor encounters an #ifndef macro or an #if !defined(macro)
+        as the first non-whitespace thing in a file. Unlike the other hooks, macro is a string,
+        not a token.
+        """
+        pass
 
 # ------------------------------------------------------------------
 # Preprocessor object
@@ -274,8 +281,10 @@ class Preprocessor(PreprocessorHooks):
         self.macros = { }
         self.path = []
         self.temp_path = []
+        self.include_once = {}
         self.return_code = 0
         self.debugout = None
+        self.auto_pragma_once_enabled = True
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -918,10 +927,22 @@ class Preprocessor(PreprocessorHooks):
         iftrigger = False
         ifpassthru = False
         ifstack = []
+        # True until any non-whitespace output or anything with effects happens.
+        at_front_of_file = True
+        # True if auto pragma once still a possibility for this #include
+        auto_pragma_once_possible = self.auto_pragma_once_enabled
+        # =(MACRO, 0) means #ifndef MACRO or #if !defined(MACRO) seen, =(MACRO,1) means #define MACRO seen
+        include_guard = None
+        self.on_potential_include_guard(None)
 
         for x in lines:
+            all_whitespace = True
+            skip_auto_pragma_once_possible_check = False
+            # Skip over whitespace
             for i,tok in enumerate(x):
-                if tok.type not in self.t_WS: break
+                if tok.type not in self.t_WS:
+                    all_whitespace = False
+                    break
             output_and_expand_line = True
             output_unexpanded_line = False
             if tok.value == '#':
@@ -947,10 +968,13 @@ class Preprocessor(PreprocessorHooks):
                     if handling == False:
                         pass
                     elif name == 'define':
+                        at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
+                            if include_guard and include_guard[0] == args[0].value:
+                                include_guard = (args[0].value, 1)
                             self.define(args)
                             if self.debugout is not None:
                                 print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
@@ -968,6 +992,7 @@ class Preprocessor(PreprocessorHooks):
                             self.macros['__FILE__'] = oldfile
                             self.source = source
                     elif name == 'undef':
+                        at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
@@ -977,6 +1002,7 @@ class Preprocessor(PreprocessorHooks):
                                 for tok in x:
                                     yield tok
                     elif name == 'ifdef':
+                        at_front_of_file = False
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
                             ifpassthru = False
@@ -993,6 +1019,10 @@ class Preprocessor(PreprocessorHooks):
                             else:
                                 iftrigger = True
                     elif name == 'ifndef':
+                        if not ifstack and at_front_of_file:
+                            self.on_potential_include_guard(args[0].value)
+                            include_guard = (args[0].value, 0)
+                        at_front_of_file = False
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
                             ifpassthru = False
@@ -1010,6 +1040,13 @@ class Preprocessor(PreprocessorHooks):
                                 else:
                                     iftrigger = True
                     elif name == 'if':
+                        if not ifstack and at_front_of_file:
+                            if args[0].value == '!' and args[1].value == 'defined':
+                                n = 2
+                                if args[n].value == '(': n += 1
+                                self.on_potential_include_guard(args[n].value)
+                                include_guard = (args[n].value, 0)
+                        at_front_of_file = False
                         ifstack.append((enable,iftrigger,ifpassthru))
                         if enable:
                             ifpassthru = False
@@ -1024,6 +1061,7 @@ class Preprocessor(PreprocessorHooks):
                             else:
                                 iftrigger = True
                     elif name == 'elif':
+                        at_front_of_file = False
                         if ifstack:
                             if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
                                 if enable and not ifpassthru:         # If already true, we flip enable False
@@ -1055,6 +1093,7 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
                             
                     elif name == 'else':
+                        at_front_of_file = False
                         if ifstack:
                             if ifstack[-1][0]:
                                 if ifpassthru:
@@ -1069,13 +1108,18 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
 
                     elif name == 'endif':
+                        at_front_of_file = False
                         if ifstack:
                             oldifpassthru = ifpassthru
                             enable,iftrigger,ifpassthru = ifstack.pop()
+                            skip_auto_pragma_once_possible_check = True
                             if oldifpassthru:
                                 raise OutputDirective()
                         else:
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
+                    elif name == 'pragma' and args[0].value == 'once':
+                        if enable:
+                            self.include_once[self.source] = None
                     elif enable:
                         # Unknown preprocessor directive
                         output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
@@ -1083,7 +1127,16 @@ class Preprocessor(PreprocessorHooks):
                 except OutputDirective:
                     output_unexpanded_line = True
 
+            # If there is ever any non-whitespace output outside an include guard, auto pragma once is not possible
+            if not skip_auto_pragma_once_possible_check and auto_pragma_once_possible and not ifstack and not all_whitespace:
+                auto_pragma_once_possible = False
+                if self.debugout is not None:
+                    print("%d:%d:%d %s:%d Determined that #include \"%s\" is not entirely wrapped in an include guard macro, disabling auto-applying #pragma once" % (enable, iftrigger, ifpassthru, x[0].source, x[0].lineno, self.source), file = self.debugout)
+                
             if output_and_expand_line or output_unexpanded_line:
+                if not all_whitespace:
+                    at_front_of_file = False
+
                 # Normal text
                 if enable:
                     if output_and_expand_line:
@@ -1107,6 +1160,11 @@ class Preprocessor(PreprocessorHooks):
         for tok in self.expand_macros(chunk):
             yield tok
         chunk = []
+        if auto_pragma_once_possible and include_guard and include_guard[1] == 1:
+            if self.debugout is not None:
+                print("%d:%d:%d %s:%d Determined that #include \"%s\" is entirely wrapped in an include guard macro called %s, auto-applying #pragma once" % (enable, iftrigger, ifpassthru, self.source, 0, self.source, include_guard[0]), file = self.debugout)
+            self.include_once[self.source] = include_guard[0]
+        
 
     # ----------------------------------------------------------------------
     # include()
@@ -1147,6 +1205,8 @@ class Preprocessor(PreprocessorHooks):
             #print path
             for p in path:
                 iname = os.path.join(p,filename)
+                if iname in self.include_once:
+                    return
                 try:
                     ih = open(iname,"r")
                     data = ih.read()

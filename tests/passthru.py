@@ -240,12 +240,7 @@ class test11(unittest.TestCase, runner):
 #endif
 """
     output = r"""#define __cpp_constexpr 201304
-
-
-
-
-
-
+# 9
 #ifndef BOOSTLITE_CONSTEXPR
 
 #define BOOSTLITE_CONSTEXPR constexpr
