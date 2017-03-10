@@ -28,6 +28,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru-unfound-includes', dest = 'passthru_unfound_includes', action = 'store_true', help = 'Pass through #includes not found without execution')
         argp.add_argument('--passthru-undefined-exprs', dest = 'passthru_undefined_exprs', action = 'store_true', help = 'Undefined macros in expressions cause preprocessor logic to be passed through instead of executed by treating undefined macros as 0L')
         argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
+        argp.add_argument('--line-directive', dest = 'line_directive', metavar = 'form', default = '#line', nargs = '?', help = "Form of line directive to use, defaults to #line, specify nothing to disable output of line directives")
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)
@@ -43,6 +44,7 @@ class CmdPreprocessor(Preprocessor):
         self.define("__PCPP_ALWAYS_TRUE__ 1")
         self.debugout = open("pcpp_debug.log", "wt")
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
+        self.line_directive = self.args.line_directive
         
         # My own instance variables
         self.bypass_ifpassthru = False

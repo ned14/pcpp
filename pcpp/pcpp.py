@@ -285,6 +285,7 @@ class Preprocessor(PreprocessorHooks):
         self.return_code = 0
         self.debugout = None
         self.auto_pragma_once_enabled = True
+        self.line_directive = '#line'
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -979,6 +980,9 @@ class Preprocessor(PreprocessorHooks):
                             chunk = []
                             if include_guard and include_guard[0] == args[0].value:
                                 include_guard = (args[0].value, 1)
+                                # If ifpassthru is only turned on due to this include guard, turn it off
+                                if ifpassthru and not ifstack[-1][2]:
+                                    ifpassthru = False
                             self.define(args)
                             if self.debugout is not None:
                                 print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
@@ -1057,6 +1061,9 @@ class Preprocessor(PreprocessorHooks):
                             result, rewritten = self.evalexpr(args)
                             if rewritten is not None:
                                 x = x[:i+2] + rewritten + [x[-1]]
+                                x[i+1] = copy.copy(x[i+1])
+                                x[i+1].type = self.t_SPACE
+                                x[i+1].value = ' '
                                 ifpassthru = True
                                 raise OutputDirective()
                             if not result:
@@ -1078,6 +1085,9 @@ class Preprocessor(PreprocessorHooks):
                                             # This is a passthru #elif after a False #if, so convert to an #if
                                             x[i].value = 'if'
                                         x = x[:i+2] + rewritten + [x[-1]]
+                                        x[i+1] = copy.copy(x[i+1])
+                                        x[i+1].type = self.t_SPACE
+                                        x[i+1].value = ' '
                                         ifpassthru = True
                                         raise OutputDirective()
                                     if ifpassthru:
@@ -1391,7 +1401,7 @@ class Preprocessor(PreprocessorHooks):
                 blanklines += toks[0].value.count('\n')
                 continue
             # The line in toks is not all whitespace
-            emitlinedirective = (blanklines > 6)
+            emitlinedirective = (blanklines > 6) and self.line_directive is not None
             if hasattr(toks[0], 'source'):
                 if lastsource is None:
                     lastsource = toks[0].source
@@ -1417,15 +1427,15 @@ class Preprocessor(PreprocessorHooks):
                             toks[m].value = ' '
             if not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
-                if newlinesneeded > 6:
+                if newlinesneeded > 6 and self.line_directive is not None:
                     emitlinedirective = True
                 else:
                     while newlinesneeded > 0:
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
-            if emitlinedirective:
-                oh.write('# ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            if emitlinedirective and self.line_directive is not None:
+                oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
             #elif blanklines > 0:
             #    for line in blankacc:
             #        for tok in line:
