@@ -46,12 +46,13 @@ g(x+(3,4)-w) | h 5) & m
 (f)^m(m);
 p() i[q()] = { q(1), r(2,3), r(4,), r(,5), r(,) };
 char c[2][6] = { str(hello), str() };"""
-    output = r"""# 15
+    output = r"""#line 15
 f(2 * (y+1)) + f(2 * (f(2 * (z[0])))) % f(2 * (0)) + t(1);
 f(2 * (2+(3,4)-0,1)) | f(2 * (~ 5)) & f(2 * (0,1))^m(0,1);
 
 int i[] = { 1, 23, 4, 5, };
-char c[2][6] = { "hello", "" };"""
+char c[2][6] = { "hello", "" };
+"""
 
 class std2(unittest.TestCase, runner):
     input = r"""#define TWO_ARGS        a,b
@@ -60,7 +61,8 @@ class std2(unittest.TestCase, runner):
 """
     output = r"""
 
-    assert( (a,b - 1) == 1);"""
+    assert( (a,b - 1) == 1);
+"""
 
 class std3(unittest.TestCase, runner):
     input = r"""#define t(x,y,z) x ## y ## z
@@ -69,7 +71,8 @@ t(10,,), t(,11,), t(,,12), t(,,) };
 """
     output = r"""
 int j[] = { 123, 45, 67, 89,
-10, 11, 12, };"""
+10, 11, 12, };
+"""
 
 class std4(unittest.TestCase, runner):
     input = r"""#define debug(...) fprintf(stderr, __VA_ARGS__)
@@ -88,7 +91,8 @@ report(x>y, "x is %d but y is %d", x, y);
 fprintf(stderr, "Flag");
 fprintf(stderr, "X = %d\n", x);
 puts("The first, second, and third items.");
-((x>y)?puts("x>y"):printf( "x is %d but y is %d", x, y));"""
+((x>y)?puts("x>y"):printf( "x is %d but y is %d", x, y));
+"""
 
 class std5(unittest.TestCase, runner):
     input = r"""#define Z   Z[0]
@@ -113,7 +117,8 @@ class std5(unittest.TestCase, runner):
 
 
     assert( x + x + g( x) == 4);
-    assert( Z[0] + f(Z[0]) == 2);"""
+    assert( Z[0] + f(Z[0]) == 2);
+"""
 
 
 class std6(unittest.TestCase, runner):
@@ -125,7 +130,8 @@ class std6(unittest.TestCase, runner):
     output = r"""
 
 
-    assert( MACRO_0MACRO_1 == 2);"""
+    assert( MACRO_0MACRO_1 == 2);
+"""
 
 
 class std7(unittest.TestCase, runner):
@@ -141,8 +147,9 @@ class std7(unittest.TestCase, runner):
 #endif
     assert( MACRO_abcd == 4);
 """
-    output = r"""# 11
-    assert( abcd == 4);"""
+    output = r"""#line 11
+    assert( abcd == 4);
+"""
 
 class std8(unittest.TestCase, runner):
     input = r"""#if 0
@@ -168,7 +175,8 @@ str(    niall  is      a   /* comment */
    pretty      boy           )
 '''
     output = r'''
-"niall is a pretty boy"'''
+"niall is a pretty boy"
+'''
 
 
 class std10(unittest.TestCase, runner):
@@ -180,7 +188,8 @@ class std10(unittest.TestCase, runner):
     output = r"""
 
 
-    assert( 1 == 1);"""
+    assert( 1 == 1);
+"""
 
 class std11(unittest.TestCase, runner):
     input = r"""#define FUNC( a, b, c)      a + b + c
@@ -199,7 +208,8 @@ class std11(unittest.TestCase, runner):
 
 
 
-        == 6"""
+        == 6
+"""
 
 class test12(unittest.TestCase, runner):
     input = r"""
@@ -271,6 +281,7 @@ class test12(unittest.TestCase, runner):
 BOOSTLITE_BIND_NAMESPACE_VERSION(, BOOST_OUTCOME_NAMESPACE_VERSION, BOOST_OUTCOME_V1_STL11_IMPL, BOOST_OUTCOME_V1_ERROR_CODE_IMPL, BOOST_OUTCOME_PREVIOUS_COMMIT_UNIQUE)
 BOOST_OUTCOME_V1_NAMESPACE_BEGIN
 """
-    output = r"""# 67
+    output = r"""#line 67
 _1_0_std_std_01320023
-namespace boost { namespace outcome { inline namespace _1_0_std_std_01320023 {"""
+namespace boost { namespace outcome { inline namespace _1_0_std_std_01320023 {
+"""

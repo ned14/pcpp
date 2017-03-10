@@ -64,7 +64,8 @@ I am not five
 I am five
 #else
 I am not five
-#endif"""
+#endif
+"""
 
 class test3(unittest.TestCase, runner):
     input = r"""#if UNKNOWN
@@ -80,7 +81,8 @@ A
 B
 #else
 C
-#endif"""
+#endif
+"""
 
 class test4(unittest.TestCase, runner):
     input = r"""#define ALSO_UNKNOWN 1
@@ -98,7 +100,8 @@ A
 B
 #else
 C
-#endif"""
+#endif
+"""
 
 class test5(unittest.TestCase, runner):
     input = r"""#define ALSO_UNKNOWN 0
@@ -116,7 +119,8 @@ A
 
 #else
 C
-#endif"""
+#endif
+"""
 
 class test6(unittest.TestCase, runner):
     input = r"""#define UNKNOWN 1
@@ -148,7 +152,8 @@ C
 B
 #else
 C
-#endif"""
+#endif
+"""
 
 class test8(unittest.TestCase, runner):
     input = r"""#define UNKNOWN 0
@@ -190,7 +195,8 @@ C
 
 
 
-#endif"""
+#endif
+"""
 
 class test9(unittest.TestCase, runner):
     input = r"""#define KNOWN 0
@@ -201,7 +207,8 @@ A
     output = r"""#define KNOWN 0
 #if defined(UNKNOWN) || 0
 A
-#endif"""
+#endif
+"""
 
 class test10(unittest.TestCase, runner):
     input = r"""#if !defined(__cpp_constexpr)
@@ -218,7 +225,8 @@ class test10(unittest.TestCase, runner):
 #else
 #define __cpp_constexpr 190000
 #endif
-#endif"""
+#endif
+"""
 
 class test11(unittest.TestCase, runner):
     input = r"""#define __cpp_constexpr 201304
@@ -239,7 +247,7 @@ class test11(unittest.TestCase, runner):
 #endif
 """
     output = r"""#define __cpp_constexpr 201304
-# 9
+#line 9
 #ifndef BOOSTLITE_CONSTEXPR
 
 #define BOOSTLITE_CONSTEXPR constexpr

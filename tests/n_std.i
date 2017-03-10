@@ -1,4 +1,4 @@
-# 30 "tests/test-c/n_std.c"
+#line 30 "tests/test-c/n_std.c"
 void n_1( void);
 void n_2( void);
 void n_3( void);
@@ -83,7 +83,7 @@ void n_2( void)
 
 
     assert( ab + cd + ef == 6);
-# 122 "tests/test-c/n_std.c"
+#line 122 "tests/test-c/n_std.c"
     assert (ab + cd + ef == 6);
 
 
@@ -103,7 +103,7 @@ void n_3( void)
 
 
     assert( strcmp( "abc de", "abc de") == 0);
-# 156 "tests/test-c/n_std.c"
+#line 156 "tests/test-c/n_std.c"
     assert( abcd == 4);
 }
 
@@ -117,7 +117,7 @@ void n_5( void)
 
     assert( abcde == 5);
 }
-# 178 "tests/test-c/n_std.c"
+#line 178 "tests/test-c/n_std.c"
 void n_6( void)
 
 {
@@ -171,21 +171,21 @@ void n_9( void)
 void n_10( void)
 
 {
-# 238 "tests/test-c/n_std.c"
+#line 238 "tests/test-c/n_std.c"
     assert( 1);
-# 251 "tests/test-c/n_std.c"
+#line 251 "tests/test-c/n_std.c"
 }
 
 void n_11( void)
 
 {
     int abc = 1, a = 0;
-# 264 "tests/test-c/n_std.c"
+#line 264 "tests/test-c/n_std.c"
     assert( abc);
 
 
     assert( abc);
-# 279 "tests/test-c/n_std.c"
+#line 279 "tests/test-c/n_std.c"
 }
 
 
@@ -201,37 +201,37 @@ void n_12( void)
 
 
     fputs( "Bad evaluation of long.\n", stderr);
-# 325 "tests/test-c/n_std.c"
+#line 325 "tests/test-c/n_std.c"
 }
 
 void n_13( void)
-# 343 "tests/test-c/n_std.c"
+#line 343 "tests/test-c/n_std.c"
 {
-# 363 "tests/test-c/n_std.c"
+#line 363 "tests/test-c/n_std.c"
 }
 
 void n_13_5( void)
 
 {
-# 387 "tests/test-c/n_std.c"
+#line 387 "tests/test-c/n_std.c"
 }
 
 void n_13_7( void)
 
 {
-# 406 "tests/test-c/n_std.c"
+#line 406 "tests/test-c/n_std.c"
 }
 
 void n_13_8( void)
 
 {
-# 439 "tests/test-c/n_std.c"
+#line 439 "tests/test-c/n_std.c"
 }
 
 void n_13_13( void)
 
 {
-# 466 "tests/test-c/n_std.c"
+#line 466 "tests/test-c/n_std.c"
 }
 
 void n_15( void)
@@ -241,7 +241,7 @@ void n_15( void)
 
 
     assert( 1);
-# 483 "tests/test-c/n_std.c"
+#line 483 "tests/test-c/n_std.c"
     assert( 1);
 
 }
@@ -272,7 +272,7 @@ void n_19( void)
 
 {
     int c = 1;
-# 521 "tests/test-c/n_std.c"
+#line 521 "tests/test-c/n_std.c"
     assert( ( c ) == 1);
 }
 
@@ -384,7 +384,7 @@ void n_25( void)
 
     assert( strcmp( "ZERO_TOKEN", "ZERO_TOKEN") == 0);
 }
-# 648 "tests/test-c/n_std.c"
+#line 648 "tests/test-c/n_std.c"
 int f( int a)
 {
     return a;
@@ -438,7 +438,7 @@ void n_27( void)
 
 {
     int a = 1, b = 2, c, m = 1, n = 2;
-# 711 "tests/test-c/n_std.c"
+#line 711 "tests/test-c/n_std.c"
     assert( 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 == 36);
 
 
@@ -473,7 +473,7 @@ void n_28( void)
 
 
 {
-    char * date = "Mar 09 2017";
+    char * date = "Mar 10 2017";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -482,24 +482,26 @@ void n_28( void)
     assert( 751 == 779);
 
 
-    assert( strlen( "Mar 09 2017") == 11);
+    assert( strlen( "Mar 10 2017") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "22:38:07") == 8);
+    assert( strlen( "22:45:43") == 8);
 
 
     assert( 1);
 
 
     assert( 199901L >= 199409L);
-# 3 "line.h"
+#line 3 "line.h"
 {
     char * file = "line.h";
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
-}}
-# 770 "tests/test-c/n_std.c"
+}
+#line 768 "tests/test-c/n_std.c"
+}
+
 void n_29( void)
 
 {
@@ -579,30 +581,30 @@ void n_37( void)
 
 
     nest = 0;
-# 865 "tests/test-c/n_std.c"
+#line 865 "tests/test-c/n_std.c"
                                 nest = 8;
-# 874 "tests/test-c/n_std.c"
+#line 874 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
     nest = 0;
-# 3 "nest1.h"
+#line 3 "nest1.h"
     nest = 1;
-# 3 "nest2.h"
+#line 3 "nest2.h"
     nest = 2;
-# 3 "nest3.h"
+#line 3 "nest3.h"
     nest = 3;
-# 3 "nest4.h"
+#line 3 "nest4.h"
     nest = 4;
-# 3 "nest5.h"
+#line 3 "nest5.h"
     nest = 5;
-# 3 "nest6.h"
+#line 3 "nest6.h"
     nest = 6;
-# 3 "nest7.h"
+#line 3 "nest7.h"
     nest = 7;
-# 4 "nest8.h"
+#line 4 "nest8.h"
     nest = 8;
-# 879 "tests/test-c/n_std.c"
+#line 879 "tests/test-c/n_std.c"
     assert( nest == 8);
 
 
@@ -618,7 +620,7 @@ void n_37( void)
     {
         char * extremely_long_string =
 "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567"
-# 901 "tests/test-c/n_std.c"
+#line 901 "tests/test-c/n_std.c"
         ;
         assert( strlen( extremely_long_string) == 507);
     }
@@ -626,10 +628,10 @@ void n_37( void)
 
     {
     int a123456789012345678901234567890 = 123450; int b123456789012345678901234567890 = 123451; int c123456789012345678901234567890 = 123452; int d123456789012345678901234567890 = 123453; int e123456789012345678901234567890 = 123454; int f123456789012345678901234567890 = 123455; int A123456789012345678901234567890 = 123456; int B123456789012345678901234567890 = 123457; int C123456789012345678901234567890 = 123458; int D1234567890123456789012 = 123459;
-# 917 "tests/test-c/n_std.c"
+#line 917 "tests/test-c/n_std.c"
         assert( a123456789012345678901234567890 == 123450
             && D1234567890123456789012 == 123459);
     }
-# 927 "tests/test-c/n_std.c"
+#line 927 "tests/test-c/n_std.c"
     assert( 1);
 }
