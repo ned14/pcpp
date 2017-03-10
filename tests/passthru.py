@@ -40,9 +40,8 @@ class runner(object):
         if oh.getvalue() != self.output:
             print("Should be:\n" + self.output + "EOF\n", file = sys.stderr)
             print("\nWas:\n" + oh.getvalue()+"EOF\n", file = sys.stderr)
-        else:
-            self.assertEqual(p.return_code, 0)
-            self.assertEqual(oh.getvalue(), self.output)
+        self.assertEqual(p.return_code, 0)
+        self.assertEqual(oh.getvalue(), self.output)
 
             
 class test1(unittest.TestCase, runner):

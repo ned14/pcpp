@@ -20,9 +20,8 @@ class runner(object):
         if oh.getvalue() != self.output:
             print("Should be:\n" + self.output, file = sys.stderr)
             print("\n\nWas:\n" + oh.getvalue(), file = sys.stderr)
-        else:
-            self.assertEqual(p.return_code, 0)
-            self.assertEqual(oh.getvalue(), self.output)
+        self.assertEqual(p.return_code, 0)
+        self.assertEqual(oh.getvalue(), self.output)
 
             
 # These preprocessor test fragments are borrowed from the C11 standard

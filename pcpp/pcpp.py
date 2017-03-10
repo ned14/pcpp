@@ -914,7 +914,7 @@ class Preprocessor(PreprocessorHooks):
     #
     # Parse an input string
     # ----------------------------------------------------------------------
-    def parsegen(self,input,source=None):
+    def parsegen(self,input,source=None,abssource=None):
         """Parse an input string"""
 
         # Replace trigraph sequences
@@ -926,11 +926,18 @@ class Preprocessor(PreprocessorHooks):
             
         self.define("__FILE__ \"%s\"" % source)
 
-        self.source = source
+        self.source = abssource
         chunk = []
         enable = True
         iftrigger = False
         ifpassthru = False
+        class ifstackentry(object):
+            def __init__(self,enable,iftrigger,ifpassthru,startlinetoks):
+                self.enable = enable
+                self.iftrigger = iftrigger
+                self.ifpassthru = ifpassthru
+                self.rewritten = False
+                self.startlinetoks = startlinetoks
         ifstack = []
         # True until any non-whitespace output or anything with effects happens.
         at_front_of_file = True
@@ -966,7 +973,7 @@ class Preprocessor(PreprocessorHooks):
                         args = []
                     
                     if self.debugout is not None:
-                        print("%d:%d:%d %s:%d #%s %s (ifstack=%s)" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]), repr(ifstack)), file = self.debugout)
+                        print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
                         #print(ifstack)
 
                     handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
@@ -981,7 +988,7 @@ class Preprocessor(PreprocessorHooks):
                             if include_guard and include_guard[0] == args[0].value:
                                 include_guard = (args[0].value, 1)
                                 # If ifpassthru is only turned on due to this include guard, turn it off
-                                if ifpassthru and not ifstack[-1][2]:
+                                if ifpassthru and not ifstack[-1].ifpassthru:
                                     ifpassthru = False
                             self.define(args)
                             if self.debugout is not None:
@@ -998,7 +1005,7 @@ class Preprocessor(PreprocessorHooks):
                             for tok in self.include(args):
                                 yield tok
                             self.macros['__FILE__'] = oldfile
-                            self.source = source
+                            self.source = abssource
                     elif name == 'undef':
                         at_front_of_file = False
                         if enable:
@@ -1011,13 +1018,14 @@ class Preprocessor(PreprocessorHooks):
                                     yield tok
                     elif name == 'ifdef':
                         at_front_of_file = False
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             if not args[0].value in self.macros:
                                 res = self.on_unknown_macro_in_defined_expr(args[0])
                                 if res is None:
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 elif res is True:
                                     iftrigger = True
@@ -1031,7 +1039,7 @@ class Preprocessor(PreprocessorHooks):
                             self.on_potential_include_guard(args[0].value)
                             include_guard = (args[0].value, 0)
                         at_front_of_file = False
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             if args[0].value in self.macros:
@@ -1041,6 +1049,7 @@ class Preprocessor(PreprocessorHooks):
                                 res = self.on_unknown_macro_in_defined_expr(args[0])
                                 if res is None:
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 elif res is True:
                                     enable = False
@@ -1055,7 +1064,7 @@ class Preprocessor(PreprocessorHooks):
                                 self.on_potential_include_guard(args[n].value)
                                 include_guard = (args[n].value, 0)
                         at_front_of_file = False
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             result, rewritten = self.evalexpr(args)
@@ -1065,6 +1074,7 @@ class Preprocessor(PreprocessorHooks):
                                 x[i+1].type = self.t_SPACE
                                 x[i+1].value = ' '
                                 ifpassthru = True
+                                ifstack[-1].rewritten = True
                                 raise OutputDirective()
                             if not result:
                                 enable = False
@@ -1074,7 +1084,7 @@ class Preprocessor(PreprocessorHooks):
                     elif name == 'elif':
                         at_front_of_file = False
                         if ifstack:
-                            if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
+                            if ifstack[-1].enable:     # We only pay attention if outer "if" allows this
                                 if enable and not ifpassthru:         # If already true, we flip enable False
                                     enable = False
                                 elif not iftrigger:   # If False, but not triggered yet, we'll check expression
@@ -1089,6 +1099,7 @@ class Preprocessor(PreprocessorHooks):
                                         x[i+1].type = self.t_SPACE
                                         x[i+1].value = ' '
                                         ifpassthru = True
+                                        ifstack[-1].rewritten = True
                                         raise OutputDirective()
                                     if ifpassthru:
                                         # If this elif can only ever be true, simulate that
@@ -1109,7 +1120,7 @@ class Preprocessor(PreprocessorHooks):
                     elif name == 'else':
                         at_front_of_file = False
                         if ifstack:
-                            if ifstack[-1][0]:
+                            if ifstack[-1].enable:
                                 if ifpassthru:
                                     enable = True
                                     raise OutputDirective()
@@ -1124,10 +1135,15 @@ class Preprocessor(PreprocessorHooks):
                     elif name == 'endif':
                         at_front_of_file = False
                         if ifstack:
-                            oldifpassthru = ifpassthru
-                            enable,iftrigger,ifpassthru = ifstack.pop()
+                            oldifstackentry = ifstack.pop()
+                            enable = oldifstackentry.enable
+                            iftrigger = oldifstackentry.iftrigger
+                            ifpassthru = oldifstackentry.ifpassthru
+                            if self.debugout is not None:
+                                print("%d:%d:%d %s:%d      (%s:%d %s)" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno,
+                                    oldifstackentry.startlinetoks[0].source, oldifstackentry.startlinetoks[0].lineno, "".join([n.value for n in oldifstackentry.startlinetoks])), file = self.debugout)
                             skip_auto_pragma_once_possible_check = True
-                            if oldifpassthru:
+                            if oldifstackentry.rewritten:
                                 raise OutputDirective()
                         else:
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
@@ -1174,6 +1190,8 @@ class Preprocessor(PreprocessorHooks):
         for tok in self.expand_macros(chunk):
             yield tok
         chunk = []
+        for i in ifstack:
+            self.on_error(i.startlinetoks[0].source, i.startlinetoks[0].lineno, "Unterminated " + "".join([n.value for n in i.startlinetoks]))
         if auto_pragma_once_possible and include_guard and include_guard[1] == 1:
             if self.debugout is not None:
                 print("%d:%d:%d %s:%d Determined that #include \"%s\" is entirely wrapped in an include guard macro called %s, auto-applying #pragma once" % (enable, iftrigger, ifpassthru, self.source, 0, self.source, include_guard[0]), file = self.debugout)
@@ -1219,16 +1237,19 @@ class Preprocessor(PreprocessorHooks):
             #print path
             for p in path:
                 iname = os.path.join(p,filename)
-                if iname in self.include_once:
+                fulliname = os.path.abspath(iname)
+                if fulliname in self.include_once:
+                    if self.debugout is not None:
+                        print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
                     return
                 try:
-                    ih = open(iname,"r")
+                    ih = open(fulliname,"r")
                     data = ih.read()
                     ih.close()
-                    dname = os.path.dirname(iname)
+                    dname = os.path.dirname(fulliname)
                     if dname:
                         self.temp_path.insert(0,dname)
-                    for tok in self.parsegen(data,filename):
+                    for tok in self.parsegen(data,filename,fulliname):
                         yield tok
                     if dname:
                         del self.temp_path[0]
@@ -1347,7 +1368,7 @@ class Preprocessor(PreprocessorHooks):
                 source = input.name
             input = input.read()
         self.ignore = ignore
-        self.parser = self.parsegen(input,source)
+        self.parser = self.parsegen(input,source,os.path.abspath(source))
         if source is not None:
             dname = os.path.dirname(source)
             self.temp_path.insert(0,dname)
