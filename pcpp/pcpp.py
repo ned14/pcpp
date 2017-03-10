@@ -790,6 +790,9 @@ class Preprocessor(PreprocessorHooks):
     def evalexpr(self,tokens):
         """Evaluate an expression token sequence for the purposes of evaluating
         integral expressions."""
+        if not tokens:
+            self.on_error('unknown', 0, "Empty expression")
+            return (0, None)
         # tokens = tokenize(line)
         # Search for defined macros
         evalfuncts = {'defined' : lambda x: True}
@@ -832,6 +835,8 @@ class Preprocessor(PreprocessorHooks):
                 del tokens[i+1:j+1]
             i += 1
         tokens = self.expand_macros(tokens)
+        if not tokens:
+            return (0, None)
         for i,t in enumerate(tokens):
             if t.type == self.t_ID:
                 repl = self.on_unknown_macro_in_expr(copy.copy(t))
@@ -1368,7 +1373,7 @@ class Preprocessor(PreprocessorHooks):
                 source = input.name
             input = input.read()
         self.ignore = ignore
-        self.parser = self.parsegen(input,source,os.path.abspath(source))
+        self.parser = self.parsegen(input,source,os.path.abspath(source) if source else None)
         if source is not None:
             dname = os.path.dirname(source)
             self.temp_path.insert(0,dname)
