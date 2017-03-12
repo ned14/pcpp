@@ -992,10 +992,12 @@ table {
     <li class="mono"><a href="#pcpp.Preprocessor.include">include</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.macro_expand_args">macro_expand_args</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.macro_prescan">macro_prescan</a></li>
+    <li class="mono"><a href="#pcpp.Preprocessor.on_comment">on_comment</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.on_directive_handle">on_directive_handle</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.on_directive_unknown">on_directive_unknown</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.on_error">on_error</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.on_include_not_found">on_include_not_found</a></li>
+    <li class="mono"><a href="#pcpp.Preprocessor.on_potential_include_guard">on_potential_include_guard</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.on_unknown_macro_in_defined_expr">on_unknown_macro_in_defined_expr</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.on_unknown_macro_in_expr">on_unknown_macro_in_expr</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.parse">parse</a></li>
@@ -1005,21 +1007,6 @@ table {
     <li class="mono"><a href="#pcpp.Preprocessor.tokenstrip">tokenstrip</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.undef">undef</a></li>
     <li class="mono"><a href="#pcpp.Preprocessor.write">write</a></li>
-  </ul>
-
-        </li>
-        <li class="mono">
-        <span class="class_name"><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></span>
-        
-          
-  <ul>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.__init__">__init__</a></li>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.on_directive_handle">on_directive_handle</a></li>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.on_directive_unknown">on_directive_unknown</a></li>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.on_error">on_error</a></li>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.on_include_not_found">on_include_not_found</a></li>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.on_unknown_macro_in_defined_expr">on_unknown_macro_in_defined_expr</a></li>
-    <li class="mono"><a href="#pcpp.PreprocessorHooks.on_unknown_macro_in_expr">on_unknown_macro_in_expr</a></li>
   </ul>
 
         </li>
@@ -1053,18 +1040,21 @@ table {
 # This edition substantially improves on standards conforming output,
 # getting quite close to what clang or GCC outputs.
 
-from __future__ import generators
+from __future__ import generators, print_function
 
-__all__ = ['Preprocessor', 'OutputDirective', 'PreprocessorHooks']
+__all__ = ['Preprocessor', 'OutputDirective']
 
 import sys, traceback
 
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
     STRING_TYPES = (str, unicode)
+    FILE_TYPES = file
 else:
     STRING_TYPES = str
     xrange = range
+    import io
+    FILE_TYPES = io.IOBase
 
 # -----------------------------------------------------------------------------
 # Default preprocessor lexer definitions.   These tokens are enough to get
@@ -1079,7 +1069,7 @@ literals = "+-*/%|&~^<>=!?()[]{}.,;:\\\'\""
 
 # Whitespace, but don't match past the end of a line
 def t_CPP_WS(t):
-    r'([ \t]+\r?\n?|\r?\n)'
+    r'([ \t]+|\n)'
     t.lexer.lineno += t.value.count("\n")
     return t
 
@@ -1116,15 +1106,11 @@ def t_CPP_COMMENT1(t):
     r'(/\*(.|\n)*?\*/)'
     ncr = t.value.count("\n")
     t.lexer.lineno += ncr
-    # replace with one space
-    t.type = 'CPP_WS'; t.value = ' '
     return t
 
 # Line comment
 def t_CPP_COMMENT2(t):
-    r'(//.*?(\n|$))'
-    # replace with '/n'
-    t.type = 'CPP_WS'; t.value = '\n'
+    r'(//[^\n]*)'
     return t
     
 def t_error(t):
@@ -1221,7 +1207,7 @@ class PreprocessorHooks(object):
         
         The default simply prints to stderr and increments the return code.
         """
-        print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+        print("%s:%d error: %s" % (file,line,msg), file = sys.stderr)
         self.return_code += 1
         
     def on_include_not_found(self,is_system_include,curdir,includepath):
@@ -1289,13 +1275,33 @@ class PreprocessorHooks(object):
         (remove from output). For everything else it returns None (pass through into output).
         """
         if directive.value == 'error':
-            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+            print("%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
             self.return_code += 1
             return True
         elif directive.value == 'warning':
-            print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+            print("%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
             return True
         return None
+        
+    def on_potential_include_guard(self,macro):
+        """Called when the preprocessor encounters an #ifndef macro or an #if !defined(macro)
+        as the first non-whitespace thing in a file. Unlike the other hooks, macro is a string,
+        not a token.
+        """
+        pass
+    
+    def on_comment(self,tok):
+        """Called when the preprocessor encounters a comment token. You can modify the token
+        in place, or do nothing to let the comment pass through.
+        
+        The default modifies the token to become whitespace, becoming a single space if the
+        comment is a block comment, else a single new line if the comment is a line comment.
+        """
+        if tok.type == self.t_COMMENT1:
+            tok.value = ' '
+        elif tok.type == self.t_COMMENT2:
+            tok.value = '\n'
+        tok.type = 'CPP_WS'
 
 # ------------------------------------------------------------------
 # Preprocessor object
@@ -1314,8 +1320,11 @@ class Preprocessor(PreprocessorHooks):
         self.macros = { }
         self.path = []
         self.temp_path = []
+        self.include_once = {}
         self.return_code = 0
         self.debugout = None
+        self.auto_pragma_once_enabled = True
+        self.line_directive = '#line'
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -1323,6 +1332,7 @@ class Preprocessor(PreprocessorHooks):
         tm = time.localtime()
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
         self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
+        self.define("__PCPP__ 1")
         self.countermacro = 0
         self.parser = None
 
@@ -1418,6 +1428,22 @@ class Preprocessor(PreprocessorHooks):
         else:
             self.t_COLON = tok.type
 
+        self.lexer.input("/* comment */")
+        tok = self.lexer.token()
+        if not tok or tok.value != "/* comment */":
+            print("Couldn't determine comment type")
+        else:
+            self.t_COMMENT1 = tok.type
+
+        self.lexer.input("// comment")
+        tok = self.lexer.token()
+        if not tok or tok.value != "// comment":
+            print("Couldn't determine comment type")
+        else:
+            self.t_COMMENT2 = tok.type
+            
+        self.t_COMMENT = (self.t_COMMENT1, self.t_COMMENT2)
+
         # Check for other characters used by the preprocessor
         chars = [ '<','>','#','##','\\','(',')',',','.']
         for c in chars:
@@ -1476,6 +1502,10 @@ class Preprocessor(PreprocessorHooks):
                 current_line = []
 
         if current_line:
+            nltok = copy.copy(current_line[-1])
+            nltok.type = self.t_NEWLINE
+            nltok.value = '\n'
+            current_line.append(nltok)
             yield current_line
 
     # ----------------------------------------------------------------------
@@ -1748,7 +1778,7 @@ class Preprocessor(PreprocessorHooks):
                     else:
                         # A macro with arguments
                         j = i + 1
-                        while j < len(tokens) and tokens[j].type in self.t_WS:
+                        while j < len(tokens) and (tokens[j].type in self.t_WS or tokens[j].type in self.t_COMMENT):
                             j += 1
                         # A function like macro without an invocation list is to be ignored
                         if j == len(tokens) or tokens[j].value != '(':
@@ -1815,6 +1845,9 @@ class Preprocessor(PreprocessorHooks):
     def evalexpr(self,tokens):
         """Evaluate an expression token sequence for the purposes of evaluating
         integral expressions."""
+        if not tokens:
+            self.on_error('unknown', 0, "Empty expression")
+            return (0, None)
         # tokens = tokenize(line)
         # Search for defined macros
         evalfuncts = {'defined' : lambda x: True}
@@ -1857,6 +1890,8 @@ class Preprocessor(PreprocessorHooks):
                 del tokens[i+1:j+1]
             i += 1
         tokens = self.expand_macros(tokens)
+        if not tokens:
+            return (0, None)
         for i,t in enumerate(tokens):
             if t.type == self.t_ID:
                 repl = self.on_unknown_macro_in_expr(copy.copy(t))
@@ -1864,13 +1899,16 @@ class Preprocessor(PreprocessorHooks):
                     # Add this identifier to a dictionary of variables
                     evalvars[t.value] = 0
                 else:
-                    tokens[i] = repl
-            elif t.type == self.t_INTEGER:
+                    tokens[i] = t = repl
+            if t.type == self.t_INTEGER:
                 tokens[i] = copy.copy(t)
                 # Strip off any trailing suffixes
                 tokens[i].value = str(tokens[i].value)
                 while tokens[i].value[-1] not in "0123456789abcdefABCDEF":
                     tokens[i].value = tokens[i].value[:-1]
+                if sys.version_info.major >= 3:
+                    if len(tokens[i].value) > 1 and tokens[i].value[0] == '0' and tokens[i].value[1] >= '0' and tokens[i].value[1] <= '7':
+                        tokens[i].value = '0o' + tokens[i].value[1:]
             elif t.type == self.t_COLON:
                 # Find the expression before the colon
                 cs = ce = i - 1
@@ -1917,13 +1955,14 @@ class Preprocessor(PreprocessorHooks):
                 # Note this is identical length
                 tokens = tokens[:es] + tokens[cs:ce+1] + tokens[ternary:ternary+1] + tokens[es:ee+1] + tokens[i:]
         
-        expr = origexpr = "".join([str(x.value) for x in tokens])
+        expr = origexpr = "".join([str(x.value) for x in tokens if x.type not in self.t_COMMENT])
         expr = expr.replace("&&"," and ")
         expr = expr.replace("||"," or ")
         expr = expr.replace("!="," <> ")
         expr = expr.replace("!"," not ")
+        expr = expr.replace(" <> ", " != ")
         try:
-            result = eval(expr, evalfuncts, evalvars)
+            result = int(eval(expr, evalfuncts, evalvars))
         except Exception:
             self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
             + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
@@ -1935,7 +1974,7 @@ class Preprocessor(PreprocessorHooks):
     #
     # Parse an input string
     # ----------------------------------------------------------------------
-    def parsegen(self,input,source=None):
+    def parsegen(self,input,source=None,abssource=None):
         """Parse an input string"""
 
         # Replace trigraph sequences
@@ -1947,19 +1986,43 @@ class Preprocessor(PreprocessorHooks):
             
         self.define("__FILE__ \"%s\"" % source)
 
-        self.source = source
+        self.source = abssource
         chunk = []
         enable = True
         iftrigger = False
         ifpassthru = False
+        class ifstackentry(object):
+            def __init__(self,enable,iftrigger,ifpassthru,startlinetoks):
+                self.enable = enable
+                self.iftrigger = iftrigger
+                self.ifpassthru = ifpassthru
+                self.rewritten = False
+                self.startlinetoks = startlinetoks
         ifstack = []
+        # True until any non-whitespace output or anything with effects happens.
+        at_front_of_file = True
+        # True if auto pragma once still a possibility for this #include
+        auto_pragma_once_possible = self.auto_pragma_once_enabled
+        # =(MACRO, 0) means #ifndef MACRO or #if !defined(MACRO) seen, =(MACRO,1) means #define MACRO seen
+        include_guard = None
+        self.on_potential_include_guard(None)
 
         for x in lines:
+            all_whitespace = True
+            skip_auto_pragma_once_possible_check = False
+            # Handle comments
             for i,tok in enumerate(x):
-                if tok.type not in self.t_WS: break
-            output_directive = True
+                if tok.type in self.t_COMMENT:
+                    self.on_comment(tok)
+            # Skip over whitespace
+            for i,tok in enumerate(x):
+                if tok.type not in self.t_WS and tok.type not in self.t_COMMENT:
+                    all_whitespace = False
+                    break
+            output_and_expand_line = True
+            output_unexpanded_line = False
             if tok.value == '#':
-                output_directive = False
+                output_and_expand_line = False
                 try:
                     # Preprocessor directive      
                     i += 1
@@ -1974,17 +2037,26 @@ class Preprocessor(PreprocessorHooks):
                         args = []
                     
                     if self.debugout is not None:
-                        print >> self.debugout, "%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]))
+                        print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
+                        #print(ifstack)
 
                     handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
                     if handling == False:
                         pass
                     elif name == 'define':
+                        at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
+                            if include_guard and include_guard[0] == args[0].value:
+                                include_guard = (args[0].value, 1)
+                                # If ifpassthru is only turned on due to this include guard, turn it off
+                                if ifpassthru and not ifstack[-1].ifpassthru:
+                                    ifpassthru = False
                             self.define(args)
+                            if self.debugout is not None:
+                                print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
                             if handling is None:
                                 for tok in x:
                                     yield tok
@@ -1997,8 +2069,9 @@ class Preprocessor(PreprocessorHooks):
                             for tok in self.include(args):
                                 yield tok
                             self.macros['__FILE__'] = oldfile
-                            self.source = source
+                            self.source = abssource
                     elif name == 'undef':
+                        at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
@@ -2008,13 +2081,15 @@ class Preprocessor(PreprocessorHooks):
                                 for tok in x:
                                     yield tok
                     elif name == 'ifdef':
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        at_front_of_file = False
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             if not args[0].value in self.macros:
                                 res = self.on_unknown_macro_in_defined_expr(args[0])
                                 if res is None:
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 elif res is True:
                                     iftrigger = True
@@ -2024,7 +2099,11 @@ class Preprocessor(PreprocessorHooks):
                             else:
                                 iftrigger = True
                     elif name == 'ifndef':
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if not ifstack and at_front_of_file:
+                            self.on_potential_include_guard(args[0].value)
+                            include_guard = (args[0].value, 0)
+                        at_front_of_file = False
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             if args[0].value in self.macros:
@@ -2034,6 +2113,7 @@ class Preprocessor(PreprocessorHooks):
                                 res = self.on_unknown_macro_in_defined_expr(args[0])
                                 if res is None:
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 elif res is True:
                                     enable = False
@@ -2041,13 +2121,24 @@ class Preprocessor(PreprocessorHooks):
                                 else:
                                     iftrigger = True
                     elif name == 'if':
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if not ifstack and at_front_of_file:
+                            if args[0].value == '!' and args[1].value == 'defined':
+                                n = 2
+                                if args[n].value == '(': n += 1
+                                self.on_potential_include_guard(args[n].value)
+                                include_guard = (args[n].value, 0)
+                        at_front_of_file = False
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             result, rewritten = self.evalexpr(args)
                             if rewritten is not None:
                                 x = x[:i+2] + rewritten + [x[-1]]
+                                x[i+1] = copy.copy(x[i+1])
+                                x[i+1].type = self.t_SPACE
+                                x[i+1].value = ' '
                                 ifpassthru = True
+                                ifstack[-1].rewritten = True
                                 raise OutputDirective()
                             if not result:
                                 enable = False
@@ -2055,8 +2146,9 @@ class Preprocessor(PreprocessorHooks):
                             else:
                                 iftrigger = True
                     elif name == 'elif':
+                        at_front_of_file = False
                         if ifstack:
-                            if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
+                            if ifstack[-1].enable:     # We only pay attention if outer "if" allows this
                                 if enable and not ifpassthru:         # If already true, we flip enable False
                                     enable = False
                                 elif not iftrigger:   # If False, but not triggered yet, we'll check expression
@@ -2067,7 +2159,11 @@ class Preprocessor(PreprocessorHooks):
                                             # This is a passthru #elif after a False #if, so convert to an #if
                                             x[i].value = 'if'
                                         x = x[:i+2] + rewritten + [x[-1]]
+                                        x[i+1] = copy.copy(x[i+1])
+                                        x[i+1].type = self.t_SPACE
+                                        x[i+1].value = ' '
                                         ifpassthru = True
+                                        ifstack[-1].rewritten = True
                                         raise OutputDirective()
                                     if ifpassthru:
                                         # If this elif can only ever be true, simulate that
@@ -2086,8 +2182,9 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
                             
                     elif name == 'else':
+                        at_front_of_file = False
                         if ifstack:
-                            if ifstack[-1][0]:
+                            if ifstack[-1].enable:
                                 if ifpassthru:
                                     enable = True
                                     raise OutputDirective()
@@ -2100,24 +2197,50 @@ class Preprocessor(PreprocessorHooks):
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
 
                     elif name == 'endif':
+                        at_front_of_file = False
                         if ifstack:
-                            oldifpassthru = ifpassthru
-                            enable,iftrigger,ifpassthru = ifstack.pop()
-                            if oldifpassthru:
+                            oldifstackentry = ifstack.pop()
+                            enable = oldifstackentry.enable
+                            iftrigger = oldifstackentry.iftrigger
+                            ifpassthru = oldifstackentry.ifpassthru
+                            if self.debugout is not None:
+                                print("%d:%d:%d %s:%d      (%s:%d %s)" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno,
+                                    oldifstackentry.startlinetoks[0].source, oldifstackentry.startlinetoks[0].lineno, "".join([n.value for n in oldifstackentry.startlinetoks])), file = self.debugout)
+                            skip_auto_pragma_once_possible_check = True
+                            if oldifstackentry.rewritten:
                                 raise OutputDirective()
                         else:
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
+                    elif name == 'pragma' and args[0].value == 'once':
+                        if enable:
+                            self.include_once[self.source] = None
                     elif enable:
                         # Unknown preprocessor directive
-                        output_directive = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
+                        output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
 
                 except OutputDirective:
-                    output_directive = True
+                    output_unexpanded_line = True
 
-            if output_directive:
+            # If there is ever any non-whitespace output outside an include guard, auto pragma once is not possible
+            if not skip_auto_pragma_once_possible_check and auto_pragma_once_possible and not ifstack and not all_whitespace:
+                auto_pragma_once_possible = False
+                if self.debugout is not None:
+                    print("%d:%d:%d %s:%d Determined that #include \"%s\" is not entirely wrapped in an include guard macro, disabling auto-applying #pragma once" % (enable, iftrigger, ifpassthru, x[0].source, x[0].lineno, self.source), file = self.debugout)
+                
+            if output_and_expand_line or output_unexpanded_line:
+                if not all_whitespace:
+                    at_front_of_file = False
+
                 # Normal text
                 if enable:
-                    chunk.extend(x)
+                    if output_and_expand_line:
+                        chunk.extend(x)
+                    elif output_unexpanded_line:
+                        for tok in self.expand_macros(chunk):
+                            yield tok
+                        chunk = []
+                        for tok in x:
+                            yield tok
                 else:
                     # Need to extend with the same number of blank lines
                     i = 0
@@ -2131,6 +2254,13 @@ class Preprocessor(PreprocessorHooks):
         for tok in self.expand_macros(chunk):
             yield tok
         chunk = []
+        for i in ifstack:
+            self.on_error(i.startlinetoks[0].source, i.startlinetoks[0].lineno, "Unterminated " + "".join([n.value for n in i.startlinetoks]))
+        if auto_pragma_once_possible and include_guard and include_guard[1] == 1:
+            if self.debugout is not None:
+                print("%d:%d:%d %s:%d Determined that #include \"%s\" is entirely wrapped in an include guard macro called %s, auto-applying #pragma once" % (enable, iftrigger, ifpassthru, self.source, 0, self.source, include_guard[0]), file = self.debugout)
+            self.include_once[self.source] = include_guard[0]
+        
 
     # ----------------------------------------------------------------------
     # include()
@@ -2171,12 +2301,19 @@ class Preprocessor(PreprocessorHooks):
             #print path
             for p in path:
                 iname = os.path.join(p,filename)
+                fulliname = os.path.abspath(iname)
+                if fulliname in self.include_once:
+                    if self.debugout is not None:
+                        print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
+                    return
                 try:
-                    data = open(iname,"r").read()
-                    dname = os.path.dirname(iname)
+                    ih = open(fulliname,"r")
+                    data = ih.read()
+                    ih.close()
+                    dname = os.path.dirname(fulliname)
                     if dname:
                         self.temp_path.insert(0,dname)
-                    for tok in self.parsegen(data,filename):
+                    for tok in self.parsegen(data,filename,fulliname):
                         yield tok
                     if dname:
                         del self.temp_path[0]
@@ -2290,12 +2427,12 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
     def parse(self,input,source=None,ignore={}):
         """Parse input text."""
-        if isinstance(input, file):
+        if isinstance(input, FILE_TYPES):
             if source is None:
                 source = input.name
             input = input.read()
         self.ignore = ignore
-        self.parser = self.parsegen(input,source)
+        self.parser = self.parsegen(input,source,os.path.abspath(source) if source else None)
         if source is not None:
             dname = os.path.dirname(source)
             self.temp_path.insert(0,dname)
@@ -2349,7 +2486,7 @@ class Preprocessor(PreprocessorHooks):
                 blanklines += toks[0].value.count('\n')
                 continue
             # The line in toks is not all whitespace
-            emitlinedirective = (blanklines > 6)
+            emitlinedirective = (blanklines > 6) and self.line_directive is not None
             if hasattr(toks[0], 'source'):
                 if lastsource is None:
                     lastsource = toks[0].source
@@ -2375,15 +2512,15 @@ class Preprocessor(PreprocessorHooks):
                             toks[m].value = ' '
             if not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
-                if newlinesneeded > 6:
+                if newlinesneeded > 6 and self.line_directive is not None:
                     emitlinedirective = True
                 else:
                     while newlinesneeded > 0:
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
-            if emitlinedirective:
-                oh.write('# ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            if emitlinedirective and self.line_directive is not None:
+                oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
             #elif blanklines > 0:
             #    for line in blankacc:
             #        for tok in line:
@@ -2477,8 +2614,11 @@ to instead output it as is into the output</p></div>
         self.macros = { }
         self.path = []
         self.temp_path = []
+        self.include_once = {}
         self.return_code = 0
         self.debugout = None
+        self.auto_pragma_once_enabled = True
+        self.line_directive = '#line'
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -2486,6 +2626,7 @@ to instead output it as is into the output</p></div>
         tm = time.localtime()
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
         self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
+        self.define("__PCPP__ 1")
         self.countermacro = 0
         self.parser = None
 
@@ -2581,6 +2722,22 @@ to instead output it as is into the output</p></div>
         else:
             self.t_COLON = tok.type
 
+        self.lexer.input("/* comment */")
+        tok = self.lexer.token()
+        if not tok or tok.value != "/* comment */":
+            print("Couldn't determine comment type")
+        else:
+            self.t_COMMENT1 = tok.type
+
+        self.lexer.input("// comment")
+        tok = self.lexer.token()
+        if not tok or tok.value != "// comment":
+            print("Couldn't determine comment type")
+        else:
+            self.t_COMMENT2 = tok.type
+            
+        self.t_COMMENT = (self.t_COMMENT1, self.t_COMMENT2)
+
         # Check for other characters used by the preprocessor
         chars = [ '<','>','#','##','\\','(',')',',','.']
         for c in chars:
@@ -2639,6 +2796,10 @@ to instead output it as is into the output</p></div>
                 current_line = []
 
         if current_line:
+            nltok = copy.copy(current_line[-1])
+            nltok.type = self.t_NEWLINE
+            nltok.value = '\n'
+            current_line.append(nltok)
             yield current_line
 
     # ----------------------------------------------------------------------
@@ -2911,7 +3072,7 @@ to instead output it as is into the output</p></div>
                     else:
                         # A macro with arguments
                         j = i + 1
-                        while j < len(tokens) and tokens[j].type in self.t_WS:
+                        while j < len(tokens) and (tokens[j].type in self.t_WS or tokens[j].type in self.t_COMMENT):
                             j += 1
                         # A function like macro without an invocation list is to be ignored
                         if j == len(tokens) or tokens[j].value != '(':
@@ -2978,6 +3139,9 @@ to instead output it as is into the output</p></div>
     def evalexpr(self,tokens):
         """Evaluate an expression token sequence for the purposes of evaluating
         integral expressions."""
+        if not tokens:
+            self.on_error('unknown', 0, "Empty expression")
+            return (0, None)
         # tokens = tokenize(line)
         # Search for defined macros
         evalfuncts = {'defined' : lambda x: True}
@@ -3020,6 +3184,8 @@ to instead output it as is into the output</p></div>
                 del tokens[i+1:j+1]
             i += 1
         tokens = self.expand_macros(tokens)
+        if not tokens:
+            return (0, None)
         for i,t in enumerate(tokens):
             if t.type == self.t_ID:
                 repl = self.on_unknown_macro_in_expr(copy.copy(t))
@@ -3027,13 +3193,16 @@ to instead output it as is into the output</p></div>
                     # Add this identifier to a dictionary of variables
                     evalvars[t.value] = 0
                 else:
-                    tokens[i] = repl
-            elif t.type == self.t_INTEGER:
+                    tokens[i] = t = repl
+            if t.type == self.t_INTEGER:
                 tokens[i] = copy.copy(t)
                 # Strip off any trailing suffixes
                 tokens[i].value = str(tokens[i].value)
                 while tokens[i].value[-1] not in "0123456789abcdefABCDEF":
                     tokens[i].value = tokens[i].value[:-1]
+                if sys.version_info.major >= 3:
+                    if len(tokens[i].value) > 1 and tokens[i].value[0] == '0' and tokens[i].value[1] >= '0' and tokens[i].value[1] <= '7':
+                        tokens[i].value = '0o' + tokens[i].value[1:]
             elif t.type == self.t_COLON:
                 # Find the expression before the colon
                 cs = ce = i - 1
@@ -3080,13 +3249,14 @@ to instead output it as is into the output</p></div>
                 # Note this is identical length
                 tokens = tokens[:es] + tokens[cs:ce+1] + tokens[ternary:ternary+1] + tokens[es:ee+1] + tokens[i:]
         
-        expr = origexpr = "".join([str(x.value) for x in tokens])
+        expr = origexpr = "".join([str(x.value) for x in tokens if x.type not in self.t_COMMENT])
         expr = expr.replace("&&"," and ")
         expr = expr.replace("||"," or ")
         expr = expr.replace("!="," <> ")
         expr = expr.replace("!"," not ")
+        expr = expr.replace(" <> ", " != ")
         try:
-            result = eval(expr, evalfuncts, evalvars)
+            result = int(eval(expr, evalfuncts, evalvars))
         except Exception:
             self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
             + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
@@ -3098,7 +3268,7 @@ to instead output it as is into the output</p></div>
     #
     # Parse an input string
     # ----------------------------------------------------------------------
-    def parsegen(self,input,source=None):
+    def parsegen(self,input,source=None,abssource=None):
         """Parse an input string"""
 
         # Replace trigraph sequences
@@ -3110,19 +3280,43 @@ to instead output it as is into the output</p></div>
             
         self.define("__FILE__ \"%s\"" % source)
 
-        self.source = source
+        self.source = abssource
         chunk = []
         enable = True
         iftrigger = False
         ifpassthru = False
+        class ifstackentry(object):
+            def __init__(self,enable,iftrigger,ifpassthru,startlinetoks):
+                self.enable = enable
+                self.iftrigger = iftrigger
+                self.ifpassthru = ifpassthru
+                self.rewritten = False
+                self.startlinetoks = startlinetoks
         ifstack = []
+        # True until any non-whitespace output or anything with effects happens.
+        at_front_of_file = True
+        # True if auto pragma once still a possibility for this #include
+        auto_pragma_once_possible = self.auto_pragma_once_enabled
+        # =(MACRO, 0) means #ifndef MACRO or #if !defined(MACRO) seen, =(MACRO,1) means #define MACRO seen
+        include_guard = None
+        self.on_potential_include_guard(None)
 
         for x in lines:
+            all_whitespace = True
+            skip_auto_pragma_once_possible_check = False
+            # Handle comments
             for i,tok in enumerate(x):
-                if tok.type not in self.t_WS: break
-            output_directive = True
+                if tok.type in self.t_COMMENT:
+                    self.on_comment(tok)
+            # Skip over whitespace
+            for i,tok in enumerate(x):
+                if tok.type not in self.t_WS and tok.type not in self.t_COMMENT:
+                    all_whitespace = False
+                    break
+            output_and_expand_line = True
+            output_unexpanded_line = False
             if tok.value == '#':
-                output_directive = False
+                output_and_expand_line = False
                 try:
                     # Preprocessor directive      
                     i += 1
@@ -3137,17 +3331,26 @@ to instead output it as is into the output</p></div>
                         args = []
                     
                     if self.debugout is not None:
-                        print >> self.debugout, "%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]))
+                        print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
+                        #print(ifstack)
 
                     handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
                     if handling == False:
                         pass
                     elif name == 'define':
+                        at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
+                            if include_guard and include_guard[0] == args[0].value:
+                                include_guard = (args[0].value, 1)
+                                # If ifpassthru is only turned on due to this include guard, turn it off
+                                if ifpassthru and not ifstack[-1].ifpassthru:
+                                    ifpassthru = False
                             self.define(args)
+                            if self.debugout is not None:
+                                print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
                             if handling is None:
                                 for tok in x:
                                     yield tok
@@ -3160,8 +3363,9 @@ to instead output it as is into the output</p></div>
                             for tok in self.include(args):
                                 yield tok
                             self.macros['__FILE__'] = oldfile
-                            self.source = source
+                            self.source = abssource
                     elif name == 'undef':
+                        at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
@@ -3171,13 +3375,15 @@ to instead output it as is into the output</p></div>
                                 for tok in x:
                                     yield tok
                     elif name == 'ifdef':
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        at_front_of_file = False
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             if not args[0].value in self.macros:
                                 res = self.on_unknown_macro_in_defined_expr(args[0])
                                 if res is None:
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 elif res is True:
                                     iftrigger = True
@@ -3187,7 +3393,11 @@ to instead output it as is into the output</p></div>
                             else:
                                 iftrigger = True
                     elif name == 'ifndef':
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if not ifstack and at_front_of_file:
+                            self.on_potential_include_guard(args[0].value)
+                            include_guard = (args[0].value, 0)
+                        at_front_of_file = False
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             if args[0].value in self.macros:
@@ -3197,6 +3407,7 @@ to instead output it as is into the output</p></div>
                                 res = self.on_unknown_macro_in_defined_expr(args[0])
                                 if res is None:
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 elif res is True:
                                     enable = False
@@ -3204,13 +3415,24 @@ to instead output it as is into the output</p></div>
                                 else:
                                     iftrigger = True
                     elif name == 'if':
-                        ifstack.append((enable,iftrigger,ifpassthru))
+                        if not ifstack and at_front_of_file:
+                            if args[0].value == '!' and args[1].value == 'defined':
+                                n = 2
+                                if args[n].value == '(': n += 1
+                                self.on_potential_include_guard(args[n].value)
+                                include_guard = (args[n].value, 0)
+                        at_front_of_file = False
+                        ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
                             ifpassthru = False
                             result, rewritten = self.evalexpr(args)
                             if rewritten is not None:
                                 x = x[:i+2] + rewritten + [x[-1]]
+                                x[i+1] = copy.copy(x[i+1])
+                                x[i+1].type = self.t_SPACE
+                                x[i+1].value = ' '
                                 ifpassthru = True
+                                ifstack[-1].rewritten = True
                                 raise OutputDirective()
                             if not result:
                                 enable = False
@@ -3218,8 +3440,9 @@ to instead output it as is into the output</p></div>
                             else:
                                 iftrigger = True
                     elif name == 'elif':
+                        at_front_of_file = False
                         if ifstack:
-                            if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
+                            if ifstack[-1].enable:     # We only pay attention if outer "if" allows this
                                 if enable and not ifpassthru:         # If already true, we flip enable False
                                     enable = False
                                 elif not iftrigger:   # If False, but not triggered yet, we'll check expression
@@ -3230,7 +3453,11 @@ to instead output it as is into the output</p></div>
                                             # This is a passthru #elif after a False #if, so convert to an #if
                                             x[i].value = 'if'
                                         x = x[:i+2] + rewritten + [x[-1]]
+                                        x[i+1] = copy.copy(x[i+1])
+                                        x[i+1].type = self.t_SPACE
+                                        x[i+1].value = ' '
                                         ifpassthru = True
+                                        ifstack[-1].rewritten = True
                                         raise OutputDirective()
                                     if ifpassthru:
                                         # If this elif can only ever be true, simulate that
@@ -3249,8 +3476,9 @@ to instead output it as is into the output</p></div>
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
                             
                     elif name == 'else':
+                        at_front_of_file = False
                         if ifstack:
-                            if ifstack[-1][0]:
+                            if ifstack[-1].enable:
                                 if ifpassthru:
                                     enable = True
                                     raise OutputDirective()
@@ -3263,24 +3491,50 @@ to instead output it as is into the output</p></div>
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
 
                     elif name == 'endif':
+                        at_front_of_file = False
                         if ifstack:
-                            oldifpassthru = ifpassthru
-                            enable,iftrigger,ifpassthru = ifstack.pop()
-                            if oldifpassthru:
+                            oldifstackentry = ifstack.pop()
+                            enable = oldifstackentry.enable
+                            iftrigger = oldifstackentry.iftrigger
+                            ifpassthru = oldifstackentry.ifpassthru
+                            if self.debugout is not None:
+                                print("%d:%d:%d %s:%d      (%s:%d %s)" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno,
+                                    oldifstackentry.startlinetoks[0].source, oldifstackentry.startlinetoks[0].lineno, "".join([n.value for n in oldifstackentry.startlinetoks])), file = self.debugout)
+                            skip_auto_pragma_once_possible_check = True
+                            if oldifstackentry.rewritten:
                                 raise OutputDirective()
                         else:
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
+                    elif name == 'pragma' and args[0].value == 'once':
+                        if enable:
+                            self.include_once[self.source] = None
                     elif enable:
                         # Unknown preprocessor directive
-                        output_directive = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
+                        output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
 
                 except OutputDirective:
-                    output_directive = True
+                    output_unexpanded_line = True
 
-            if output_directive:
+            # If there is ever any non-whitespace output outside an include guard, auto pragma once is not possible
+            if not skip_auto_pragma_once_possible_check and auto_pragma_once_possible and not ifstack and not all_whitespace:
+                auto_pragma_once_possible = False
+                if self.debugout is not None:
+                    print("%d:%d:%d %s:%d Determined that #include \"%s\" is not entirely wrapped in an include guard macro, disabling auto-applying #pragma once" % (enable, iftrigger, ifpassthru, x[0].source, x[0].lineno, self.source), file = self.debugout)
+                
+            if output_and_expand_line or output_unexpanded_line:
+                if not all_whitespace:
+                    at_front_of_file = False
+
                 # Normal text
                 if enable:
-                    chunk.extend(x)
+                    if output_and_expand_line:
+                        chunk.extend(x)
+                    elif output_unexpanded_line:
+                        for tok in self.expand_macros(chunk):
+                            yield tok
+                        chunk = []
+                        for tok in x:
+                            yield tok
                 else:
                     # Need to extend with the same number of blank lines
                     i = 0
@@ -3294,6 +3548,13 @@ to instead output it as is into the output</p></div>
         for tok in self.expand_macros(chunk):
             yield tok
         chunk = []
+        for i in ifstack:
+            self.on_error(i.startlinetoks[0].source, i.startlinetoks[0].lineno, "Unterminated " + "".join([n.value for n in i.startlinetoks]))
+        if auto_pragma_once_possible and include_guard and include_guard[1] == 1:
+            if self.debugout is not None:
+                print("%d:%d:%d %s:%d Determined that #include \"%s\" is entirely wrapped in an include guard macro called %s, auto-applying #pragma once" % (enable, iftrigger, ifpassthru, self.source, 0, self.source, include_guard[0]), file = self.debugout)
+            self.include_once[self.source] = include_guard[0]
+        
 
     # ----------------------------------------------------------------------
     # include()
@@ -3334,12 +3595,19 @@ to instead output it as is into the output</p></div>
             #print path
             for p in path:
                 iname = os.path.join(p,filename)
+                fulliname = os.path.abspath(iname)
+                if fulliname in self.include_once:
+                    if self.debugout is not None:
+                        print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
+                    return
                 try:
-                    data = open(iname,"r").read()
-                    dname = os.path.dirname(iname)
+                    ih = open(fulliname,"r")
+                    data = ih.read()
+                    ih.close()
+                    dname = os.path.dirname(fulliname)
                     if dname:
                         self.temp_path.insert(0,dname)
-                    for tok in self.parsegen(data,filename):
+                    for tok in self.parsegen(data,filename,fulliname):
                         yield tok
                     if dname:
                         del self.temp_path[0]
@@ -3453,12 +3721,12 @@ to instead output it as is into the output</p></div>
     # ----------------------------------------------------------------------
     def parse(self,input,source=None,ignore={}):
         """Parse input text."""
-        if isinstance(input, file):
+        if isinstance(input, FILE_TYPES):
             if source is None:
                 source = input.name
             input = input.read()
         self.ignore = ignore
-        self.parser = self.parsegen(input,source)
+        self.parser = self.parsegen(input,source,os.path.abspath(source) if source else None)
         if source is not None:
             dname = os.path.dirname(source)
             self.temp_path.insert(0,dname)
@@ -3512,7 +3780,7 @@ to instead output it as is into the output</p></div>
                 blanklines += toks[0].value.count('\n')
                 continue
             # The line in toks is not all whitespace
-            emitlinedirective = (blanklines > 6)
+            emitlinedirective = (blanklines > 6) and self.line_directive is not None
             if hasattr(toks[0], 'source'):
                 if lastsource is None:
                     lastsource = toks[0].source
@@ -3538,15 +3806,15 @@ to instead output it as is into the output</p></div>
                             toks[m].value = ' '
             if not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
-                if newlinesneeded > 6:
+                if newlinesneeded > 6 and self.line_directive is not None:
                     emitlinedirective = True
                 else:
                     while newlinesneeded > 0:
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
-            if emitlinedirective:
-                oh.write('# ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            if emitlinedirective and self.line_directive is not None:
+                oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
             #elif blanklines > 0:
             #    for line in blankacc:
             #        for tok in line:
@@ -3566,104 +3834,9 @@ to instead output it as is into the output</p></div>
           <h3>Ancestors (in MRO)</h3>
           <ul class="class_list">
           <li><a href="#pcpp.Preprocessor">Preprocessor</a></li>
-          <li><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></li>
+          <li>__pdoc_file_module__.PreprocessorHooks</li>
           <li>__builtin__.object</li>
           </ul>
-          <h3>Instance variables</h3>
-            <div class="item">
-            <p id="pcpp.Preprocessor.countermacro" class="name">var <span class="ident">countermacro</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.debugout" class="name">var <span class="ident">debugout</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.lastdirective" class="name">var <span class="ident">lastdirective</span></p>
-            
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.lastdirective">lastdirective</a></code>
-    </p>
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.lexer" class="name">var <span class="ident">lexer</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.macros" class="name">var <span class="ident">macros</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.parser" class="name">var <span class="ident">parser</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.path" class="name">var <span class="ident">path</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.return_code" class="name">var <span class="ident">return_code</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-            <div class="item">
-            <p id="pcpp.Preprocessor.temp_path" class="name">var <span class="ident">temp_path</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
           <h3>Methods</h3>
             
   <div class="item">
@@ -3671,10 +3844,6 @@ to instead output it as is into the output</p></div>
     <p>def <span class="ident">__init__</span>(</p><p>self, lexer=None)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.__init__">__init__</a></code>
-    </p>
 
     
   
@@ -3690,13 +3859,17 @@ to instead output it as is into the output</p></div>
     self.macros = { }
     self.path = []
     self.temp_path = []
+    self.include_once = {}
     self.return_code = 0
     self.debugout = None
+    self.auto_pragma_once_enabled = True
+    self.line_directive = '#line'
     # Probe the lexer for selected tokens
     self.__lexprobe()
     tm = time.localtime()
     self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
     self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
+    self.define("__PCPP__ 1")
     self.countermacro = 0
     self.parser = None
 </code></pre>
@@ -3913,6 +4086,9 @@ integral expressions.</p></div>
     <pre><code>def evalexpr(self,tokens):
     """Evaluate an expression token sequence for the purposes of evaluating
     integral expressions."""
+    if not tokens:
+        self.on_error('unknown', 0, "Empty expression")
+        return (0, None)
     # tokens = tokenize(line)
     # Search for defined macros
     evalfuncts = {'defined' : lambda x: True}
@@ -3955,6 +4131,8 @@ integral expressions.</p></div>
             del tokens[i+1:j+1]
         i += 1
     tokens = self.expand_macros(tokens)
+    if not tokens:
+        return (0, None)
     for i,t in enumerate(tokens):
         if t.type == self.t_ID:
             repl = self.on_unknown_macro_in_expr(copy.copy(t))
@@ -3962,13 +4140,16 @@ integral expressions.</p></div>
                 # Add this identifier to a dictionary of variables
                 evalvars[t.value] = 0
             else:
-                tokens[i] = repl
-        elif t.type == self.t_INTEGER:
+                tokens[i] = t = repl
+        if t.type == self.t_INTEGER:
             tokens[i] = copy.copy(t)
             # Strip off any trailing suffixes
             tokens[i].value = str(tokens[i].value)
             while tokens[i].value[-1] not in "0123456789abcdefABCDEF":
                 tokens[i].value = tokens[i].value[:-1]
+            if sys.version_info.major >= 3:
+                if len(tokens[i].value) > 1 and tokens[i].value[0] == '0' and tokens[i].value[1] >= '0' and tokens[i].value[1] <= '7':
+                    tokens[i].value = '0o' + tokens[i].value[1:]
         elif t.type == self.t_COLON:
             # Find the expression before the colon
             cs = ce = i - 1
@@ -4015,13 +4196,14 @@ integral expressions.</p></div>
             # Note this is identical length
             tokens = tokens[:es] + tokens[cs:ce+1] + tokens[ternary:ternary+1] + tokens[es:ee+1] + tokens[i:]
     
-    expr = origexpr = "".join([str(x.value) for x in tokens])
+    expr = origexpr = "".join([str(x.value) for x in tokens if x.type not in self.t_COMMENT])
     expr = expr.replace("&&"," and ")
     expr = expr.replace("||"," or ")
     expr = expr.replace("!="," <> ")
     expr = expr.replace("!"," not ")
+    expr = expr.replace(" <> ", " != ")
     try:
-        result = eval(expr, evalfuncts, evalvars)
+        result = int(eval(expr, evalfuncts, evalvars))
     except Exception:
         self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
         + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
@@ -4077,7 +4259,7 @@ integral expressions.</p></div>
                 else:
                     # A macro with arguments
                     j = i + 1
-                    while j < len(tokens) and tokens[j].type in self.t_WS:
+                    while j < len(tokens) and (tokens[j].type in self.t_WS or tokens[j].type in self.t_COMMENT):
                         j += 1
                     # A function like macro without an invocation list is to be ignored
                     if j == len(tokens) or tokens[j].value != '(':
@@ -4183,6 +4365,10 @@ a line-by-line format.</p></div>
             yield current_line
             current_line = []
     if current_line:
+        nltok = copy.copy(current_line[-1])
+        nltok.type = self.t_NEWLINE
+        nltok.value = '\n'
+        current_line.append(nltok)
         yield current_line
 </code></pre>
   </div>
@@ -4235,12 +4421,19 @@ a line-by-line format.</p></div>
         #print path
         for p in path:
             iname = os.path.join(p,filename)
+            fulliname = os.path.abspath(iname)
+            if fulliname in self.include_once:
+                if self.debugout is not None:
+                    print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
+                return
             try:
-                data = open(iname,"r").read()
-                dname = os.path.dirname(iname)
+                ih = open(fulliname,"r")
+                data = ih.read()
+                ih.close()
+                dname = os.path.dirname(fulliname)
                 if dname:
                     self.temp_path.insert(0,dname)
-                for tok in self.parsegen(data,filename):
+                for tok in self.parsegen(data,filename,fulliname):
                     yield tok
                 if dname:
                     del self.temp_path[0]
@@ -4418,18 +4611,48 @@ right away where to apply patches to the value to form the expansion</p></div>
   
             
   <div class="item">
+    <div class="name def" id="pcpp.Preprocessor.on_comment">
+    <p>def <span class="ident">on_comment</span>(</p><p>self, tok)</p>
+    </div>
+    
+
+    
+  
+    <div class="desc"><p>Called when the preprocessor encounters a comment token. You can modify the token
+in place, or do nothing to let the comment pass through.</p>
+<p>The default modifies the token to become whitespace, becoming a single space if the
+comment is a block comment, else a single new line if the comment is a line comment.</p></div>
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.Preprocessor.on_comment', this);">Show source &equiv;</a></p>
+  <div id="source-pcpp.Preprocessor.on_comment" class="source">
+    <pre><code>def on_comment(self,tok):
+    """Called when the preprocessor encounters a comment token. You can modify the token
+    in place, or do nothing to let the comment pass through.
+    
+    The default modifies the token to become whitespace, becoming a single space if the
+    comment is a block comment, else a single new line if the comment is a line comment.
+    """
+    if tok.type == self.t_COMMENT1:
+        tok.value = ' '
+    elif tok.type == self.t_COMMENT2:
+        tok.value = '\n'
+    tok.type = 'CPP_WS'
+</code></pre>
+  </div>
+</div>
+
+  </div>
+  
+            
+  <div class="item">
     <div class="name def" id="pcpp.Preprocessor.on_directive_handle">
     <p>def <span class="ident">on_directive_handle</span>(</p><p>self, directive, toks, ifpassthru)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.on_directive_handle">on_directive_handle</a></code>
-    </p>
 
     
   
-    <div class="desc inherited"><p>Called when there is one of</p>
+    <div class="desc"><p>Called when there is one of</p>
 <p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
 <p>Return True to execute and remove from the output, return False to
 remove from the output, raise OutputDirective to pass through without
@@ -4465,14 +4688,10 @@ execution, or return None to execute AND pass through to the output
     <p>def <span class="ident">on_directive_unknown</span>(</p><p>self, directive, toks, ifpassthru)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.on_directive_unknown">on_directive_unknown</a></code>
-    </p>
 
     
   
-    <div class="desc inherited"><p>Called when the preprocessor encounters a #directive it doesn't understand.
+    <div class="desc"><p>Called when the preprocessor encounters a #directive it doesn't understand.
 This is actually quite an extensive list as it currently only understands:</p>
 <p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
 <p>Return True or False to remove from the output, or else raise OutputDirective
@@ -4495,11 +4714,11 @@ or return None to pass through into the output.</p>
     (remove from output). For everything else it returns None (pass through into output).
     """
     if directive.value == 'error':
-        print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+        print("%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
         self.return_code += 1
         return True
     elif directive.value == 'warning':
-        print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
+        print("%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
         return True
     return None
 </code></pre>
@@ -4514,14 +4733,10 @@ or return None to pass through into the output.</p>
     <p>def <span class="ident">on_error</span>(</p><p>self, file, line, msg)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.on_error">on_error</a></code>
-    </p>
 
     
   
-    <div class="desc inherited"><p>Called when the preprocessor has encountered an error, e.g. malformed input.</p>
+    <div class="desc"><p>Called when the preprocessor has encountered an error, e.g. malformed input.</p>
 <p>The default simply prints to stderr and increments the return code.</p></div>
   <div class="source_cont">
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.Preprocessor.on_error', this);">Show source &equiv;</a></p>
@@ -4531,7 +4746,7 @@ or return None to pass through into the output.</p>
     
     The default simply prints to stderr and increments the return code.
     """
-    print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
+    print("%s:%d error: %s" % (file,line,msg), file = sys.stderr)
     self.return_code += 1
 </code></pre>
   </div>
@@ -4545,14 +4760,10 @@ or return None to pass through into the output.</p>
     <p>def <span class="ident">on_include_not_found</span>(</p><p>self, is_system_include, curdir, includepath)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.on_include_not_found">on_include_not_found</a></code>
-    </p>
 
     
   
-    <div class="desc inherited"><p>Called when a #include wasn't found.</p>
+    <div class="desc"><p>Called when a #include wasn't found.</p>
 <p>Return None to ignore, raise OutputDirective to pass through, else return
 a suitable path. Remember that Preprocessor.add_path() lets you add search paths.</p>
 <p>The default calls self.on_error() with a suitable error message about the
@@ -4579,18 +4790,41 @@ include file not found and raises OutputDirective (pass through).</p></div>
   
             
   <div class="item">
+    <div class="name def" id="pcpp.Preprocessor.on_potential_include_guard">
+    <p>def <span class="ident">on_potential_include_guard</span>(</p><p>self, macro)</p>
+    </div>
+    
+
+    
+  
+    <div class="desc"><p>Called when the preprocessor encounters an #ifndef macro or an #if !defined(macro)
+as the first non-whitespace thing in a file. Unlike the other hooks, macro is a string,
+not a token.</p></div>
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.Preprocessor.on_potential_include_guard', this);">Show source &equiv;</a></p>
+  <div id="source-pcpp.Preprocessor.on_potential_include_guard" class="source">
+    <pre><code>def on_potential_include_guard(self,macro):
+    """Called when the preprocessor encounters an #ifndef macro or an #if !defined(macro)
+    as the first non-whitespace thing in a file. Unlike the other hooks, macro is a string,
+    not a token.
+    """
+    pass
+</code></pre>
+  </div>
+</div>
+
+  </div>
+  
+            
+  <div class="item">
     <div class="name def" id="pcpp.Preprocessor.on_unknown_macro_in_defined_expr">
     <p>def <span class="ident">on_unknown_macro_in_defined_expr</span>(</p><p>self, tok)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.on_unknown_macro_in_defined_expr">on_unknown_macro_in_defined_expr</a></code>
-    </p>
 
     
   
-    <div class="desc inherited"><p>Called when an expression passed to an #if contained a defined operator
+    <div class="desc"><p>Called when an expression passed to an #if contained a defined operator
 performed on something unknown.</p>
 <p>Return True if to treat it as defined, False if to treat it as undefined,
 raise OutputDirective to pass through without execution, or return None to
@@ -4622,14 +4856,10 @@ pass through the mostly expanded #if expression apart from the unknown defined.<
     <p>def <span class="ident">on_unknown_macro_in_expr</span>(</p><p>self, tok)</p>
     </div>
     
-    <p class="inheritance">
-     <strong>Inheritance:</strong>
-       <code><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></code>.<code><a href="#pcpp.PreprocessorHooks.on_unknown_macro_in_expr">on_unknown_macro_in_expr</a></code>
-    </p>
 
     
   
-    <div class="desc inherited"><p>Called when an expression passed to an #if contained something unknown.</p>
+    <div class="desc"><p>Called when an expression passed to an #if contained something unknown.</p>
 <p>Return what value it should be, raise OutputDirective to pass through
 without execution, or return None to pass through the mostly expanded #if
 expression apart from the unknown item.</p>
@@ -4670,12 +4900,12 @@ expression apart from the unknown item.</p>
   <div id="source-pcpp.Preprocessor.parse" class="source">
     <pre><code>def parse(self,input,source=None,ignore={}):
     """Parse input text."""
-    if isinstance(input, file):
+    if isinstance(input, FILE_TYPES):
         if source is None:
             source = input.name
         input = input.read()
     self.ignore = ignore
-    self.parser = self.parsegen(input,source)
+    self.parser = self.parsegen(input,source,os.path.abspath(source) if source else None)
     if source is not None:
         dname = os.path.dirname(source)
         self.temp_path.insert(0,dname)
@@ -4688,7 +4918,7 @@ expression apart from the unknown item.</p>
             
   <div class="item">
     <div class="name def" id="pcpp.Preprocessor.parsegen">
-    <p>def <span class="ident">parsegen</span>(</p><p>self, input, source=None)</p>
+    <p>def <span class="ident">parsegen</span>(</p><p>self, input, source=None, abssource=None)</p>
     </div>
     
 
@@ -4698,7 +4928,7 @@ expression apart from the unknown item.</p>
   <div class="source_cont">
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.Preprocessor.parsegen', this);">Show source &equiv;</a></p>
   <div id="source-pcpp.Preprocessor.parsegen" class="source">
-    <pre><code>def parsegen(self,input,source=None):
+    <pre><code>def parsegen(self,input,source=None,abssource=None):
     """Parse an input string"""
     # Replace trigraph sequences
     t = trigraph(input)
@@ -4707,18 +4937,42 @@ expression apart from the unknown item.</p>
         source = ""
         
     self.define("__FILE__ \"%s\"" % source)
-    self.source = source
+    self.source = abssource
     chunk = []
     enable = True
     iftrigger = False
     ifpassthru = False
+    class ifstackentry(object):
+        def __init__(self,enable,iftrigger,ifpassthru,startlinetoks):
+            self.enable = enable
+            self.iftrigger = iftrigger
+            self.ifpassthru = ifpassthru
+            self.rewritten = False
+            self.startlinetoks = startlinetoks
     ifstack = []
+    # True until any non-whitespace output or anything with effects happens.
+    at_front_of_file = True
+    # True if auto pragma once still a possibility for this #include
+    auto_pragma_once_possible = self.auto_pragma_once_enabled
+    # =(MACRO, 0) means #ifndef MACRO or #if !defined(MACRO) seen, =(MACRO,1) means #define MACRO seen
+    include_guard = None
+    self.on_potential_include_guard(None)
     for x in lines:
+        all_whitespace = True
+        skip_auto_pragma_once_possible_check = False
+        # Handle comments
         for i,tok in enumerate(x):
-            if tok.type not in self.t_WS: break
-        output_directive = True
+            if tok.type in self.t_COMMENT:
+                self.on_comment(tok)
+        # Skip over whitespace
+        for i,tok in enumerate(x):
+            if tok.type not in self.t_WS and tok.type not in self.t_COMMENT:
+                all_whitespace = False
+                break
+        output_and_expand_line = True
+        output_unexpanded_line = False
         if tok.value == '#':
-            output_directive = False
+            output_and_expand_line = False
             try:
                 # Preprocessor directive      
                 i += 1
@@ -4733,16 +4987,25 @@ expression apart from the unknown item.</p>
                     args = []
                 
                 if self.debugout is not None:
-                    print >> self.debugout, "%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args]))
+                    print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
+                    #print(ifstack)
                 handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
                 if handling == False:
                     pass
                 elif name == 'define':
+                    at_front_of_file = False
                     if enable:
                         for tok in self.expand_macros(chunk):
                             yield tok
                         chunk = []
+                        if include_guard and include_guard[0] == args[0].value:
+                            include_guard = (args[0].value, 1)
+                            # If ifpassthru is only turned on due to this include guard, turn it off
+                            if ifpassthru and not ifstack[-1].ifpassthru:
+                                ifpassthru = False
                         self.define(args)
+                        if self.debugout is not None:
+                            print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
                         if handling is None:
                             for tok in x:
                                 yield tok
@@ -4755,8 +5018,9 @@ expression apart from the unknown item.</p>
                         for tok in self.include(args):
                             yield tok
                         self.macros['__FILE__'] = oldfile
-                        self.source = source
+                        self.source = abssource
                 elif name == 'undef':
+                    at_front_of_file = False
                     if enable:
                         for tok in self.expand_macros(chunk):
                             yield tok
@@ -4766,13 +5030,15 @@ expression apart from the unknown item.</p>
                             for tok in x:
                                 yield tok
                 elif name == 'ifdef':
-                    ifstack.append((enable,iftrigger,ifpassthru))
+                    at_front_of_file = False
+                    ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                     if enable:
                         ifpassthru = False
                         if not args[0].value in self.macros:
                             res = self.on_unknown_macro_in_defined_expr(args[0])
                             if res is None:
                                 ifpassthru = True
+                                ifstack[-1].rewritten = True
                                 raise OutputDirective()
                             elif res is True:
                                 iftrigger = True
@@ -4782,7 +5048,11 @@ expression apart from the unknown item.</p>
                         else:
                             iftrigger = True
                 elif name == 'ifndef':
-                    ifstack.append((enable,iftrigger,ifpassthru))
+                    if not ifstack and at_front_of_file:
+                        self.on_potential_include_guard(args[0].value)
+                        include_guard = (args[0].value, 0)
+                    at_front_of_file = False
+                    ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                     if enable:
                         ifpassthru = False
                         if args[0].value in self.macros:
@@ -4792,6 +5062,7 @@ expression apart from the unknown item.</p>
                             res = self.on_unknown_macro_in_defined_expr(args[0])
                             if res is None:
                                 ifpassthru = True
+                                ifstack[-1].rewritten = True
                                 raise OutputDirective()
                             elif res is True:
                                 enable = False
@@ -4799,13 +5070,24 @@ expression apart from the unknown item.</p>
                             else:
                                 iftrigger = True
                 elif name == 'if':
-                    ifstack.append((enable,iftrigger,ifpassthru))
+                    if not ifstack and at_front_of_file:
+                        if args[0].value == '!' and args[1].value == 'defined':
+                            n = 2
+                            if args[n].value == '(': n += 1
+                            self.on_potential_include_guard(args[n].value)
+                            include_guard = (args[n].value, 0)
+                    at_front_of_file = False
+                    ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                     if enable:
                         ifpassthru = False
                         result, rewritten = self.evalexpr(args)
                         if rewritten is not None:
                             x = x[:i+2] + rewritten + [x[-1]]
+                            x[i+1] = copy.copy(x[i+1])
+                            x[i+1].type = self.t_SPACE
+                            x[i+1].value = ' '
                             ifpassthru = True
+                            ifstack[-1].rewritten = True
                             raise OutputDirective()
                         if not result:
                             enable = False
@@ -4813,8 +5095,9 @@ expression apart from the unknown item.</p>
                         else:
                             iftrigger = True
                 elif name == 'elif':
+                    at_front_of_file = False
                     if ifstack:
-                        if ifstack[-1][0]:     # We only pay attention if outer "if" allows this
+                        if ifstack[-1].enable:     # We only pay attention if outer "if" allows this
                             if enable and not ifpassthru:         # If already true, we flip enable False
                                 enable = False
                             elif not iftrigger:   # If False, but not triggered yet, we'll check expression
@@ -4825,7 +5108,11 @@ expression apart from the unknown item.</p>
                                         # This is a passthru #elif after a False #if, so convert to an #if
                                         x[i].value = 'if'
                                     x = x[:i+2] + rewritten + [x[-1]]
+                                    x[i+1] = copy.copy(x[i+1])
+                                    x[i+1].type = self.t_SPACE
+                                    x[i+1].value = ' '
                                     ifpassthru = True
+                                    ifstack[-1].rewritten = True
                                     raise OutputDirective()
                                 if ifpassthru:
                                     # If this elif can only ever be true, simulate that
@@ -4844,8 +5131,9 @@ expression apart from the unknown item.</p>
                         self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #elif")
                         
                 elif name == 'else':
+                    at_front_of_file = False
                     if ifstack:
-                        if ifstack[-1][0]:
+                        if ifstack[-1].enable:
                             if ifpassthru:
                                 enable = True
                                 raise OutputDirective()
@@ -4857,22 +5145,47 @@ expression apart from the unknown item.</p>
                     else:
                         self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #else")
                 elif name == 'endif':
+                    at_front_of_file = False
                     if ifstack:
-                        oldifpassthru = ifpassthru
-                        enable,iftrigger,ifpassthru = ifstack.pop()
-                        if oldifpassthru:
+                        oldifstackentry = ifstack.pop()
+                        enable = oldifstackentry.enable
+                        iftrigger = oldifstackentry.iftrigger
+                        ifpassthru = oldifstackentry.ifpassthru
+                        if self.debugout is not None:
+                            print("%d:%d:%d %s:%d      (%s:%d %s)" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno,
+                                oldifstackentry.startlinetoks[0].source, oldifstackentry.startlinetoks[0].lineno, "".join([n.value for n in oldifstackentry.startlinetoks])), file = self.debugout)
+                        skip_auto_pragma_once_possible_check = True
+                        if oldifstackentry.rewritten:
                             raise OutputDirective()
                     else:
                         self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
+                elif name == 'pragma' and args[0].value == 'once':
+                    if enable:
+                        self.include_once[self.source] = None
                 elif enable:
                     # Unknown preprocessor directive
-                    output_directive = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
+                    output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
             except OutputDirective:
-                output_directive = True
-        if output_directive:
+                output_unexpanded_line = True
+        # If there is ever any non-whitespace output outside an include guard, auto pragma once is not possible
+        if not skip_auto_pragma_once_possible_check and auto_pragma_once_possible and not ifstack and not all_whitespace:
+            auto_pragma_once_possible = False
+            if self.debugout is not None:
+                print("%d:%d:%d %s:%d Determined that #include \"%s\" is not entirely wrapped in an include guard macro, disabling auto-applying #pragma once" % (enable, iftrigger, ifpassthru, x[0].source, x[0].lineno, self.source), file = self.debugout)
+            
+        if output_and_expand_line or output_unexpanded_line:
+            if not all_whitespace:
+                at_front_of_file = False
             # Normal text
             if enable:
-                chunk.extend(x)
+                if output_and_expand_line:
+                    chunk.extend(x)
+                elif output_unexpanded_line:
+                    for tok in self.expand_macros(chunk):
+                        yield tok
+                    chunk = []
+                    for tok in x:
+                        yield tok
             else:
                 # Need to extend with the same number of blank lines
                 i = 0
@@ -4885,6 +5198,12 @@ expression apart from the unknown item.</p>
     for tok in self.expand_macros(chunk):
         yield tok
     chunk = []
+    for i in ifstack:
+        self.on_error(i.startlinetoks[0].source, i.startlinetoks[0].lineno, "Unterminated " + "".join([n.value for n in i.startlinetoks]))
+    if auto_pragma_once_possible and include_guard and include_guard[1] == 1:
+        if self.debugout is not None:
+            print("%d:%d:%d %s:%d Determined that #include \"%s\" is entirely wrapped in an include guard macro called %s, auto-applying #pragma once" % (enable, iftrigger, ifpassthru, self.source, 0, self.source, include_guard[0]), file = self.debugout)
+        self.include_once[self.source] = include_guard[0]
 </code></pre>
   </div>
 </div>
@@ -5009,7 +5328,7 @@ expression apart from the unknown item.</p>
             
   <div class="item">
     <div class="name def" id="pcpp.Preprocessor.write">
-    <p>def <span class="ident">write</span>(</p><p>self, oh=&lt;open file &#39;&lt;stdout&gt;&#39;, mode &#39;w&#39; at 0x7f7d9eff2150&gt;)</p>
+    <p>def <span class="ident">write</span>(</p><p>self, oh=&lt;open file &#39;&lt;stdout&gt;&#39;, mode &#39;w&#39; at 0x7f3098c02150&gt;)</p>
     </div>
     
 
@@ -5052,7 +5371,7 @@ expression apart from the unknown item.</p>
             blanklines += toks[0].value.count('\n')
             continue
         # The line in toks is not all whitespace
-        emitlinedirective = (blanklines > 6)
+        emitlinedirective = (blanklines > 6) and self.line_directive is not None
         if hasattr(toks[0], 'source'):
             if lastsource is None:
                 lastsource = toks[0].source
@@ -5078,15 +5397,15 @@ expression apart from the unknown item.</p>
                         toks[m].value = ' '
         if not emitlinedirective:
             newlinesneeded = toks[0].lineno - lastlineno - 1
-            if newlinesneeded > 6:
+            if newlinesneeded > 6 and self.line_directive is not None:
                 emitlinedirective = True
             else:
                 while newlinesneeded > 0:
                     oh.write('\n')
                     newlinesneeded -= 1
         lastlineno = toks[0].lineno
-        if emitlinedirective:
-            oh.write('# ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+        if emitlinedirective and self.line_directive is not None:
+            oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
         #elif blanklines > 0:
         #    for line in blankacc:
         #        for tok in line:
@@ -5097,360 +5416,6 @@ expression apart from the unknown item.</p>
         for tok in toks:
             #print tok.value,
             oh.write(tok.value)
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-      </div>
-      </div>
-      
-      <div class="item">
-      <p id="pcpp.PreprocessorHooks" class="name">class <span class="ident">PreprocessorHooks</span></p>
-      
-  
-    <div class="desc"><p>Override these in your subclass of Preprocessor to customise preprocessing</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks" class="source">
-    <pre><code>class PreprocessorHooks(object):
-    """Override these in your subclass of Preprocessor to customise preprocessing"""
-    def __init__(self):
-        self.lastdirective = None
-
-    def on_error(self,file,line,msg):
-        """Called when the preprocessor has encountered an error, e.g. malformed input.
-        
-        The default simply prints to stderr and increments the return code.
-        """
-        print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
-        self.return_code += 1
-        
-    def on_include_not_found(self,is_system_include,curdir,includepath):
-        """Called when a #include wasn't found.
-        
-        Return None to ignore, raise OutputDirective to pass through, else return
-        a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
-        
-        The default calls self.on_error() with a suitable error message about the
-        include file not found and raises OutputDirective (pass through).
-        """
-        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
-        raise OutputDirective()
-        
-    def on_unknown_macro_in_defined_expr(self,tok):
-        """Called when an expression passed to an #if contained a defined operator
-        performed on something unknown.
-        
-        Return True if to treat it as defined, False if to treat it as undefined,
-        raise OutputDirective to pass through without execution, or return None to
-        pass through the mostly expanded #if expression apart from the unknown defined.
-        
-        The default returns False, as per the C standard.
-        """
-        return False
-
-    def on_unknown_macro_in_expr(self,tok):
-        """Called when an expression passed to an #if contained something unknown.
-        
-        Return what value it should be, raise OutputDirective to pass through
-        without execution, or return None to pass through the mostly expanded #if
-        expression apart from the unknown item.
-        
-        The default returns a token for an integer 0L, as per the C standard.
-        """
-        tok.type = self.t_INTEGER
-        tok.value = self.t_INTEGER_TYPE("0L")
-        return tok
-    
-    def on_directive_handle(self,directive,toks,ifpassthru):
-        """Called when there is one of
-        
-        define, include, undef, ifdef, ifndef, if, elif, else, endif
-        
-        Return True to execute and remove from the output, return False to
-        remove from the output, raise OutputDirective to pass through without
-        execution, or return None to execute AND pass through to the output
-        (this only works for #define, #undef).
-        
-        The default returns True (execute and remove from the output).
-        """
-        self.lastdirective = directive
-        return True
-        
-    def on_directive_unknown(self,directive,toks,ifpassthru):
-        """Called when the preprocessor encounters a #directive it doesn't understand.
-        This is actually quite an extensive list as it currently only understands:
-        
-        define, include, undef, ifdef, ifndef, if, elif, else, endif
-        
-        Return True or False to remove from the output, or else raise OutputDirective
-        or return None to pass through into the output.
-        
-        The default handles #error and #warning by printing to stderr and returning True
-        (remove from output). For everything else it returns None (pass through into output).
-        """
-        if directive.value == 'error':
-            print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
-            self.return_code += 1
-            return True
-        elif directive.value == 'warning':
-            print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
-            return True
-        return None
-</code></pre>
-  </div>
-</div>
-
-
-      <div class="class">
-          <h3>Ancestors (in MRO)</h3>
-          <ul class="class_list">
-          <li><a href="#pcpp.PreprocessorHooks">PreprocessorHooks</a></li>
-          <li>__builtin__.object</li>
-          </ul>
-          <h3>Instance variables</h3>
-            <div class="item">
-            <p id="pcpp.PreprocessorHooks.lastdirective" class="name">var <span class="ident">lastdirective</span></p>
-            
-
-            
-  
-  <div class="source_cont">
-</div>
-
-            </div>
-          <h3>Methods</h3>
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.__init__">
-    <p>def <span class="ident">__init__</span>(</p><p>self)</p>
-    </div>
-    
-
-    
-  
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.__init__', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.__init__" class="source">
-    <pre><code>def __init__(self):
-    self.lastdirective = None
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.on_directive_handle">
-    <p>def <span class="ident">on_directive_handle</span>(</p><p>self, directive, toks, ifpassthru)</p>
-    </div>
-    
-
-    
-  
-    <div class="desc"><p>Called when there is one of</p>
-<p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
-<p>Return True to execute and remove from the output, return False to
-remove from the output, raise OutputDirective to pass through without
-execution, or return None to execute AND pass through to the output
-(this only works for #define, #undef).</p>
-<p>The default returns True (execute and remove from the output).</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.on_directive_handle', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.on_directive_handle" class="source">
-    <pre><code>def on_directive_handle(self,directive,toks,ifpassthru):
-    """Called when there is one of
-    
-    define, include, undef, ifdef, ifndef, if, elif, else, endif
-    
-    Return True to execute and remove from the output, return False to
-    remove from the output, raise OutputDirective to pass through without
-    execution, or return None to execute AND pass through to the output
-    (this only works for #define, #undef).
-    
-    The default returns True (execute and remove from the output).
-    """
-    self.lastdirective = directive
-    return True
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.on_directive_unknown">
-    <p>def <span class="ident">on_directive_unknown</span>(</p><p>self, directive, toks, ifpassthru)</p>
-    </div>
-    
-
-    
-  
-    <div class="desc"><p>Called when the preprocessor encounters a #directive it doesn't understand.
-This is actually quite an extensive list as it currently only understands:</p>
-<p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
-<p>Return True or False to remove from the output, or else raise OutputDirective
-or return None to pass through into the output.</p>
-<p>The default handles #error and #warning by printing to stderr and returning True
-(remove from output). For everything else it returns None (pass through into output).</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.on_directive_unknown', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.on_directive_unknown" class="source">
-    <pre><code>def on_directive_unknown(self,directive,toks,ifpassthru):
-    """Called when the preprocessor encounters a #directive it doesn't understand.
-    This is actually quite an extensive list as it currently only understands:
-    
-    define, include, undef, ifdef, ifndef, if, elif, else, endif
-    
-    Return True or False to remove from the output, or else raise OutputDirective
-    or return None to pass through into the output.
-    
-    The default handles #error and #warning by printing to stderr and returning True
-    (remove from output). For everything else it returns None (pass through into output).
-    """
-    if directive.value == 'error':
-        print >> sys.stderr, "%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
-        self.return_code += 1
-        return True
-    elif directive.value == 'warning':
-        print >> sys.stderr, "%s:%d warning: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks))
-        return True
-    return None
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.on_error">
-    <p>def <span class="ident">on_error</span>(</p><p>self, file, line, msg)</p>
-    </div>
-    
-
-    
-  
-    <div class="desc"><p>Called when the preprocessor has encountered an error, e.g. malformed input.</p>
-<p>The default simply prints to stderr and increments the return code.</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.on_error', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.on_error" class="source">
-    <pre><code>def on_error(self,file,line,msg):
-    """Called when the preprocessor has encountered an error, e.g. malformed input.
-    
-    The default simply prints to stderr and increments the return code.
-    """
-    print >> sys.stderr, "%s:%d error: %s" % (file,line,msg)
-    self.return_code += 1
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.on_include_not_found">
-    <p>def <span class="ident">on_include_not_found</span>(</p><p>self, is_system_include, curdir, includepath)</p>
-    </div>
-    
-
-    
-  
-    <div class="desc"><p>Called when a #include wasn't found.</p>
-<p>Return None to ignore, raise OutputDirective to pass through, else return
-a suitable path. Remember that Preprocessor.add_path() lets you add search paths.</p>
-<p>The default calls self.on_error() with a suitable error message about the
-include file not found and raises OutputDirective (pass through).</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.on_include_not_found', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.on_include_not_found" class="source">
-    <pre><code>def on_include_not_found(self,is_system_include,curdir,includepath):
-    """Called when a #include wasn't found.
-    
-    Return None to ignore, raise OutputDirective to pass through, else return
-    a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
-    
-    The default calls self.on_error() with a suitable error message about the
-    include file not found and raises OutputDirective (pass through).
-    """
-    self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
-    raise OutputDirective()
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.on_unknown_macro_in_defined_expr">
-    <p>def <span class="ident">on_unknown_macro_in_defined_expr</span>(</p><p>self, tok)</p>
-    </div>
-    
-
-    
-  
-    <div class="desc"><p>Called when an expression passed to an #if contained a defined operator
-performed on something unknown.</p>
-<p>Return True if to treat it as defined, False if to treat it as undefined,
-raise OutputDirective to pass through without execution, or return None to
-pass through the mostly expanded #if expression apart from the unknown defined.</p>
-<p>The default returns False, as per the C standard.</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.on_unknown_macro_in_defined_expr', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.on_unknown_macro_in_defined_expr" class="source">
-    <pre><code>def on_unknown_macro_in_defined_expr(self,tok):
-    """Called when an expression passed to an #if contained a defined operator
-    performed on something unknown.
-    
-    Return True if to treat it as defined, False if to treat it as undefined,
-    raise OutputDirective to pass through without execution, or return None to
-    pass through the mostly expanded #if expression apart from the unknown defined.
-    
-    The default returns False, as per the C standard.
-    """
-    return False
-</code></pre>
-  </div>
-</div>
-
-  </div>
-  
-            
-  <div class="item">
-    <div class="name def" id="pcpp.PreprocessorHooks.on_unknown_macro_in_expr">
-    <p>def <span class="ident">on_unknown_macro_in_expr</span>(</p><p>self, tok)</p>
-    </div>
-    
-
-    
-  
-    <div class="desc"><p>Called when an expression passed to an #if contained something unknown.</p>
-<p>Return what value it should be, raise OutputDirective to pass through
-without execution, or return None to pass through the mostly expanded #if
-expression apart from the unknown item.</p>
-<p>The default returns a token for an integer 0L, as per the C standard.</p></div>
-  <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-pcpp.PreprocessorHooks.on_unknown_macro_in_expr', this);">Show source &equiv;</a></p>
-  <div id="source-pcpp.PreprocessorHooks.on_unknown_macro_in_expr" class="source">
-    <pre><code>def on_unknown_macro_in_expr(self,tok):
-    """Called when an expression passed to an #if contained something unknown.
-    
-    Return what value it should be, raise OutputDirective to pass through
-    without execution, or return None to pass through the mostly expanded #if
-    expression apart from the unknown item.
-    
-    The default returns a token for an integer 0L, as per the C standard.
-    """
-    tok.type = self.t_INTEGER
-    tok.value = self.t_INTEGER_TYPE("0L")
-    return tok
 </code></pre>
   </div>
 </div>

@@ -18,11 +18,41 @@ C++ libraries into single file includes and other such build or packaging stage 
 The implementation can be used as a Python module (`see API reference <https://ned14.github.io/pcpp/>`_)
 or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
-Extensive ability to hook and customise the preprocessing is provided, for example one
-can pass through preprocessor logic if any macros are undefined (instead of treating
-undefined macros as if 0). This aids easy generation of low compile time single file
-includes for some header only library, thus making ``pcpp`` a "pre-pre-processor".
 
+A very unique facility of this C preprocessor is *partial* preprocessing so you can
+programmatically control how much preprocessing is done by ``pcpp`` and how much is
+done by the C or C++ compiler's preprocessor. The ultimate control is by subclassing
+the :c:`Preprocessor` class in Python from which you can do anything you like, however
+for your convenience the ``pcpp`` command line tool comes with the following canned
+partial preprocessing algorithms:
+
+**passthru-defines**
+  Pass through but still execute #defines and #undefs if not always removed by
+  preprocessor logic. This ensures that including the output sets exactly the same
+  macros as if you included the original, plus include guards work.
+
+**passthru-unfound-includes**
+  If an :c:`#include` is not found, pass it through unmodified. This is very useful
+  for passing through includes of system headers.
+
+**passthru-undefined-exprs**
+  This is one of the most powerful pass through algorithms. If an expression passed to
+  :c:`#if` (or its brethern) contains an unknown macro, expand the expression with
+  known macros and pass through *unexecuted*, and then pass through the remaining block.
+  Each :c:`#elif` is evaluated in turn and if it does not contain unknown macros, it will be
+  executed immediately. Finally, any :c:`#else` clause is always passed through *unexecuted*.
+  Note that include guards normally defeat this algorithm, so those are specially detected and
+  ignored.
+
+**passthru-comments**
+  A major use case for ``pcpp`` is as a preprocessor for the `doxygen <http://www.stack.nl/~dimitri/doxygen/>`_
+  reference documentation tool whose preprocessor is unable to handle any preprocessing
+  of any complexity. ``pcpp`` can partially execute the preprocessing which doxygen
+  is incapable of, thus generating output which produces good results with doxygen.
+  Hence the ability to pass through comments containing doxygen markup is very useful.
+
+Standards (non-)compliance
+--------------------------
 ``pcpp`` passes a modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_ unit
 test suite. Modifications done were to clarify ternary operators with extra brackets,
 plus those testing the unusual special quirks in expression evaluation (see detailed
@@ -39,7 +69,10 @@ http://www.dabeaz.com/ply/ are welcome). In practice, in most real world code, y
 won't notice the departures and if you do, the application of extra brackets to
 group subexpressions so Python's :c:`eval()` executes right will fix it.
 
-A full, detailed list of known non-conformance with the C99 standard is below.
+A full, detailed list of known non-conformance with the C99 standard is below. We have
+been told that ``pcpp`` does not pass the Boost.Wave preprocessor test suite, but
+the chances of that biting most people is low. If it does, pull requests with bug
+fixes and new unit tests for the fix are welcome.
 
 Note that most of this preprocessor was written originally by David Beazley to show
 off his excellent Python Lex-Yacc library PLY (http://www.dabeaz.com/ply/) and is
@@ -56,7 +89,8 @@ The help from the command line tool ``pcpp``::
 
     usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-N macro] [-I path]
                 [--passthru-defines] [--passthru-unfound-includes]
-                [--passthru-undefined-exprs] [--disable-auto-pragma-once]
+                [--passthru-unknown-exprs] [--passthru-comments]
+                [--disable-auto-pragma-once] [--line-directive [form]] [--debug]
                 [--version]
                 [input]
 
@@ -79,24 +113,26 @@ The help from the command line tool ``pcpp``::
                             not always removed by preprocessor logic
       --passthru-unfound-includes
                             Pass through #includes not found without execution
-      --passthru-undefined-exprs
-                            Undefined macros in expressions cause preprocessor
-                            logic to be passed through instead of executed by
-                            treating undefined macros as 0L
+      --passthru-unknown-exprs
+                            Unknown macros in expressions cause preprocessor logic
+                            to be passed through instead of executed by treating
+                            unknown macros as 0L
+      --passthru-comments   Pass through comments unmodified
       --disable-auto-pragma-once
                             Disable the heuristics which auto apply #pragma once
                             to #include files wholly wrapped in an obvious include
                             guard macro
+      --line-directive [form]
+                            Form of line directive to use, defaults to #line,
+                            specify nothing to disable output of line directives
+      --debug               Generate a pcpp_debug.log file logging execution
       --version             show program's version number and exit
 
     Note that so pcpp can stand in for other preprocessor tooling, it ignores any
     arguments it does not understand and any files it cannot open.
 
-Pass through mode passes through any #define's and #undef's plus any #if logic
-where any macro in the expression is unknown. In this mode, -U macro means that
-that macro is to be assumed to be undefined and expanding to `0L` i.e. don't
-perform pass through on that macro because it is undefined.
-
+Quick demo of pass through mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Let us look at an example for pass through mode. Here is the original:
 
 .. code-block:: c
@@ -117,7 +153,7 @@ Let us look at an example for pass through mode. Here is the original:
     #define BOOSTLITE_CONSTEXPR
     #endif
 
-``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs`` will output:
+``pcpp test.h --passthru-defines --passthru-unknown-exprs`` will output:
 
 .. code-block:: c
 
@@ -137,15 +173,15 @@ Let us look at an example for pass through mode. Here is the original:
     #define BOOSTLITE_CONSTEXPR
     #endif
     
-This is because ``__cpp_constexpr`` was not defined, so because of the ``--passthru-undefined-exprs`` flag
+This is because ``__cpp_constexpr`` was not defined, so because of the ``--passthru-unknown-exprs`` flag
 we pass through everything inside that if block **unexecuted** i.e. defines and undefs are NOT executed by
 ``pcpp``. Let's define ``__cpp_constexpr``:
 
-``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs -D __cpp_constexpr=1``
+``pcpp test.h --passthru-defines --passthru-unknown-exprs -D __cpp_constexpr``
 
 .. code-block:: c
 
-    # 8 "test.h"
+    #line 8 "test.h"
     #ifndef BOOSTLITE_CONSTEXPR
 
 
@@ -158,11 +194,11 @@ we pass through everything inside that if block **unexecuted** i.e. defines and 
 So, big difference now. We execute the entire first if block as ``__cpp_constexpr`` is now defined, thus
 leaving whitespace. Let's try setting ``__cpp_constexpr`` a bit higher:
 
-``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs -D __cpp_constexpr=201304``
+``pcpp test.h --passthru-defines --passthru-unknown-exprs -D __cpp_constexpr=201304``
 
 .. code-block:: c
 
-    # 8 "test.h"
+    #line 8 "test.h"
     #ifndef BOOSTLITE_CONSTEXPR
 
     #define BOOSTLITE_CONSTEXPR constexpr
@@ -172,16 +208,50 @@ leaving whitespace. Let's try setting ``__cpp_constexpr`` a bit higher:
 As you can see, the lines related to the known ``__cpp_constexpr`` are executed and removed, passing through
 any if blocks with unknown macros in the expression.
 
-Sometimes it can be useful to have part of an if block being passed through to also be executed in addition to the pass through.
-For this use ``__PCPP_ALWAYS_FALSE__`` or ``__PCPP_ALWAYS_TRUE__`` which tells ``pcpp`` to temporarily
-start executing the passed through preprocessor commands e.g.
+What if you want a macro to be known but undefined? The -U (to undefine) flag has an obvious meaning in pass
+through mode in that it makes a macro no longer unknown, but known to be undefined.
+
+``pcpp test.h --passthru-defines --passthru-unknown-exprs -U __cpp_constexpr``
+
+.. code-block:: c
+
+    #if __cplusplus >= 201402
+    #define __cpp_constexpr 201304
+    #else
+    #define __cpp_constexpr 190000
+    #endif
+    
+    #ifndef BOOSTLITE_CONSTEXPR
+    
+    
+    
+    #endif
+    #ifndef BOOSTLITE_CONSTEXPR
+    #define BOOSTLITE_CONSTEXPR
+    #endif
+    
+Here ``__cpp_constexpr`` is known to be undefined so the first clause executes, but ``__cplusplus`` is
+unknown so that entire block is passed through unexecuted. In the next test comparing ``__cpp_constexpr``
+to 201304 it is still known to be undefined, and so 0 >= 201304 is the expressions tested which is false,
+hence the following stanza is removed entirely.
+
+Helping ``pcpp`` using source code annotation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You can achieve a great deal using -D (define), -U (undefine) and -N (never define) on the command line,
+but for more complex preprocessing it gets hard to pass through the correct logic without some source code
+annotation.
+
+``pcpp`` lets you annotate which part of an if block being passed through due to use of unknown macros
+to also be executed in addition to the pass through. For this use ``__PCPP_ALWAYS_FALSE__`` or
+``__PCPP_ALWAYS_TRUE__`` which tells ``pcpp`` to temporarily start executing the passed through
+preprocessor commands e.g.
 
 .. code-block:: c
 
     #if !defined(__cpp_constexpr)
     #if __cplusplus >= 201402L 
-    #define __cpp_constexpr 201304  // relaxed constexpr
-    #elif !__PCPP_ALWAYS_FALSE__
+    #define __cpp_constexpr 201304
+    #elif !__PCPP_ALWAYS_FALSE__     // pcpp please execute this next block
     #define __cpp_constexpr 190000
     #endif
     #endif
@@ -195,9 +265,9 @@ start executing the passed through preprocessor commands e.g.
     #endif
 
 Note that ``__PCPP_ALWAYS_FALSE__`` will always be false in any other preprocessor, and it is also
-false in ``pcpp``. However it causes ``pcpp`` to execute the following define of ``__cpp_constexpr``:
+false in ``pcpp``. However it causes ``pcpp`` to execute the define of ``__cpp_constexpr`` to 190000:
 
-``pcpp test.h --passthru-defines --passthru-unfound-includes --passthru-undefined-exprs``
+``pcpp test.h --passthru-defines --passthru-unknown-exprs``
 
 .. code-block:: c
 
@@ -216,11 +286,14 @@ false in ``pcpp``. However it causes ``pcpp`` to execute the following define of
     #ifndef BOOSTLITE_CONSTEXPR
     #define BOOSTLITE_CONSTEXPR
     #endif
-    
-Which means the following use of ``__cpp_constexpr`` is now fully defined, and therefore executed.
+
+This is one way of marking up ``#else`` clauses so they always execute in a normal preprocessor
+and also pass through with execution with ``pcpp``. You can, of course, also place ``|| __PCPP_ALWAYS_FALSE__``
+in any ``#if`` stanza to cause it to be passed through with execution, but not affect the
+preprocessing logic otherwise.
         
-What's working:
----------------
+What's implemented by the ``Preprocessor`` class:
+=================================================
 - Digraphs and Trigraphs
 - line continuation operator '``\``'
 - C99 correct elimination of comments and maintenance of whitespace in output.
@@ -253,18 +326,18 @@ What's working:
 - :c:`#if`, :c:`#ifdef`, :c:`#ifndef`, :c:`#elif`, :c:`#else`, :c:`#endif`
 - Stringizing operator #
 - Token pasting operator ##
-- #pragma once
+- :c:`#pragma once`, a very common extension
 
-Implementable by overriding :c:`PreprocessorHooks`:
----------------------------------------------------
-- :c:`#error` (default implementation prints to stderr)
+Additionally implemented by ``pcpp`` command line tool:
+-------------------------------------------------------
+- :c:`#error` (default implementation prints to stderr and increments the exit code)
 - :c:`#warning` (default implementation prints to stderr)
-- :c:`#pragma` (ignored)
-- :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE` (no default implementation, so ignored)
 
-This is the default ``PreprocessorHooks``, simply subclass ``Preprocessor`` to override with
-your own behaviours (`see API reference <https://ned14.github.io/pcpp/>`_). If you need an example,
-the command line tool overrides the hooks to provide partial pre-preprocessing.
+Not implemented yet (donations of code welcome):
+------------------------------------------------
+- :c:`#pragma` anything other than once.
+- :c:`_Pragma` used to emit preprocessor calculated #pragma.
+- :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE`.
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
@@ -294,12 +367,15 @@ Known bugs (ordered from worst to least worst):
 
  Code donations of a proper lexing parser based on http://www.dabeaz.com/ply/ are welcome!
 
-**_Pragma used to emit preprocessor calculated #pragma is not implemented.**
- It would not be hard to add, it was simply a case of the author having no need of it.
- Patches adding support are welcome.
+**We do not pass the Boost.Wave preprocessor test suite**
+ A lot of bugs have been fixed since this was reported, however the chances are
+ that ``pcpp`` still doesn't pass it. A TODO is to port the Wave test suite to
+ Python and find out how bad things are. We suspect that any failures will be
+ in highly estoric use cases i.e. known illegal input. If you only use valid
+ input then we expect you generally won't have trouble.
 
 Customising your own preprocessor:
-----------------------------------
+==================================
 See the API reference docs at https://ned14.github.io/pcpp/
 
-You can find an example of overriding the `on_*()` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcpp_cmd.py
+You can find an example of overriding the ``on_*()`` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcpp_cmd.py

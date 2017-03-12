@@ -75,16 +75,11 @@ def t_CPP_COMMENT1(t):
     r'(/\*(.|\n)*?\*/)'
     ncr = t.value.count("\n")
     t.lexer.lineno += ncr
-    # replace with one space
-    t.type = 'CPP_WS'; t.value = ' '
     return t
 
 # Line comment
 def t_CPP_COMMENT2(t):
-    r'(//.*?(\n|$))'
-    # replace with '/n'
-    t.type = 'CPP_WS'; t.value = '\n'
-    t.lexer.lineno += 1
+    r'(//[^\n]*)'
     return t
     
 def t_error(t):
@@ -263,6 +258,19 @@ class PreprocessorHooks(object):
         not a token.
         """
         pass
+    
+    def on_comment(self,tok):
+        """Called when the preprocessor encounters a comment token. You can modify the token
+        in place, or do nothing to let the comment pass through.
+        
+        The default modifies the token to become whitespace, becoming a single space if the
+        comment is a block comment, else a single new line if the comment is a line comment.
+        """
+        if tok.type == self.t_COMMENT1:
+            tok.value = ' '
+        elif tok.type == self.t_COMMENT2:
+            tok.value = '\n'
+        tok.type = 'CPP_WS'
 
 # ------------------------------------------------------------------
 # Preprocessor object
@@ -388,6 +396,22 @@ class Preprocessor(PreprocessorHooks):
             print("Couldn't determine token for ternary operator")
         else:
             self.t_COLON = tok.type
+
+        self.lexer.input("/* comment */")
+        tok = self.lexer.token()
+        if not tok or tok.value != "/* comment */":
+            print("Couldn't determine comment type")
+        else:
+            self.t_COMMENT1 = tok.type
+
+        self.lexer.input("// comment")
+        tok = self.lexer.token()
+        if not tok or tok.value != "// comment":
+            print("Couldn't determine comment type")
+        else:
+            self.t_COMMENT2 = tok.type
+            
+        self.t_COMMENT = (self.t_COMMENT1, self.t_COMMENT2)
 
         # Check for other characters used by the preprocessor
         chars = [ '<','>','#','##','\\','(',')',',','.']
@@ -723,7 +747,7 @@ class Preprocessor(PreprocessorHooks):
                     else:
                         # A macro with arguments
                         j = i + 1
-                        while j < len(tokens) and tokens[j].type in self.t_WS:
+                        while j < len(tokens) and (tokens[j].type in self.t_WS or tokens[j].type in self.t_COMMENT):
                             j += 1
                         # A function like macro without an invocation list is to be ignored
                         if j == len(tokens) or tokens[j].value != '(':
@@ -900,7 +924,7 @@ class Preprocessor(PreprocessorHooks):
                 # Note this is identical length
                 tokens = tokens[:es] + tokens[cs:ce+1] + tokens[ternary:ternary+1] + tokens[es:ee+1] + tokens[i:]
         
-        expr = origexpr = "".join([str(x.value) for x in tokens])
+        expr = origexpr = "".join([str(x.value) for x in tokens if x.type not in self.t_COMMENT])
         expr = expr.replace("&&"," and ")
         expr = expr.replace("||"," or ")
         expr = expr.replace("!="," <> ")
@@ -955,9 +979,13 @@ class Preprocessor(PreprocessorHooks):
         for x in lines:
             all_whitespace = True
             skip_auto_pragma_once_possible_check = False
+            # Handle comments
+            for i,tok in enumerate(x):
+                if tok.type in self.t_COMMENT:
+                    self.on_comment(tok)
             # Skip over whitespace
             for i,tok in enumerate(x):
-                if tok.type not in self.t_WS:
+                if tok.type not in self.t_WS and tok.type not in self.t_COMMENT:
                     all_whitespace = False
                     break
             output_and_expand_line = True
@@ -990,7 +1018,7 @@ class Preprocessor(PreprocessorHooks):
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
-                            if include_guard and include_guard[0] == args[0].value:
+                            if include_guard and include_guard[0] == args[0].value and not args:
                                 include_guard = (args[0].value, 1)
                                 # If ifpassthru is only turned on due to this include guard, turn it off
                                 if ifpassthru and not ifstack[-1].ifpassthru:
