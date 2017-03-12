@@ -1,6 +1,12 @@
 from __future__ import absolute_import, print_function
 import sys, argparse, traceback
-from pcpp.preprocessor import Preprocessor, OutputDirective
+try:
+    from .preprocessor import Preprocessor, OutputDirective
+except:
+    try:
+        from preprocessor import Preprocessor, OutputDirective
+    except:
+        from pcpp.preprocessor import Preprocessor, OutputDirective
 
 version='1.0'
 
