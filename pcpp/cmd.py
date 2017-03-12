@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 import sys, argparse, traceback
-from .pcpp import Preprocessor, OutputDirective
+from pcpp.preprocessor import Preprocessor, OutputDirective
 
 version='1.0'
 
@@ -134,3 +134,6 @@ def main():
     p = CmdPreprocessor(sys.argv)
     sys.exit(p.return_code)
         
+if __name__ == "__main__":
+    p = CmdPreprocessor(sys.argv)
+    sys.exit(p.return_code)

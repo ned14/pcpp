@@ -1,3 +1,3 @@
-from .pcpp_cmd import main, version
-from .pcpp import Preprocessor, OutputDirective
+from .cmd import main, version
+from .preprocessor import Preprocessor, OutputDirective
 __version__ = version

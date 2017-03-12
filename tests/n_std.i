@@ -486,7 +486,7 @@ void n_28( void)
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "15:19:50") == 8);
+    assert( strlen( "23:48:02") == 8);
 
 
     assert( 1);
