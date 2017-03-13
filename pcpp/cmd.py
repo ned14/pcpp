@@ -1,12 +1,8 @@
 from __future__ import absolute_import, print_function
-import sys, argparse, traceback
-try:
-    from .preprocessor import Preprocessor, OutputDirective
-except:
-    try:
-        from preprocessor import Preprocessor, OutputDirective
-    except:
-        from pcpp.preprocessor import Preprocessor, OutputDirective
+import sys, argparse, traceback, os
+if __name__ == '__main__' and __package__ is None:
+    sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
+from pcpp.preprocessor import Preprocessor, OutputDirective
 
 version='1.0'
 
