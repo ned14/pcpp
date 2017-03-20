@@ -933,8 +933,8 @@ class Preprocessor(PreprocessorHooks):
         try:
             result = int(eval(expr, evalfuncts, evalvars))
         except Exception:
-            self.on_error(tokens[0].source,tokens[0].lineno,"Couldn't evaluate expression due to " + traceback.format_exc()
-            + "\nConverted expression was " + expr + " with evalvars = " + repr(evalvars))
+            print("%s:%d" % (tokens[0].source,tokens[0].lineno), "warning: couldn't evaluate expression due to", traceback.format_exc()
+            + "\nConverted expression was", expr, "with evalvars =", repr(evalvars))
             result = 0
         return (result, tokens) if evalvars else (result, None)
 
@@ -1018,11 +1018,12 @@ class Preprocessor(PreprocessorHooks):
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
-                            if include_guard and include_guard[0] == args[0].value and not args:
-                                include_guard = (args[0].value, 1)
-                                # If ifpassthru is only turned on due to this include guard, turn it off
-                                if ifpassthru and not ifstack[-1].ifpassthru:
-                                    ifpassthru = False
+                            if include_guard and include_guard[1] == 0:
+                                if include_guard[0] == args[0].value and len(args) == 1:
+                                    include_guard = (args[0].value, 1)
+                                    # If ifpassthru is only turned on due to this include guard, turn it off
+                                    if ifpassthru and not ifstack[-1].ifpassthru:
+                                        ifpassthru = False
                             self.define(args)
                             if self.debugout is not None:
                                 print("%d:%d:%d %s:%d      %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, repr(self.macros[args[0].value])), file = self.debugout)
@@ -1229,6 +1230,9 @@ class Preprocessor(PreprocessorHooks):
             if self.debugout is not None:
                 print("%d:%d:%d %s:%d Determined that #include \"%s\" is entirely wrapped in an include guard macro called %s, auto-applying #pragma once" % (enable, iftrigger, ifpassthru, self.source, 0, self.source, include_guard[0]), file = self.debugout)
             self.include_once[self.source] = include_guard[0]
+        elif self.auto_pragma_once_enabled and self.source not in self.include_once:
+            if self.debugout is not None:
+                print("%d:%d:%d %s:%d Did not auto apply #pragma once to this file due to auto_pragma_once_possible=%d, include_guard=%s" % (enable, iftrigger, ifpassthru, self.source, 0, auto_pragma_once_possible, repr(include_guard)), file = self.debugout)
         
 
     # ----------------------------------------------------------------------
