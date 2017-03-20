@@ -1099,6 +1099,7 @@ class Preprocessor(PreprocessorHooks):
                         at_front_of_file = False
                         ifstack.append(ifstackentry(enable,iftrigger,ifpassthru,x))
                         if enable:
+                            iftrigger = False
                             ifpassthru = False
                             result, rewritten = self.evalexpr(args)
                             if rewritten is not None:
@@ -1111,7 +1112,6 @@ class Preprocessor(PreprocessorHooks):
                                 raise OutputDirective()
                             if not result:
                                 enable = False
-                                iftrigger = False
                             else:
                                 iftrigger = True
                     elif name == 'elif':

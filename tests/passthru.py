@@ -255,3 +255,32 @@ class test11(unittest.TestCase, runner):
 #endif
 """
 
+class test12(unittest.TestCase, runner):
+    input = r"""
+#define BOOST_OUTCOME_DISABLE_PREPROCESSED_INTERFACE_FILE
+
+#ifndef BOOST_OUTCOME_DISABLE_PREPROCESSED_INTERFACE_FILE
+
+#else
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#define BOOST_OUTCOME_HEADERS_PATH2 BOOST_OUTCOME_VERSION_GLUE(v, BOOST_OUTCOME_HEADERS_VERSION, /monad.hpp)
+#elif 1
+#define BOOST_OUTCOME_HEADERS_PATH2 BOOST_OUTCOME_VERSION_GLUE(v, BOOST_OUTCOME_HEADERS_VERSION,)/monad.hpp
+#endif
+
+#endif
+"""
+    output = r"""
+#define BOOST_OUTCOME_DISABLE_PREPROCESSED_INTERFACE_FILE
+
+
+
+
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#define BOOST_OUTCOME_HEADERS_PATH2 BOOST_OUTCOME_VERSION_GLUE(v, BOOST_OUTCOME_HEADERS_VERSION, /monad.hpp)
+#elif 1
+#define BOOST_OUTCOME_HEADERS_PATH2 BOOST_OUTCOME_VERSION_GLUE(v, BOOST_OUTCOME_HEADERS_VERSION,)/monad.hpp
+#endif
+"""
