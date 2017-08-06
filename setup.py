@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-import os, pcpp
+import os
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -11,7 +11,7 @@ with open(os.path.join(here, 'Readme.rst')) as f:
     
 setup(
     name='pcpp',
-    version=pcpp.version,
+    use_scm_version=True,
     description='A C99 preprocessor written in pure Python',
     long_description=long_description,
     author='Niall Douglas and David Beazley',
@@ -22,6 +22,7 @@ setup(
         'console_scripts': [ 'pcpp=pcpp:main' ]
     },
     install_requires=['ply'],
+    setup_requires=['setuptools_scm'],
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
