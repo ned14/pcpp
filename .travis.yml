@@ -16,6 +16,7 @@ env:
 install: "pip install -r requirements.txt"
 
 script:
+ - git fetch --unshallow
  -
    if [ "$__" = "Build" ]; then
      python setup.py build;
