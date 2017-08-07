@@ -4,7 +4,15 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective
 
-version='1.0.1'
+# Get current version of module
+from pkg_resources import get_distribution, DistributionNotFound
+try:
+    version = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    from setuptools_scm import get_version
+    version = get_version(root='..', relative_to=__file__)
+
 
 __all__ = []
 
