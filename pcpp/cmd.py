@@ -7,7 +7,7 @@ from pcpp.preprocessor import Preprocessor, OutputDirective
 # Get current version of module
 from pkg_resources import get_distribution, DistributionNotFound
 try:
-    version = get_distribution(__name__).version
+    version = get_distribution('pcpp').version
 except DistributionNotFound:
     # package is not installed
     from setuptools_scm import get_version

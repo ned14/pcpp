@@ -21,8 +21,8 @@ setup(
     entry_points={
         'console_scripts': [ 'pcpp=pcpp:main' ]
     },
-    install_requires=['ply'],
     setup_requires=['setuptools_scm'],
+    install_requires=['ply', 'setuptools_scm'],
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
