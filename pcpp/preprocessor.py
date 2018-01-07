@@ -698,6 +698,7 @@ class Preprocessor(PreprocessorHooks):
                 j = i + 1
                 while rep[j].type == self.t_DPOUND:
                     j += 1
+                rep[i-1] = copy.copy(rep[i-1])
                 rep[i-1].type = self.t_ID
                 rep[i-1].value += rep[j].value
                 while j >= i:
