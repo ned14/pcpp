@@ -379,3 +379,15 @@ Customising your own preprocessor:
 See the API reference docs at https://ned14.github.io/pcpp/
 
 You can find an example of overriding the ``on_*()`` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcpp_cmd.py
+
+History:
+========
+v1.01 (21st Feb 2018):
+----------------------
+- Fix bug where in pass through mode, an #elif in an #if block inside an #if block in ifpassthru was failing to be passed through.
+- Downgraded failure to evaluate an expression to a warning.
+- Fix missing Readme.rst in pypi package.
+
+v1.00 (13th Mar 2017):
+----------------------
+First release
