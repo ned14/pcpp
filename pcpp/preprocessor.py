@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor useful for generating single include files
-# (C) 2017 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2018 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -13,7 +13,7 @@ from __future__ import generators, print_function
 
 __all__ = ['Preprocessor', 'OutputDirective']
 
-import sys, traceback
+import sys, traceback, time
 
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
@@ -273,6 +273,20 @@ class PreprocessorHooks(object):
         tok.type = 'CPP_WS'
 
 # ------------------------------------------------------------------
+# File inclusion timings
+#
+# Useful for figuring out how long a sequence of preprocessor inclusions actually is
+# ------------------------------------------------------------------
+
+class FileInclusionTime(object):
+    """The seconds taken to #include another file"""
+    def __init__(self,including_path,included_path,depth):
+        self.including_path = including_path
+        self.included_path = included_path
+        self.depth = depth
+        self.elapsed = 0.0
+
+# ------------------------------------------------------------------
 # Preprocessor object
 #
 # Object representing a preprocessor.  Contains macro definitions,
@@ -290,6 +304,8 @@ class Preprocessor(PreprocessorHooks):
         self.path = []
         self.temp_path = []
         self.include_once = {}
+        self.include_depth = 0
+        self.include_times = []  # list of FileInclusionTime
         self.return_code = 0
         self.debugout = None
         self.auto_pragma_once_enabled = True
@@ -953,6 +969,10 @@ class Preprocessor(PreprocessorHooks):
         if not source:
             source = ""
             
+        my_include_times_idx = len(self.include_times)
+        self.include_times.append(FileInclusionTime(self.macros['__FILE__'] if '__FILE__' in self.macros else None, source, self.include_depth))
+        self.include_depth += 1
+        my_include_time_begin = time.clock()
         self.define("__FILE__ \"%s\"" % source)
 
         self.source = abssource
@@ -1233,7 +1253,9 @@ class Preprocessor(PreprocessorHooks):
         elif self.auto_pragma_once_enabled and self.source not in self.include_once:
             if self.debugout is not None:
                 print("%d:%d:%d %s:%d Did not auto apply #pragma once to this file due to auto_pragma_once_possible=%d, include_guard=%s" % (enable, iftrigger, ifpassthru, self.source, 0, auto_pragma_once_possible, repr(include_guard)), file = self.debugout)
-        
+        my_include_time_end = time.clock()
+        self.include_times[my_include_times_idx].elapsed = my_include_time_end - my_include_time_begin
+        self.include_depth -= 1
 
     # ----------------------------------------------------------------------
     # include()

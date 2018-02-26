@@ -33,6 +33,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
         argp.add_argument('--line-directive', dest = 'line_directive', metavar = 'form', default = '#line', nargs = '?', help = "Form of line directive to use, defaults to #line, specify nothing to disable output of line directives")
         argp.add_argument('--debug', dest = 'debug', action = 'store_true', help = 'Generate a pcpp_debug.log file logging execution')
+        argp.add_argument('--time', dest = 'time', action = 'store_true', help = 'Print the time it took to #include each file')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)
@@ -82,6 +83,20 @@ class CmdPreprocessor(Preprocessor):
                 % (self.lastdirective.source, self.lastdirective.lineno), file = sys.stderr)
             sys.exit(-99)
         
+        if self.args.time:
+            print("\nTime report:")
+            print("============")
+            for n in range(0, len(self.include_times)):
+                if n == 0:
+                    print("top level: %f seconds" % self.include_times[n].elapsed)
+                elif self.include_times[n].depth == 1:
+                    print("\n %s: %f seconds (%f%%)" % (self.include_times[n].included_path, self.include_times[n].elapsed, 100 * self.include_times[n].elapsed / self.include_times[0].elapsed))
+                else:
+                    print("%s%s: %f seconds" % (' ' * self.include_times[n].depth, self.include_times[n].included_path, self.include_times[n].elapsed))
+            print("\nPragma once files (including heuristically applied):")
+            print("====================================================")
+            for i in self.include_once:
+                print("", i)
     def on_include_not_found(self,is_system_include,curdir,includepath):
         if self.args.passthru_unfound_includes:
             raise OutputDirective()
