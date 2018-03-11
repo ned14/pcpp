@@ -4,7 +4,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective
 
-version='1.0.1'
+version='1.1.0'
 
 __all__ = []
 
@@ -34,6 +34,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--line-directive', dest = 'line_directive', metavar = 'form', default = '#line', nargs = '?', help = "Form of line directive to use, defaults to #line, specify nothing to disable output of line directives")
         argp.add_argument('--debug', dest = 'debug', action = 'store_true', help = 'Generate a pcpp_debug.log file logging execution')
         argp.add_argument('--time', dest = 'time', action = 'store_true', help = 'Print the time it took to #include each file')
+        argp.add_argument('--filetimes', dest = 'filetimes', metavar = 'path', type = argparse.FileType('wt'), default=None, nargs = '?', help = 'Write CSV file with time spent inside each included file, inclusive and exclusive')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)
@@ -96,7 +97,33 @@ class CmdPreprocessor(Preprocessor):
             print("\nPragma once files (including heuristically applied):")
             print("====================================================")
             for i in self.include_once:
-                print("", i)
+                print(" ", i)
+            print()
+        if self.args.filetimes:
+            print('"Total seconds","Self seconds","File size","File path"', file = self.args.filetimes)
+            filetimes = {}
+            currentfiles = []
+            for n in range(0, len(self.include_times)):
+                while self.include_times[n].depth < len(currentfiles):
+                    currentfiles.pop()
+                if self.include_times[n].depth > len(currentfiles) - 1:
+                    currentfiles.append(self.include_times[n].included_abspath)
+                #print()
+                #for path in currentfiles:
+                #    print("currentfiles =", path)
+                path = currentfiles[-1]
+                if path in filetimes:
+                    filetimes[path][0] += self.include_times[n].elapsed
+                    filetimes[path][1] += self.include_times[n].elapsed
+                else:
+                    filetimes[path] = [self.include_times[n].elapsed, self.include_times[n].elapsed]
+                if self.include_times[n].elapsed > 0 and len(currentfiles) > 1:
+                    #print("Removing child %f from parent %s = %f" % (self.include_times[n].elapsed, currentfiles[-2], filetimes[currentfiles[-2]]))
+                    filetimes[currentfiles[-2]][1] -= self.include_times[n].elapsed
+            filetimes = [(v[0],v[1],k) for k,v in filetimes.items()]
+            filetimes.sort(reverse=True)
+            for t,s,p in filetimes:
+                print(('%f,%f,%d,"%s"' % (t, s, os.stat(p).st_size, p)), file = self.args.filetimes)
     def on_include_not_found(self,is_system_include,curdir,includepath):
         if self.args.passthru_unfound_includes:
             raise OutputDirective()

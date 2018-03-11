@@ -7,7 +7,7 @@ A C99 preprocessor written in pure Python
     :align: middle
     :target: https://travis-ci.org/ned14/pcpp
 
-\(C) 2017 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2017 David Beazley http://www.dabeaz.com/
+\(C) 2018 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
@@ -18,6 +18,9 @@ C++ libraries into single file includes and other such build or packaging stage 
 The implementation can be used as a Python module (`see API reference <https://ned14.github.io/pcpp/>`_)
 or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
+
+Your includes can be benchmarked for heft in order to improve your build times! See
+the ``--times`` and ``--filetimes`` options.
 
 A very unique facility of this C preprocessor is *partial* preprocessing so you can
 programmatically control how much preprocessing is done by ``pcpp`` and how much is
@@ -126,6 +129,9 @@ The help from the command line tool ``pcpp``::
                             Form of line directive to use, defaults to #line,
                             specify nothing to disable output of line directives
       --debug               Generate a pcpp_debug.log file logging execution
+      --time                Print the time it took to #include each file
+      --filetimes [path]    Write CSV file with time spent inside each included
+                            file, inclusive and exclusive
       --version             show program's version number and exit
 
     Note that so pcpp can stand in for other preprocessor tooling, it ignores any
@@ -382,6 +388,10 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
+v1.1 ?:
+-------
+- Added the ``--times`` and ``--filetimes`` features.
+
 v1.01 (21st Feb 2018):
 ----------------------
 - Fix bug where in pass through mode, an #elif in an #if block inside an #if block in ifpassthru was failing to be passed through.

@@ -280,9 +280,10 @@ class PreprocessorHooks(object):
 
 class FileInclusionTime(object):
     """The seconds taken to #include another file"""
-    def __init__(self,including_path,included_path,depth):
+    def __init__(self,including_path,included_path,included_abspath,depth):
         self.including_path = including_path
         self.included_path = included_path
+        self.included_abspath = included_abspath
         self.depth = depth
         self.elapsed = 0.0
 
@@ -970,7 +971,7 @@ class Preprocessor(PreprocessorHooks):
             source = ""
             
         my_include_times_idx = len(self.include_times)
-        self.include_times.append(FileInclusionTime(self.macros['__FILE__'] if '__FILE__' in self.macros else None, source, self.include_depth))
+        self.include_times.append(FileInclusionTime(self.macros['__FILE__'] if '__FILE__' in self.macros else None, source, abssource, self.include_depth))
         self.include_depth += 1
         my_include_time_begin = time.clock()
         self.define("__FILE__ \"%s\"" % source)
