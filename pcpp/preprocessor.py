@@ -838,44 +838,50 @@ class Preprocessor(PreprocessorHooks):
         # Search for defined macros
         evalfuncts = {'defined' : lambda x: True}
         evalvars = {}
-        i = 0
-        while i < len(tokens):
-            if tokens[i].type == self.t_ID and tokens[i].value == 'defined':
-                j = i + 1
-                needparen = False
-                result = "0L"
-                while j < len(tokens):
-                    if tokens[j].type in self.t_WS:
-                        j += 1
-                        continue
-                    elif tokens[j].type == self.t_ID:
-                        if tokens[j].value in self.macros:
-                            result = "1L"
-                        else:
-                            repl = self.on_unknown_macro_in_defined_expr(tokens[j])
-                            if repl is None:
-                                # Add this identifier to a dictionary of variables
-                                evalvars[tokens[j].value] = 0
-                                result = 'defined('+tokens[j].value+')'
+        def replace_defined(tokens):
+            i = 0
+            while i < len(tokens):
+                if tokens[i].type == self.t_ID and tokens[i].value == 'defined':
+                    j = i + 1
+                    needparen = False
+                    result = "0L"
+                    while j < len(tokens):
+                        if tokens[j].type in self.t_WS:
+                            j += 1
+                            continue
+                        elif tokens[j].type == self.t_ID:
+                            if tokens[j].value in self.macros:
+                                result = "1L"
                             else:
-                                result = "1L" if repl else "0L"
-                        if not needparen: break
-                    elif tokens[j].value == '(':
-                        needparen = True
-                    elif tokens[j].value == ')':
-                        break
+                                repl = self.on_unknown_macro_in_defined_expr(tokens[j])
+                                if repl is None:
+                                    # Add this identifier to a dictionary of variables
+                                    evalvars[tokens[j].value] = 0
+                                    result = 'defined('+tokens[j].value+')'
+                                else:
+                                    result = "1L" if repl else "0L"
+                            if not needparen: break
+                        elif tokens[j].value == '(':
+                            needparen = True
+                        elif tokens[j].value == ')':
+                            break
+                        else:
+                            self.on_error(tokens[i].source,tokens[i].lineno,"Malformed defined()")
+                        j += 1
+                    if result.startswith('defined'):
+                        tokens[i].type = self.t_ID
+                        tokens[i].value = result
                     else:
-                        self.on_error(tokens[i].source,tokens[i].lineno,"Malformed defined()")
-                    j += 1
-                if result.startswith('defined'):
-                    tokens[i].type = self.t_ID
-                    tokens[i].value = result
-                else:
-                    tokens[i].type = self.t_INTEGER
-                    tokens[i].value = self.t_INTEGER_TYPE(result)
-                del tokens[i+1:j+1]
-            i += 1
+                        tokens[i].type = self.t_INTEGER
+                        tokens[i].value = self.t_INTEGER_TYPE(result)
+                    del tokens[i+1:j+1]
+                i += 1
+            return tokens
+        # Replace any defined(macro) before macro expansion
+        tokens = replace_defined(tokens)
         tokens = self.expand_macros(tokens)
+        # Replace any defined(macro) after macro expansion
+        tokens = replace_defined(tokens)
         if not tokens:
             return (0, None)
         for i,t in enumerate(tokens):

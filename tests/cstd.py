@@ -285,3 +285,18 @@ BOOST_OUTCOME_V1_NAMESPACE_BEGIN
 _1_0_std_std_01320023
 namespace boost { namespace outcome { inline namespace _1_0_std_std_01320023 {
 """
+
+class test13(unittest.TestCase, runner):
+    input = r"""
+#define _CRT_INTERNAL_NONSTDC_NAMES                                            \
+    (                                                                          \
+        ( defined _CRT_DECLARE_NONSTDC_NAMES && _CRT_DECLARE_NONSTDC_NAMES) || \
+        (!defined _CRT_DECLARE_NONSTDC_NAMES && !__STDC__                 )    \
+    )
+#if _CRT_INTERNAL_NONSTDC_NAMES
+foo
+#endif
+"""
+    output = r"""#line 8
+foo
+"""

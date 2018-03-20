@@ -391,6 +391,7 @@ History:
 v1.1 ?:
 -------
 - Added the ``--times`` and ``--filetimes`` features.
+- Fix bug where macros containing operator `defined` were not being expanded properly.
 
 v1.01 (21st Feb 2018):
 ----------------------
