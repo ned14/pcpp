@@ -87,7 +87,12 @@ class CmdPreprocessor(Preprocessor):
                 self.add_path(d)
 
         try:
-            for input in self.args.inputs:
+            if len(self.args.inputs) == 1:
+                self.parse(self.args.inputs[0])
+            else:
+                input = ''
+                for i in self.args.inputs:
+                    input += '#include "' + i.name + '"\n'
                 self.parse(input)
             self.write(self.args.output)
         except:
