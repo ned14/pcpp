@@ -95,14 +95,14 @@ The help from the command line tool ``pcpp``::
                 [--passthru-unknown-exprs] [--passthru-comments]
                 [--disable-auto-pragma-once] [--line-directive [form]] [--debug]
                 [--time] [--filetimes [path]] [--version]
-                [inputs [inputs ...]]
+                [input [input ...]]
 
     A pure universal Python C (pre-)preprocessor implementation very useful for
     pre-preprocessing header only C++ libraries into single file includes and
     other such build or packaging stage malarky.
 
     positional arguments:
-      inputs                Files to preprocess
+      input                 Files to preprocess
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -135,7 +135,7 @@ The help from the command line tool ``pcpp``::
       --version             show program's version number and exit
 
     Note that so pcpp can stand in for other preprocessor tooling, it ignores any
-    arguments it does not understand and any files it cannot open.
+    arguments it does not understand.
 
 Quick demo of pass through mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

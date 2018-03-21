@@ -1,5 +1,5 @@
 from __future__ import absolute_import, print_function
-import sys, argparse, traceback, os
+import sys, argparse, traceback, os, copy
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective
@@ -7,6 +7,18 @@ from pcpp.preprocessor import Preprocessor, OutputDirective
 version='1.1.0'
 
 __all__ = []
+
+class FileAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super(FileAction, self).__init__(option_strings, dest, **kwargs)
+        
+    def __call__(self, parser, namespace, values, option_string=None):
+        if getattr(namespace, self.dest)[0] == sys.stdin:
+            items = []
+        else:
+            items = copy.copy(getattr(namespace, self.dest))
+        items += [argparse.FileType('rt')(value) for value in values]
+        setattr(namespace, self.dest, items)
 
 class CmdPreprocessor(Preprocessor):
     def __init__(self, argv):
@@ -17,8 +29,8 @@ class CmdPreprocessor(Preprocessor):
     other such build or packaging stage malarky.''',
             epilog=
     '''Note that so pcpp can stand in for other preprocessor tooling, it
-    ignores any arguments it does not understand and any files it cannot open.''')
-        argp.add_argument('inputs', metavar = 'inputs', type = argparse.FileType('rt'), default=sys.stdin, nargs = '*', help = 'Files to preprocess')
+    ignores any arguments it does not understand.''')
+        argp.add_argument('inputs', metavar = 'input', default = [sys.stdin], nargs = '*', action = FileAction, help = 'Files to preprocess')
         argp.add_argument('-o', dest = 'output', metavar = 'path', type = argparse.FileType('wt'), default=sys.stdout, nargs = '?', help = 'Output to a file instead of stdout')
         argp.add_argument('-D', dest = 'defines', metavar = 'macro[=val]', nargs = 1, action = 'append', help = 'Predefine name as a macro [with value]')
         argp.add_argument('-U', dest = 'undefines', metavar = 'macro', nargs = 1, action = 'append', help = 'Pre-undefine name as a macro')
