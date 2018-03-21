@@ -18,8 +18,7 @@ class CmdPreprocessor(Preprocessor):
             epilog=
     '''Note that so pcpp can stand in for other preprocessor tooling, it
     ignores any arguments it does not understand and any files it cannot open.''')
-        argp.add_argument('input', metavar = 'input', type = argparse.FileType('rt'), default=sys.stdin, nargs = '?', help = 'File to preprocess')
-        #argp.add_argument('inputs', metavar = 'inputs', nargs = '*', action = 'append', help = 'More files to preprocess')
+        argp.add_argument('inputs', metavar = 'inputs', type = argparse.FileType('rt'), default=sys.stdin, nargs = '*', help = 'Files to preprocess')
         argp.add_argument('-o', dest = 'output', metavar = 'path', type = argparse.FileType('wt'), default=sys.stdout, nargs = '?', help = 'Output to a file instead of stdout')
         argp.add_argument('-D', dest = 'defines', metavar = 'macro[=val]', nargs = 1, action = 'append', help = 'Predefine name as a macro [with value]')
         argp.add_argument('-U', dest = 'undefines', metavar = 'macro', nargs = 1, action = 'append', help = 'Pre-undefine name as a macro')
@@ -76,7 +75,8 @@ class CmdPreprocessor(Preprocessor):
                 self.add_path(d)
 
         try:
-            self.parse(self.args.input)
+            for input in self.args.inputs:
+                self.parse(input)
             self.write(self.args.output)
         except:
             print(traceback.print_exc(10), file = sys.stderr)

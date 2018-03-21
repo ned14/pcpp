@@ -94,15 +94,15 @@ The help from the command line tool ``pcpp``::
                 [--passthru-defines] [--passthru-unfound-includes]
                 [--passthru-unknown-exprs] [--passthru-comments]
                 [--disable-auto-pragma-once] [--line-directive [form]] [--debug]
-                [--version]
-                [input]
+                [--time] [--filetimes [path]] [--version]
+                [inputs [inputs ...]]
 
     A pure universal Python C (pre-)preprocessor implementation very useful for
     pre-preprocessing header only C++ libraries into single file includes and
     other such build or packaging stage malarky.
 
     positional arguments:
-      input                 File to preprocess
+      inputs                Files to preprocess
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -392,6 +392,7 @@ v1.1 ?:
 -------
 - Added the ``--times`` and ``--filetimes`` features.
 - Fix bug where macros containing operator `defined` were not being expanded properly.
+- Added the ability to accept multiple inputs, they are concatenated into the output.
 
 v1.01 (21st Feb 2018):
 ----------------------
