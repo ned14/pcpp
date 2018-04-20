@@ -36,6 +36,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('-U', dest = 'undefines', metavar = 'macro', nargs = 1, action = 'append', help = 'Pre-undefine name as a macro')
         argp.add_argument('-N', dest = 'nevers', metavar = 'macro', nargs = 1, action = 'append', help = 'Never define name as a macro, even if defined during the preprocessing.')
         argp.add_argument('-I', dest = 'includes', metavar = 'path', nargs = 1, action = 'append', help = "Path to search for unfound #include's")
+        argp.add_argument('--preserve-whitespace', dest = 'preserve_whitespace', action = 'store_true', help = 'Preserve whitespace in output')
         #argp.add_argument('--passthru', dest = 'passthru', action = 'store_true', help = 'Pass through everything unexecuted except for #include and include guards (which need to be the first thing in an include file')
         argp.add_argument('--passthru-defines', dest = 'passthru_defines', action = 'store_true', help = 'Pass through but still execute #defines and #undefs if not always removed by preprocessor logic')
         argp.add_argument('--passthru-unfound-includes', dest = 'passthru_unfound_includes', action = 'store_true', help = 'Pass through #includes not found without execution')
@@ -63,6 +64,7 @@ class CmdPreprocessor(Preprocessor):
             self.debugout = open("pcpp_debug.log", "wt")
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
         self.line_directive = self.args.line_directive
+        self.preserve_whitespace = self.args.preserve_whitespace
         
         # My own instance variables
         self.bypass_ifpassthru = False
