@@ -311,6 +311,7 @@ class Preprocessor(PreprocessorHooks):
         self.debugout = None
         self.auto_pragma_once_enabled = True
         self.line_directive = '#line'
+        self.preserve_whitespace = False
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -1495,23 +1496,24 @@ class Preprocessor(PreprocessorHooks):
                 elif lastsource != toks[0].source:
                     emitlinedirective = True
                     lastsource = toks[0].source
-            # Replace consecutive whitespace in output with a single space except at any indent
-            first_ws = None
-            for n in xrange(len(toks)-1, -1, -1):
-                tok = toks[n]
-                if first_ws is None:
-                    if tok.type in self.t_SPACE or len(tok.value) == 0:
-                        first_ws = n
-                else:
-                    if tok.type not in self.t_SPACE and len(tok.value) > 0:
-                        m = n + 1
-                        while m != first_ws:
-                            del toks[m]
-                            first_ws -= 1
-                        first_ws = None
-                        # Collapse a token of many whitespace into single
-                        if toks[m].value[0] == ' ':
-                            toks[m].value = ' '
+            if not self.preserve_whitespace:
+                # Replace consecutive whitespace in output with a single space except at any indent
+                first_ws = None
+                for n in xrange(len(toks)-1, -1, -1):
+                    tok = toks[n]
+                    if first_ws is None:
+                        if tok.type in self.t_SPACE or len(tok.value) == 0:
+                            first_ws = n
+                    else:
+                        if tok.type not in self.t_SPACE and len(tok.value) > 0:
+                            m = n + 1
+                            while m != first_ws:
+                                del toks[m]
+                                first_ws -= 1
+                            first_ws = None
+                            # Collapse a token of many whitespace into single
+                            if toks[m].value[0] == ' ':
+                                toks[m].value = ' '
             if not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
                 if newlinesneeded > 6 and self.line_directive is not None:

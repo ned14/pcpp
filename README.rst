@@ -93,7 +93,8 @@ The help from the command line tool ``pcpp``::
     usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-N macro] [-I path]
                 [--passthru-defines] [--passthru-unfound-includes]
                 [--passthru-unknown-exprs] [--passthru-comments]
-                [--disable-auto-pragma-once] [--line-directive [form]] [--debug]
+                [--disable-auto-pragma-once] [--line-directive [form]]
+                [--preserve-whitespace] [--debug]
                 [--time] [--filetimes [path]] [--version]
                 [input [input ...]]
 
@@ -121,6 +122,7 @@ The help from the command line tool ``pcpp``::
                             to be passed through instead of executed by treating
                             unknown macros as 0L
       --passthru-comments   Pass through comments unmodified
+      --preserve-whitespace Preserve whitespace in output
       --disable-auto-pragma-once
                             Disable the heuristics which auto apply #pragma once
                             to #include files wholly wrapped in an obvious include
