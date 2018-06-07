@@ -1022,21 +1022,23 @@ class Preprocessor(PreprocessorHooks):
                 try:
                     # Preprocessor directive      
                     i += 1
-                    while x[i].type in self.t_WS:
+                    while i < len(x) and x[i].type in self.t_WS:
                         i += 1                    
                     dirtokens = self.tokenstrip(x[i:])
                     if dirtokens:
                         name = dirtokens[0].value
                         args = self.tokenstrip(dirtokens[1:])
+                    
+                        if self.debugout is not None:
+                            print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
+                            #print(ifstack)
+
+                        handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
                     else:
                         name = ""
                         args = []
-                    
-                    if self.debugout is not None:
-                        print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
-                        #print(ifstack)
-
-                    handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
+                        handling = False
+                        
                     if handling == False:
                         pass
                     elif name == 'define':

@@ -300,3 +300,32 @@ foo
     output = r"""#line 8
 foo
 """
+
+class test14(unittest.TestCase, runner):
+    input = r"""
+# if defined __GNUC__ // NOTE: GNUC is also defined for Clang
+#   if (__GNUC__ == 4) && (__GNUC_MINOR__ >= 8)
+#     define TR2_OPTIONAL_GCC_4_8_AND_HIGHER___
+#   elif (__GNUC__ > 4)
+#     define TR2_OPTIONAL_GCC_4_8_AND_HIGHER___
+#   endif
+# 
+#   if (__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)
+#     define TR2_OPTIONAL_GCC_4_7_AND_HIGHER___
+#   elif (__GNUC__ > 4)
+#     define TR2_OPTIONAL_GCC_4_7_AND_HIGHER___
+#   endif
+#
+#   if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8) && (__GNUC_PATCHLEVEL__ >= 1)
+#     define TR2_OPTIONAL_GCC_4_8_1_AND_HIGHER___
+#   elif (__GNUC__ == 4) && (__GNUC_MINOR__ >= 9)
+#     define TR2_OPTIONAL_GCC_4_8_1_AND_HIGHER___
+#   elif (__GNUC__ > 4)
+#     define TR2_OPTIONAL_GCC_4_8_1_AND_HIGHER___
+#   endif
+# endif
+foo
+"""
+    output = r"""#line 23
+foo
+"""
