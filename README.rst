@@ -388,12 +388,13 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
-v1.1 ?:
--------
+v1.1 (19th June 2018):
+----------------------
 - Added the ``--times`` and ``--filetimes`` features.
 - Fix bug where macros containing operator `defined` were not being expanded properly.
 - Added the ability to accept multiple inputs, they are concatenated into the output.
 - Fix bug where lines beginning with `#` and no contents caused an internal preprocessor error.
+- Fix bug where the macro expansion ``par par##ext`` was expanding into ``parext parext``.
 
 v1.01 (21st Feb 2018):
 ----------------------

@@ -602,7 +602,7 @@ class Preprocessor(PreprocessorHooks):
         macro.str_patch = []             # String conversion expansion
         macro.var_comma_patch = []       # Variadic macro comma patch
         i = 0
-        #print "BEFORE", macro.value
+        #print("BEFORE", macro.value)
         while i < len(macro.value):
             if macro.value[i].type == self.t_ID and macro.value[i].value in macro.arglist:
                 argnum = macro.arglist.index(macro.value[i].value)
@@ -637,7 +637,7 @@ class Preprocessor(PreprocessorHooks):
                     macro.var_comma_patch.append(i-1)
             i += 1
         macro.patch.sort(key=lambda x: x[2],reverse=True)
-        #print "AFTER", macro.value
+        #print("AFTER", macro.value)
 
     # ----------------------------------------------------------------------
     # macro_expand_args()
@@ -688,8 +688,8 @@ class Preprocessor(PreprocessorHooks):
         # size of the replacement sequence to expand from the patch point.
         
         expanded = { }
-        #print "***", macro
-        #print macro.patch
+        #print("***", macro)
+        #print(macro.patch)
         for ptype, argnum, i in macro.patch:
             # Concatenation.   Argument is left unexpanded
             if ptype == 't':
@@ -715,6 +715,7 @@ class Preprocessor(PreprocessorHooks):
                 j = i + 1
                 while rep[j].type == self.t_DPOUND:
                     j += 1
+                rep[i-1] = copy.copy(rep[i-1])
                 rep[i-1].type = self.t_ID
                 rep[i-1].value += rep[j].value
                 while j >= i:
@@ -807,7 +808,7 @@ class Preprocessor(PreprocessorHooks):
                                     if not hasattr(e, 'expanded_from'):
                                         e.expanded_from = []
                                     e.expanded_from.append(t.value)
-                                #print "\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:j+tokcount]
+                                #print("\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:j+tokcount])
                                 tokens[i:j+tokcount] = ex
                     continue
                 elif t.value == '__LINE__':

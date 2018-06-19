@@ -329,3 +329,12 @@ foo
     output = r"""#line 23
 foo
 """
+
+class test15(unittest.TestCase, runner):
+    input = r"""#define f(type) type type##_base
+f(g)
+"""
+    output = r"""
+g g_base
+"""
+
