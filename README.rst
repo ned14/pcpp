@@ -388,6 +388,11 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
+v1.11 (?):
+----------------------
+- Now supports character literals in expressions. Thanks to untaugh for the pull request
+adding this.
+
 v1.1 (19th June 2018):
 ----------------------
 - Added the ``--times`` and ``--filetimes`` features.

@@ -338,3 +338,22 @@ f(g)
 g g_base
 """
 
+class test16(unittest.TestCase, runner):
+    # #if ((1?2:3) == 2) is known to fail
+    input = r"""#if (((1)?2:3) == 2)
+hi
+#endif
+"""
+    output = r"""
+hi
+"""
+
+class test17(unittest.TestCase, runner):
+    input = r"""#if L'\0' == 0
+hi
+#endif
+"""
+    output = r"""
+hi
+"""
+

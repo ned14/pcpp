@@ -959,10 +959,9 @@ class Preprocessor(PreprocessorHooks):
                         es -= 1
                 else:
                     while es > 0 and tokens[es].type not in self.t_WS:
-                        if tokens[es].value == '(':
-                            es += 1
-                            break;
                         es -= 1
+                    if tokens[es].value == '(':
+                        es += 1
                 # Swap the pre-ternary and post-ternary expressions
                 tokens[ternary].value = ' if '
                 tokens[i].value = ' else '
