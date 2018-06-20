@@ -88,6 +88,7 @@ def t_error(t):
     t.lexer.skip(1)
     return t
 
+import codecs
 import re
 import copy
 import time
@@ -366,6 +367,14 @@ class Preprocessor(PreprocessorHooks):
             self.t_INTEGER = tok.type
             self.t_INTEGER_TYPE = type(tok.value)
 
+        # Determine the token type for character
+        self.lexer.input("'a'")
+        tok = self.lexer.token()
+        if not tok or tok.value != "'a'":
+            print("Couldn't determine character type")
+        else:
+            self.t_CHAR = tok.type
+            
         # Determine the token type for strings enclosed in double quotes
         self.lexer.input("\"filename\"")
         tok = self.lexer.token()
@@ -902,6 +911,17 @@ class Preprocessor(PreprocessorHooks):
                 if sys.version_info.major >= 3:
                     if len(tokens[i].value) > 1 and tokens[i].value[0] == '0' and tokens[i].value[1] >= '0' and tokens[i].value[1] <= '7':
                         tokens[i].value = '0o' + tokens[i].value[1:]
+            elif t.type == self.t_CHAR:
+                tokens[i] = copy.copy(t)
+                # Strip off any leading prefixes
+                tokens[i].value = str(tokens[i].value)
+                while tokens[i].value[0] != '\'':
+                    tokens[i].value = tokens[i].value[1:]
+                # Strip off quotes
+                strip_value = tokens[i].value.strip('\'')
+                # Unescape character
+                unescape_value = codecs.getdecoder("unicode_escape")(strip_value)[0]
+                tokens[i].value = ord(unescape_value)
             elif t.type == self.t_COLON:
                 # Find the expression before the colon
                 cs = ce = i - 1
@@ -939,9 +959,10 @@ class Preprocessor(PreprocessorHooks):
                         es -= 1
                 else:
                     while es > 0 and tokens[es].type not in self.t_WS:
+                        if tokens[es].value == '(':
+                            es += 1
+                            break;
                         es -= 1
-                    if tokens[es].value == '(':
-                        es += 1
                 # Swap the pre-ternary and post-ternary expressions
                 tokens[ternary].value = ' if '
                 tokens[i].value = ' else '
