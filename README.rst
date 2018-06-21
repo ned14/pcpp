@@ -132,6 +132,7 @@ The help from the command line tool ``pcpp``::
       --time                Print the time it took to #include each file
       --filetimes [path]    Write CSV file with time spent inside each included
                             file, inclusive and exclusive
+      --compress            Make output as small as possible
       --version             show program's version number and exit
 
     Note that so pcpp can stand in for other preprocessor tooling, it ignores any
@@ -392,6 +393,8 @@ v1.11 (?):
 ----------------------
 - Now supports character literals in expressions. Thanks to untaugh for the pull request
 adding this.
+- Stopped the default collapsing of whitespace in output, and made it optional via a
+new command line option ``--compress``.
 
 v1.1 (19th June 2018):
 ----------------------

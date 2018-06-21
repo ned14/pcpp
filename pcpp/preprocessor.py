@@ -312,6 +312,7 @@ class Preprocessor(PreprocessorHooks):
         self.debugout = None
         self.auto_pragma_once_enabled = True
         self.line_directive = '#line'
+        self.compress = False
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -1532,10 +1533,11 @@ class Preprocessor(PreprocessorHooks):
                             del toks[m]
                             first_ws -= 1
                         first_ws = None
-                        # Collapse a token of many whitespace into single
-                        if toks[m].value[0] == ' ':
-                            toks[m].value = ' '
-            if not emitlinedirective:
+                        if self.compress:
+                            # Collapse a token of many whitespace into single
+                            if toks[m].value[0] == ' ':
+                                toks[m].value = ' '
+            if not self.compress and not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
                 if newlinesneeded > 6 and self.line_directive is not None:
                     emitlinedirective = True
