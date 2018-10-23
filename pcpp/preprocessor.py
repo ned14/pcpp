@@ -1484,7 +1484,6 @@ class Preprocessor(PreprocessorHooks):
         lastlineno = 0
         lastsource = None
         done = False
-        blankacc = []
         blanklines = 0
         while not done:
             emitlinedirective = False
@@ -1508,7 +1507,6 @@ class Preprocessor(PreprocessorHooks):
                 if len(toks) > 1:
                     tok = toks[-1]
                     toks = [ tok ]
-                blankacc.append(toks)
                 blanklines += toks[0].value.count('\n')
                 continue
             # The line in toks is not all whitespace
@@ -1548,15 +1546,12 @@ class Preprocessor(PreprocessorHooks):
             lastlineno = toks[0].lineno
             if emitlinedirective and self.line_directive is not None:
                 oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
-            #elif blanklines > 0:
-            #    for line in blankacc:
-            #        for tok in line:
-            #            oh.write(tok.value)
-            blankacc = []
             blanklines = 0
             #print toks[0].lineno, 
             for tok in toks:
                 #print tok.value,
+                if tok.type == self.t_COMMENT1:
+                    lastlineno += tok.value.count('\n')
                 oh.write(tok.value)
             #print ''
 
