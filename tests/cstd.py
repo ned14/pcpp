@@ -357,3 +357,37 @@ hi
 hi
 """
 
+class test18(unittest.TestCase, runner):
+    input = r"""
+/*
+multiline
+comment
+*/
+
+void shouldBeOnLineSeven();
+"""
+    output = r"""
+
+
+
+
+
+void shouldBeOnLineSeven();
+"""
+
+
+class test19(unittest.TestCase, runner):
+    input = r"""
+/*
+a
+comment
+that
+spans
+eight
+lines
+*/
+
+void shouldBeOnLineEleven();"""
+    output = r"""#line 11
+void shouldBeOnLineEleven();
+"""

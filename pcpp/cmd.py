@@ -64,7 +64,7 @@ class CmdPreprocessor(Preprocessor):
             self.debugout = open("pcpp_debug.log", "wt")
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
         self.line_directive = self.args.line_directive
-        self.compress = self.args.compress
+        self.compress = 2 if self.args.compress else 0
         
         # My own instance variables
         self.bypass_ifpassthru = False
@@ -190,7 +190,7 @@ class CmdPreprocessor(Preprocessor):
 
     def on_comment(self,tok):
         if self.args.passthru_comments:
-            return
+            return True  # Pass through
         return super(CmdPreprocessor, self).on_comment(tok)
 
 def main():

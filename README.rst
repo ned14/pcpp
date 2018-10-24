@@ -395,6 +395,8 @@ v1.11 (?):
 adding this.
 - Stopped the default collapsing of whitespace in output, and made it optional via a
 new command line option ``--compress``.
+- Fixed extraneous whitespace in ``--passthru-comments`` caused by multiline comments.
+Thanks to p2k for reporting this.
 
 v1.1 (19th June 2018):
 ----------------------

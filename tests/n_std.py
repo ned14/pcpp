@@ -8,6 +8,7 @@ class n_std(unittest.TestCase):
 
         start = time.clock()
         p = Preprocessor()
+        p.compress = 1
         p.define('__STDC__ 1')
         p.define('__STDC_VERSION__ 199901L')
         p.define('NO_SYSTEM_HEADERS')

@@ -473,7 +473,7 @@ void n_28( void)
 
 
 {
-    char * date = "Mar 12 2017";
+    char * date = "Oct 24 2018";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -482,11 +482,11 @@ void n_28( void)
     assert( 751 == 779);
 
 
-    assert( strlen( "Mar 12 2017") == 11);
+    assert( strlen( "Oct 24 2018") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "23:48:02") == 8);
+    assert( strlen( "19:08:58") == 8);
 
 
     assert( 1);
@@ -545,15 +545,7 @@ void n_30( void)
 void n_32( void)
 
 {
-
-
-    fputs( "Bad evaluation of octal escape sequence.\n", stderr);
-
-
-
-
-
-
+#line 822 "tests/test-c/n_std.c"
 }
 
 void n_37( void)

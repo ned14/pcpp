@@ -30,6 +30,10 @@ class runner(object):
                 # Pass through
                 raise OutputDirective()                
 
+            def on_comment(self,tok):
+                # Pass through
+                return True
+
         start = time.clock()
         p = PassThruPreprocessor()
         p.parse(self.input)
@@ -221,7 +225,7 @@ class test10(unittest.TestCase, runner):
 """
     output = r"""#if !defined(__cpp_constexpr)
 #if __cplusplus >= 201402
-#define __cpp_constexpr 201304
+#define __cpp_constexpr 201304  // relaxed constexpr
 #else
 #define __cpp_constexpr 190000
 #endif
@@ -283,4 +287,48 @@ class test12(unittest.TestCase, runner):
 #elif 1
 #define BOOST_OUTCOME_HEADERS_PATH2 BOOST_OUTCOME_VERSION_GLUE(v, BOOST_OUTCOME_HEADERS_VERSION,)/monad.hpp
 #endif
+"""
+
+class test18(unittest.TestCase, runner):
+    input = r"""
+/*
+multiline
+comment
+*/
+
+void shouldBeOnLineSeven();
+"""
+    output = r"""
+/*
+multiline
+comment
+*/
+
+void shouldBeOnLineSeven();
+"""
+
+
+class test19(unittest.TestCase, runner):
+    input = r"""
+/*
+a
+comment
+that
+spans
+eight
+lines
+*/
+
+void shouldBeOnLineEleven();"""
+    output = r"""
+/*
+a
+comment
+that
+spans
+eight
+lines
+*/
+
+void shouldBeOnLineEleven();
 """

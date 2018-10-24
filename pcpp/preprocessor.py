@@ -262,16 +262,12 @@ class PreprocessorHooks(object):
     
     def on_comment(self,tok):
         """Called when the preprocessor encounters a comment token. You can modify the token
-        in place, or do nothing to let the comment pass through.
+        in place. You must return True to let the comment pass through, else it will be removed.
         
-        The default modifies the token to become whitespace, becoming a single space if the
-        comment is a block comment, else a single new line if the comment is a line comment.
+        Returning False or None modifies the token to become whitespace, becoming a single space
+        if the comment is a block comment, else a single new line if the comment is a line comment.
         """
-        if tok.type == self.t_COMMENT1:
-            tok.value = ' '
-        elif tok.type == self.t_COMMENT2:
-            tok.value = '\n'
-        tok.type = 'CPP_WS'
+        return None
 
 # ------------------------------------------------------------------
 # File inclusion timings
@@ -1031,7 +1027,12 @@ class Preprocessor(PreprocessorHooks):
             # Handle comments
             for i,tok in enumerate(x):
                 if tok.type in self.t_COMMENT:
-                    self.on_comment(tok)
+                    if not self.on_comment(tok):
+                        if tok.type == self.t_COMMENT1:
+                            tok.value = ' '
+                        elif tok.type == self.t_COMMENT2:
+                            tok.value = '\n'
+                        tok.type = 'CPP_WS'
             # Skip over whitespace
             for i,tok in enumerate(x):
                 if tok.type not in self.t_WS and tok.type not in self.t_COMMENT:
@@ -1484,7 +1485,6 @@ class Preprocessor(PreprocessorHooks):
         lastlineno = 0
         lastsource = None
         done = False
-        blankacc = []
         blanklines = 0
         while not done:
             emitlinedirective = False
@@ -1508,7 +1508,6 @@ class Preprocessor(PreprocessorHooks):
                 if len(toks) > 1:
                     tok = toks[-1]
                     toks = [ tok ]
-                blankacc.append(toks)
                 blanklines += toks[0].value.count('\n')
                 continue
             # The line in toks is not all whitespace
@@ -1533,11 +1532,11 @@ class Preprocessor(PreprocessorHooks):
                             del toks[m]
                             first_ws -= 1
                         first_ws = None
-                        if self.compress:
+                        if self.compress > 0:
                             # Collapse a token of many whitespace into single
                             if toks[m].value[0] == ' ':
                                 toks[m].value = ' '
-            if not self.compress and not emitlinedirective:
+            if not self.compress > 1 and not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
                 if newlinesneeded > 6 and self.line_directive is not None:
                     emitlinedirective = True
@@ -1546,13 +1545,11 @@ class Preprocessor(PreprocessorHooks):
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
+            # Account for those newlines in a multiline comment
+            if toks[0].type == self.t_COMMENT1:
+                lastlineno += toks[0].value.count('\n')
             if emitlinedirective and self.line_directive is not None:
                 oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
-            #elif blanklines > 0:
-            #    for line in blankacc:
-            #        for tok in line:
-            #            oh.write(tok.value)
-            blankacc = []
             blanklines = 0
             #print toks[0].lineno, 
             for tok in toks:
