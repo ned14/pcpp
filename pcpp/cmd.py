@@ -4,7 +4,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective
 
-version='1.1.1'
+version='1.11.0'
 
 __all__ = []
 
@@ -22,6 +22,8 @@ class FileAction(argparse.Action):
 
 class CmdPreprocessor(Preprocessor):
     def __init__(self, argv):
+        if len(argv) < 2:
+            argv = [argv[0], '--help']
         argp = argparse.ArgumentParser(prog='pcpp',
             description=
     '''A pure universal Python C (pre-)preprocessor implementation very useful for
@@ -30,7 +32,7 @@ class CmdPreprocessor(Preprocessor):
             epilog=
     '''Note that so pcpp can stand in for other preprocessor tooling, it
     ignores any arguments it does not understand.''')
-        argp.add_argument('inputs', metavar = 'input', default = [sys.stdin], nargs = '*', action = FileAction, help = 'Files to preprocess')
+        argp.add_argument('inputs', metavar = 'input', default = [sys.stdin], nargs = '*', action = FileAction, help = 'Files to preprocess (use \'-\' for stdin)')
         argp.add_argument('-o', dest = 'output', metavar = 'path', type = argparse.FileType('wt'), default=sys.stdout, nargs = '?', help = 'Output to a file instead of stdout')
         argp.add_argument('-D', dest = 'defines', metavar = 'macro[=val]', nargs = 1, action = 'append', help = 'Predefine name as a macro [with value]')
         argp.add_argument('-U', dest = 'undefines', metavar = 'macro', nargs = 1, action = 'append', help = 'Pre-undefine name as a macro')
