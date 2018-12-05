@@ -397,6 +397,8 @@ adding this.
 new command line option ``--compress``.
 - Fixed extraneous whitespace in ``--passthru-comments`` caused by multiline comments.
 Thanks to p2k for reporting this.
+- Fixed bug where defining a macro via string did not set the source attribute in the
+token. Thanks to ZedThree for reporting this.
 
 v1.1 (19th June 2018):
 ----------------------

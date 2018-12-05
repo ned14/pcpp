@@ -333,6 +333,7 @@ class Preprocessor(PreprocessorHooks):
         while True:
             tok = self.lexer.token()
             if not tok: break
+            tok.source = ''
             tokens.append(tok)
         return tokens
 
