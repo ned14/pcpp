@@ -7,7 +7,7 @@ A C99 preprocessor written in pure Python
     :align: middle
     :target: https://travis-ci.org/ned14/pcpp
 
-\(C) 2018 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2017 David Beazley http://www.dabeaz.com/
+\(C) 2018-2019 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2019 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
@@ -389,16 +389,22 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
-v1.11 (?):
+v1.20 (7th January 2019):
 ----------------------
 - Now supports character literals in expressions. Thanks to untaugh for the pull request
-adding this.
+  adding this.
 - Stopped the default collapsing of whitespace in output, and made it optional via a
-new command line option ``--compress``.
+  new command line option ``--compress``.
 - Fixed extraneous whitespace in ``--passthru-comments`` caused by multiline comments.
-Thanks to p2k for reporting this.
+  Thanks to p2k for reporting this.
 - Fixed bug where defining a macro via string did not set the source attribute in the
-token. Thanks to ZedThree for reporting this.
+  token. Thanks to ZedThree for reporting this.
+- Stop triggering an exception when no arguments are supplied to pcpp. Thanks to
+  virtuald for reporting this.
+- Rebase onto PLY latest from Dec 28th 2018 (https://github.com/dabeaz/ply/commit/a37e0839583d683d95e70ce1445c0063c7d4bd21). Latest
+  PLY no longer works using pypi packaging, David wants people to include the source of
+  PLY directly. pcpp does this via a git submodule, and has setuptools bundle the submodule.
+- Add a formal LICENSE.txt file, as requested by Sei-Lisa.
 
 v1.1 (19th June 2018):
 ----------------------

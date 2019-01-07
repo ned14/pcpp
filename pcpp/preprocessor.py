@@ -93,7 +93,7 @@ import re
 import copy
 import time
 import os.path
-from ply.lex import LexToken
+from .ply.ply.lex import LexToken
 
 # -----------------------------------------------------------------------------
 # trigraph()
@@ -295,7 +295,7 @@ class Preprocessor(PreprocessorHooks):
     def __init__(self,lexer=None):
         super(Preprocessor, self).__init__()
         if lexer is None:
-            import ply.lex as lex
+            from .ply.ply import lex
             lexer = lex.lex()
         self.lexer = lexer
         self.macros = { }

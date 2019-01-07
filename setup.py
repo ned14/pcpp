@@ -16,18 +16,18 @@ setup(
     long_description=long_description,
     author='Niall Douglas and David Beazley',
     url='http://pypi.python.org/pypi/pcpp',
-    packages=['pcpp'],
+    packages=['pcpp', 'pcpp/ply/ply'],
+    package_data={'pcpp' : ['../LICENSE.txt']},
     test_suite='tests',
     entry_points={
         'console_scripts': [ 'pcpp=pcpp:main' ]
     },
-    install_requires=['ply'],
-    license='MIT',
+    license='BSD',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
