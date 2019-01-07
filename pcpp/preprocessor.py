@@ -9,7 +9,7 @@
 # This edition substantially improves on standards conforming output,
 # getting quite close to what clang or GCC outputs.
 
-from __future__ import generators, print_function
+from __future__ import generators, print_function, absolute_import
 
 __all__ = ['Preprocessor', 'OutputDirective']
 
@@ -93,7 +93,14 @@ import re
 import copy
 import time
 import os.path
-from .ply.ply.lex import LexToken
+
+# Python 2/3 compatible way of importing a subpackage
+oldsyspath = sys.path
+sys.path = [ os.path.join( os.path.dirname( os.path.abspath(__file__) ), "ply" ) ] + sys.path
+from ply import lex
+from ply.lex import LexToken
+sys.path = oldsyspath
+del oldsyspath
 
 # -----------------------------------------------------------------------------
 # trigraph()
@@ -295,7 +302,6 @@ class Preprocessor(PreprocessorHooks):
     def __init__(self,lexer=None):
         super(Preprocessor, self).__init__()
         if lexer is None:
-            from .ply.ply import lex
             lexer = lex.lex()
         self.lexer = lexer
         self.macros = { }
