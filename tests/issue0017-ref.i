@@ -1,4 +1,3 @@
-#line 1 "tests/issue0017/issue0017.c"
 #line 1 "inc.h"
 inc1
 

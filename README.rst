@@ -405,6 +405,8 @@ v1.20 (7th January 2019):
   PLY no longer works using pypi packaging, David wants people to include the source of
   PLY directly. pcpp does this via a git submodule, and has setuptools bundle the submodule.
 - Add a formal LICENSE.txt file, as requested by Sei-Lisa.
+- Fix failure to issue ``#line`` directive for first include file in a file. Thanks to
+  Sei-Lisa for reporting this.
 
 v1.1 (19th June 2018):
 ----------------------

@@ -1521,6 +1521,8 @@ class Preprocessor(PreprocessorHooks):
             emitlinedirective = (blanklines > 6) and self.line_directive is not None
             if hasattr(toks[0], 'source'):
                 if lastsource is None:
+                    if toks[0].source is not None:
+                        emitlinedirective = True
                     lastsource = toks[0].source
                 elif lastsource != toks[0].source:
                     emitlinedirective = True
