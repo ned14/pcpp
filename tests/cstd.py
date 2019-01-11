@@ -391,3 +391,34 @@ void shouldBeOnLineEleven();"""
     output = r"""#line 11
 void shouldBeOnLineEleven();
 """
+
+class test20(unittest.TestCase, runner):
+    input = r"""
+#define PASTE(x, y) x ## y
+#if PASTE(1, 2) == 12
+  works
+#else
+  fails
+#endif
+"""
+    output = r"""
+
+
+  works
+"""
+
+class test21(unittest.TestCase, runner):
+    input = r"""
+#define PASTE(x, y, z) x ## y ## z
+#if PASTE(1, 2, L) == 12
+  works
+#else
+  fails
+#endif
+"""
+    output = r"""
+
+
+  works
+"""
+

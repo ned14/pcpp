@@ -723,18 +723,45 @@ class Preprocessor(PreprocessorHooks):
         while len(rep) and rep[-1].type == self.t_DPOUND:
             del rep[-1]
         i = 1
+        stitched = False
         while i < len(rep) - 1:
             if rep[i].type == self.t_DPOUND:
                 j = i + 1
                 while rep[j].type == self.t_DPOUND:
                     j += 1
                 rep[i-1] = copy.copy(rep[i-1])
-                rep[i-1].type = self.t_ID
+                rep[i-1].type = None
                 rep[i-1].value += rep[j].value
                 while j >= i:
                     del rep[i]
                     j -= 1
+                stitched = True
             else:
+                i += 1
+        if stitched:
+            # Stitched tokens will have unknown type, so figure those out now
+            i = 0
+            lex = self.lexer.clone()
+            while i < len(rep):
+                if rep[i].type is None:
+                    lex.input(rep[i].value)
+                    toks = []
+                    while True:
+                        tok = lex.token()
+                        if not tok:
+                            break
+                        toks.append(tok)
+                    if len(toks) != 1:
+                        # Split it once again
+                        while len(toks) > 1:
+                            rep.insert(i+1, copy.copy(rep[i]))
+                            rep[i+1].value = toks[-1].value
+                            rep[i+1].type = toks[-1].type
+                            toks.pop()
+                        rep[i].value = toks[0].value
+                        rep[i].type = toks[0].type
+                    else:
+                        rep[i].type = toks[0].type
                 i += 1
 
         #print rep

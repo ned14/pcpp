@@ -389,6 +389,11 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
+v1.21 (?):
+-------------------------
+- Fix bug where token pasting two numeric tokens did not yield a numeric token. Thanks
+  to Sei-Lisa for reporting this.
+
 v1.20 (7th January 2019):
 -------------------------
 - Now supports character literals in expressions. Thanks to untaugh for the pull request
