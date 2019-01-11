@@ -390,7 +390,7 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 History:
 ========
 v1.20 (7th January 2019):
-----------------------
+-------------------------
 - Now supports character literals in expressions. Thanks to untaugh for the pull request
   adding this.
 - Stopped the default collapsing of whitespace in output, and made it optional via a
