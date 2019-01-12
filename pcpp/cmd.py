@@ -77,7 +77,7 @@ class CmdPreprocessor(Preprocessor):
             for d in self.args.defines:
                 if '=' not in d:
                     d += '=1'
-                d = d.replace('=', ' ')
+                d = d.replace('=', ' ', 1)
                 self.define(d)
         if self.args.undefines:
             self.args.undefines = [x[0] for x in self.args.undefines]
