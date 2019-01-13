@@ -393,6 +393,14 @@ v1.21 (?):
 -------------------------
 - Fix bug where token pasting two numeric tokens did not yield a numeric token. Thanks
   to Sei-Lisa for reporting this.
+- BREAKING CHANGE: Paths emitted by pcpp into ``#line`` directives now are relative to the
+  working directory of the process when ``Preprocessor`` is initialised. This includes
+  added search paths - files included from those locations will be emitted with a sequence
+  of ``../`` to relativise the path emitted. If no path exists between the working
+  directory and the path of the file being emitted, an absolute path is emitted instead.
+  
+  If you wish to disable this new behaviour, or use different behaviour, you can
+  customise the new `rewrite_paths` member variable of ``Preprocessor``.
 
 v1.20 (7th January 2019):
 -------------------------

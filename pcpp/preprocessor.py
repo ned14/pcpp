@@ -305,8 +305,9 @@ class Preprocessor(PreprocessorHooks):
             lexer = lex.lex()
         self.lexer = lexer
         self.macros = { }
-        self.path = []
-        self.temp_path = []
+        self.path = []           # list of -I formal search paths for includes
+        self.temp_path = []      # list of temporary search paths for includes
+        self.rewrite_paths = [(re.escape(os.path.abspath('') + os.sep) + '(.*)', '\\1')]
         self.include_once = {}
         self.include_depth = 0
         self.include_times = []  # list of FileInclusionTime
@@ -460,6 +461,16 @@ class Preprocessor(PreprocessorHooks):
     def add_path(self,path):
         """Adds a search path to the preprocessor. """
         self.path.append(path)
+        # If the search path being added is relative, or has a common ancestor to the
+        # current working directory, add a rewrite to relativise includes from this
+        # search path
+        relpath = None
+        try:
+            relpath = os.path.relpath(path)
+        except: pass
+        if relpath is not None:
+            self.rewrite_paths += [(re.escape(os.path.abspath(path) + os.sep) + '(.*)', os.path.join(relpath, '\\1'))]
+
 
     # ----------------------------------------------------------------------
     # group_lines()
@@ -470,7 +481,7 @@ class Preprocessor(PreprocessorHooks):
     # a line-by-line format.
     # ----------------------------------------------------------------------
 
-    def group_lines(self,input,source):
+    def group_lines(self,input,abssource):
         """Given an input string, this function splits it into lines.  Trailing whitespace
         is removed.   Any line ending with \ is grouped with the next line.  This
         function forms the lowest level of the preprocessor---grouping into text into
@@ -494,7 +505,7 @@ class Preprocessor(PreprocessorHooks):
             tok = lex.token()
             if not tok:
                 break
-            tok.source = source
+            tok.source = abssource
             current_line.append(tok)
             if tok.type in self.t_WS and '\n' in tok.value:
                 yield current_line
@@ -1021,18 +1032,31 @@ class Preprocessor(PreprocessorHooks):
     def parsegen(self,input,source=None,abssource=None):
         """Parse an input string"""
 
+        rewritten_source = source
+        if abssource:
+            rewritten_source = abssource
+            for rewrite in self.rewrite_paths:
+                temp = re.sub(rewrite[0], rewrite[1], rewritten_source)
+                if temp != abssource:
+                    rewritten_source = temp
+                    if os.sep != '/':
+                        rewritten_source = rewritten_source.replace(os.sep, '/')
+                    break
+
         # Replace trigraph sequences
         t = trigraph(input)
-        lines = self.group_lines(t, source)
+        lines = self.group_lines(t, rewritten_source)
 
         if not source:
             source = ""
+        if not rewritten_source:
+            rewritten_source = ""
             
         my_include_times_idx = len(self.include_times)
         self.include_times.append(FileInclusionTime(self.macros['__FILE__'] if '__FILE__' in self.macros else None, source, abssource, self.include_depth))
         self.include_depth += 1
         my_include_time_begin = time.clock()
-        self.define("__FILE__ \"%s\"" % source)
+        self.define("__FILE__ \"%s\"" % rewritten_source)
 
         self.source = abssource
         chunk = []
@@ -1351,9 +1375,11 @@ class Preprocessor(PreprocessorHooks):
                     self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include <...>")
                     return
                 filename = "".join([x.value for x in tokens[1:i]])
+                # Search only formally specified paths
                 path = self.path
             elif tokens[0].type == self.t_STRING:
                 filename = tokens[0].value[1:-1]
+                # Search from each nested include file, as well as formally specified paths
                 path = self.temp_path + self.path
             else:
                 self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")

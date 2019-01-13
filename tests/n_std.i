@@ -473,7 +473,7 @@ void n_28( void)
 
 
 {
-    char * date = "Oct 24 2018";
+    char * date = "Jan 13 2019";
 
 
     assert( strcmp( "tests/test-c/n_std.c", "n_std.c") == 0);
@@ -482,20 +482,20 @@ void n_28( void)
     assert( 751 == 779);
 
 
-    assert( strlen( "Oct 24 2018") == 11);
+    assert( strlen( "Jan 13 2019") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "19:08:58") == 8);
+    assert( strlen( "16:15:24") == 8);
 
 
     assert( 1);
 
 
     assert( 199901L >= 199409L);
-#line 3 "line.h"
+#line 3 "tests/test-c/line.h"
 {
-    char * file = "line.h";
+    char * file = "tests/test-c/line.h";
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
 }
@@ -580,21 +580,21 @@ void n_37( void)
 
 
     nest = 0;
-#line 3 "nest1.h"
+#line 3 "tests/test-c/nest1.h"
     nest = 1;
-#line 3 "nest2.h"
+#line 3 "tests/test-c/nest2.h"
     nest = 2;
-#line 3 "nest3.h"
+#line 3 "tests/test-c/nest3.h"
     nest = 3;
-#line 3 "nest4.h"
+#line 3 "tests/test-c/nest4.h"
     nest = 4;
-#line 3 "nest5.h"
+#line 3 "tests/test-c/nest5.h"
     nest = 5;
-#line 3 "nest6.h"
+#line 3 "tests/test-c/nest6.h"
     nest = 6;
-#line 3 "nest7.h"
+#line 3 "tests/test-c/nest7.h"
     nest = 7;
-#line 4 "nest8.h"
+#line 4 "tests/test-c/nest8.h"
     nest = 8;
 #line 879 "tests/test-c/n_std.c"
     assert( nest == 8);
