@@ -748,7 +748,7 @@ void    n_28( void)
     assert( strcmp( __FILE__, "n_std.c") == 0);
 
 /* 28.2:    */
-    assert( __LINE__ == 779);
+    assert( __LINE__ == 751);
 
 /* 28.3:    */
     assert( strlen( __DATE__) == 11);

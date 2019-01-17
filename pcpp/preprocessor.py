@@ -324,6 +324,8 @@ class Preprocessor(PreprocessorHooks):
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
         self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
         self.define("__PCPP__ 1")
+        self.linemacro = 0
+        self.linemacrodepth = 0
         self.countermacro = 0
         self.parser = None
 
@@ -797,6 +799,9 @@ class Preprocessor(PreprocessorHooks):
         #print [(t.value, t.expanded_from) for t in tokens]
         while i < len(tokens):
             t = tokens[i]
+            if self.linemacrodepth == 0:
+                self.linemacro = t.lineno
+            self.linemacrodepth = self.linemacrodepth + 1
             if t.type == self.t_ID:
                 if t.value in self.macros and t.value not in t.expanded_from and t.value not in expanding_from:
                     # Yes, we found a macro match
@@ -861,16 +866,22 @@ class Preprocessor(PreprocessorHooks):
                                     e.expanded_from.append(t.value)
                                 #print("\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:j+tokcount])
                                 tokens[i:j+tokcount] = ex
+                    self.linemacrodepth = self.linemacrodepth - 1
+                    if self.linemacrodepth == 0:
+                        self.linemacro = 0
                     continue
                 elif t.value == '__LINE__':
                     t.type = self.t_INTEGER
-                    t.value = self.t_INTEGER_TYPE(t.lineno)
+                    t.value = self.t_INTEGER_TYPE(self.linemacro)
                 elif t.value == '__COUNTER__':
                     t.type = self.t_INTEGER
                     t.value = self.t_INTEGER_TYPE(self.countermacro)
                     self.countermacro += 1
                 
             i += 1
+            self.linemacrodepth = self.linemacrodepth - 1
+            if self.linemacrodepth == 0:
+                self.linemacro = 0
         return tokens
 
     # ----------------------------------------------------------------------    

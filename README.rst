@@ -401,6 +401,8 @@ v1.21 (?):
   
   If you wish to disable this new behaviour, or use different behaviour, you can
   customise the new `rewrite_paths` member variable of ``Preprocessor``.
+- Fix bug where ``__LINE__`` was expanding into the line number of its definition instead
+  of its use. Thanks to Sei-Lisa for reporting this.
 
 v1.20 (7th January 2019):
 -------------------------

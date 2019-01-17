@@ -422,3 +422,22 @@ class test21(unittest.TestCase, runner):
   works
 """
 
+class test22(unittest.TestCase, runner):
+    input = r"""
+#define OUTCOME_TRY_GLUE2(x, y) x##y
+#define OUTCOME_TRY_GLUE(x, y) OUTCOME_TRY_GLUE2(x, y)
+#define OUTCOME_TRY_UNIQUE_NAME OUTCOME_TRY_GLUE(_outcome_try_unique_name_temporary, __LINE__)
+
+OUTCOME_TRY_UNIQUE_NAME
+OUTCOME_TRY_UNIQUE_NAME
+OUTCOME_TRY_UNIQUE_NAME
+"""
+    output = r"""
+
+
+
+
+_outcome_try_unique_name_temporary6
+_outcome_try_unique_name_temporary7
+_outcome_try_unique_name_temporary8
+"""
