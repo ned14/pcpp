@@ -324,6 +324,9 @@ class Preprocessor(PreprocessorHooks):
         self.define("__DATE__ \"%s\"" % time.strftime("%b %d %Y",tm))
         self.define("__TIME__ \"%s\"" % time.strftime("%H:%M:%S",tm))
         self.define("__PCPP__ 1")
+        self.expand_linemacro = True
+        self.expand_filemacro = True
+        self.expand_countermacro = True
         self.linemacro = 0
         self.linemacrodepth = 0
         self.countermacro = 0
@@ -870,10 +873,10 @@ class Preprocessor(PreprocessorHooks):
                     if self.linemacrodepth == 0:
                         self.linemacro = 0
                     continue
-                elif t.value == '__LINE__':
+                elif self.expand_linemacro and t.value == '__LINE__':
                     t.type = self.t_INTEGER
                     t.value = self.t_INTEGER_TYPE(self.linemacro)
-                elif t.value == '__COUNTER__':
+                elif self.expand_countermacro and t.value == '__COUNTER__':
                     t.type = self.t_INTEGER
                     t.value = self.t_INTEGER_TYPE(self.countermacro)
                     self.countermacro += 1
@@ -1067,7 +1070,8 @@ class Preprocessor(PreprocessorHooks):
         self.include_times.append(FileInclusionTime(self.macros['__FILE__'] if '__FILE__' in self.macros else None, source, abssource, self.include_depth))
         self.include_depth += 1
         my_include_time_begin = time.clock()
-        self.define("__FILE__ \"%s\"" % rewritten_source)
+        if self.expand_filemacro:
+            self.define("__FILE__ \"%s\"" % rewritten_source)
 
         self.source = abssource
         chunk = []
@@ -1156,10 +1160,11 @@ class Preprocessor(PreprocessorHooks):
                             for tok in self.expand_macros(chunk):
                                 yield tok
                             chunk = []
-                            oldfile = self.macros['__FILE__']
+                            oldfile = self.macros['__FILE__'] if '__FILE__' in self.macros else None
                             for tok in self.include(args):
                                 yield tok
-                            self.macros['__FILE__'] = oldfile
+                            if oldfile is not None:
+                                self.macros['__FILE__'] = oldfile
                             self.source = abssource
                     elif name == 'undef':
                         at_front_of_file = False

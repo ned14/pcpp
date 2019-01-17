@@ -54,6 +54,9 @@ partial preprocessing algorithms:
   is incapable of, thus generating output which produces good results with doxygen.
   Hence the ability to pass through comments containing doxygen markup is very useful.
 
+**passthru-magic-macros**
+  Don't expand ``__DATE__``, ``__TIME__``, ``__FILE__``, ``__LINE__`` nor ``__COUNTER__``.
+
 Standards (non-)compliance
 --------------------------
 ``pcpp`` passes a modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_ unit
@@ -121,6 +124,8 @@ The help from the command line tool ``pcpp``::
                             to be passed through instead of executed by treating
                             unknown macros as 0L
       --passthru-comments   Pass through comments unmodified
+      --passthru-magic-macros
+                            Pass through double underscore magic macros unmodified
       --disable-auto-pragma-once
                             Disable the heuristics which auto apply #pragma once
                             to #include files wholly wrapped in an obvious include
@@ -403,6 +408,7 @@ v1.21 (?):
   customise the new `rewrite_paths` member variable of ``Preprocessor``.
 - Fix bug where ``__LINE__`` was expanding into the line number of its definition instead
   of its use. Thanks to Sei-Lisa for reporting this.
+- Add ``--passthru-magic-macros`` command line option.
 
 v1.20 (7th January 2019):
 -------------------------
