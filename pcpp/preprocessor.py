@@ -11,7 +11,7 @@
 
 from __future__ import generators, print_function, absolute_import
 
-__all__ = ['Preprocessor', 'OutputDirective']
+__all__ = ['Preprocessor', 'PreprocessorHooks', 'OutputDirective', 'Action']
 
 import sys, traceback, time, enum
 
@@ -174,7 +174,9 @@ class Macro(object):
 class Action(enum.IntEnum):
     """What kind of abort processing to do in OutputDirective"""
     IgnoreAndPassThrough = 0
+    """Abort processing (don't execute), but pass the directive through to output"""
     IgnoreAndRemove = 1
+    """Abort processing (don't execute), and remove from output"""
 
 class OutputDirective(Exception):
     """Raise this exception to abort processing of a preprocessor directive and
