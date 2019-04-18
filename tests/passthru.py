@@ -1,14 +1,18 @@
 from __future__ import absolute_import, print_function
-import unittest
+import unittest, time
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+try:
+    clock = time.process_time
+except:
+    clock = time.clock
 
 class runner(object):
     def runTest(self):
         from pcpp import Preprocessor, OutputDirective
-        import os, time, sys
+        import os, sys
 
         class PassThruPreprocessor(Preprocessor):
             def on_include_not_found(self,is_system_include,curdir,includepath):
@@ -20,13 +24,13 @@ class runner(object):
             def on_unknown_macro_in_expr(self,tok):
                 return None  # Pass through as expanded as possible
                 
-            def on_directive_handle(self,directive,toks,ifpassthru):
-                super(PassThruPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
+            def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
+                super(PassThruPreprocessor, self).on_directive_handle(directive,toks,ifpassthru,precedingtoks)
                 return None  # Pass through where possible
 
-            def on_directive_unknown(self,directive,toks,ifpassthru):
+            def on_directive_unknown(self,directive,toks,ifpassthru,precedingtoks):
                 if directive.value == 'error' or directive.value == 'warning':
-                    super(PassThruPreprocessor, self).on_directive_unknown(directive,toks)
+                    super(PassThruPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru,precedingtoks)
                 # Pass through
                 raise OutputDirective()                
 
@@ -34,12 +38,12 @@ class runner(object):
                 # Pass through
                 return True
 
-        start = time.clock()
+        start = clock()
         p = PassThruPreprocessor()
         p.parse(self.input)
         oh = StringIO()
         p.write(oh)
-        end = time.clock()
+        end = clock()
         print("Preprocessed test in", end-start, "seconds")
         if oh.getvalue() != self.output:
             print("Should be:\n" + self.output + "EOF\n", file = sys.stderr)

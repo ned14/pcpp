@@ -1,12 +1,16 @@
 from __future__ import absolute_import, print_function
-import unittest
+import unittest, time
+try:
+    clock = time.process_time
+except:
+    clock = time.clock
 
 class n_std(unittest.TestCase):
     def runTest(self):
         from pcpp import Preprocessor
-        import os, time
+        import os
 
-        start = time.clock()
+        start = clock()
         p = Preprocessor()
         p.compress = 1
         p.define('__STDC__ 1')
@@ -17,7 +21,7 @@ class n_std(unittest.TestCase):
             p.parse(ih.read(), path)
         with open('tests/n_std.i', 'w') as oh:
             p.write(oh)
-        end = time.clock()
+        end = clock()
         print("Preprocessed", path, "in", end-start, "seconds")
         self.assertEqual(p.return_code, 0)
         

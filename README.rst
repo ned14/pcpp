@@ -409,6 +409,11 @@ v1.21 (?):
 - Fix bug where ``__LINE__`` was expanding into the line number of its definition instead
   of its use. Thanks to Sei-Lisa for reporting this.
 - Add ``--passthru-magic-macros`` command line option.
+- BREAKING CHANGE: The ``PreprocessorHooks`` and ``OutputDirective`` interface has
+changed. One now must specify the kind of ``OutputDirective`` abort one wants, and one
+can now both ignore AND remove directives. ``on_directive_handle()`` and
+``on_directive_unknown()`` now take an extra parameter ``precedingtoks``, these are the
+tokens from the ``#`` up to the directive.
 
 v1.20 (7th January 2019):
 -------------------------

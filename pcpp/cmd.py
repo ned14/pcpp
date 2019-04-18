@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 import sys, argparse, traceback, os, copy
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
-from pcpp.preprocessor import Preprocessor, OutputDirective
+from pcpp.preprocessor import Preprocessor, OutputDirective, Action
 
 version='1.21'
 
@@ -154,7 +154,7 @@ class CmdPreprocessor(Preprocessor):
                 print(('%f,%f,%d,"%s"' % (t, s, os.stat(p).st_size, p)), file = self.args.filetimes)
     def on_include_not_found(self,is_system_include,curdir,includepath):
         if self.args.passthru_unfound_includes:
-            raise OutputDirective()
+            raise OutputDirective(Action.IgnoreAndPassThrough)
         return super(CmdPreprocessor, self).on_include_not_found(is_system_include,curdir,includepath)
 
     def on_unknown_macro_in_defined_expr(self,tok):
@@ -173,25 +173,25 @@ class CmdPreprocessor(Preprocessor):
             return None  # Pass through as expanded as possible
         return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
         
-    def on_directive_handle(self,directive,toks,ifpassthru):
+    def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
         if ifpassthru:
             if directive.value == 'if' or directive.value == 'elif' or directive == 'else' or directive.value == 'endif':
                 self.bypass_ifpassthru = len([tok for tok in toks if tok.value == '__PCPP_ALWAYS_FALSE__' or tok.value == '__PCPP_ALWAYS_TRUE__']) > 0
             if not self.bypass_ifpassthru and (directive.value == 'define' or directive.value == 'undef'):
                 if toks[0].value != self.potential_include_guard:
-                    raise OutputDirective()  # Don't execute anything with effects when inside an #if expr with undefined macro
+                    raise OutputDirective(Action.IgnoreAndPassThrough)  # Don't execute anything with effects when inside an #if expr with undefined macro
         if (directive.value == 'define' or directive.value == 'undef') and self.args.nevers:
             if toks[0].value in self.args.nevers:
-                raise OutputDirective()
+                raise OutputDirective(Action.IgnoreAndPassThrough)
         if self.args.passthru_defines:
-            super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
+            super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru,precedingtoks)
             return None  # Pass through where possible
-        return super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru)
+        return super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru,precedingtoks)
 
-    def on_directive_unknown(self,directive,toks,ifpassthru):
+    def on_directive_unknown(self,directive,toks,ifpassthru,precedingtoks):
         if ifpassthru:
             return None  # Pass through
-        return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru)
+        return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru,precedingtoks)
 
     def on_potential_include_guard(self,macro):
         self.potential_include_guard = macro

@@ -13,17 +13,19 @@ from __future__ import generators, print_function, absolute_import
 
 __all__ = ['Preprocessor', 'OutputDirective']
 
-import sys, traceback, time
+import sys, traceback, time, enum
 
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
     STRING_TYPES = (str, unicode)
     FILE_TYPES = file
+    clock = time.clock
 else:
     STRING_TYPES = str
     xrange = range
     import io
     FILE_TYPES = io.IOBase
+    clock = time.process_time
 
 # -----------------------------------------------------------------------------
 # Default preprocessor lexer definitions.   These tokens are enough to get
@@ -169,10 +171,16 @@ class Macro(object):
 # Override these to customise preprocessing
 # ------------------------------------------------------------------
 
+class Action(enum.IntEnum):
+    """What kind of abort processing to do in OutputDirective"""
+    IgnoreAndPassThrough = 0
+    IgnoreAndRemove = 1
+
 class OutputDirective(Exception):
     """Raise this exception to abort processing of a preprocessor directive and
     to instead output it as is into the output"""
-    pass
+    def __init__(self, action):
+        self.action = action
 
 class PreprocessorHooks(object):
     """Override these in your subclass of Preprocessor to customise preprocessing"""
@@ -190,14 +198,14 @@ class PreprocessorHooks(object):
     def on_include_not_found(self,is_system_include,curdir,includepath):
         """Called when a #include wasn't found.
         
-        Return None to ignore, raise OutputDirective to pass through, else return
+        Raise OutputDirective to pass through or remove, else return
         a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
         
         The default calls self.on_error() with a suitable error message about the
         include file not found and raises OutputDirective (pass through).
         """
         self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
-        raise OutputDirective()
+        raise OutputDirective(Action.IgnoreAndPassThrough)
         
     def on_unknown_macro_in_defined_expr(self,tok):
         """Called when an expression passed to an #if contained a defined operator
@@ -224,32 +232,40 @@ class PreprocessorHooks(object):
         tok.value = self.t_INTEGER_TYPE("0L")
         return tok
     
-    def on_directive_handle(self,directive,toks,ifpassthru):
+    def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
         """Called when there is one of
         
         define, include, undef, ifdef, ifndef, if, elif, else, endif
         
-        Return True to execute and remove from the output, return False to
-        remove from the output, raise OutputDirective to pass through without
-        execution, or return None to execute AND pass through to the output
-        (this only works for #define, #undef).
+        Return True to execute and remove from the output, raise OutputDirective
+        to pass through or remove without execution, or return None to execute
+        AND pass through to the output (this only works for #define, #undef).
         
         The default returns True (execute and remove from the output).
+
+        directive is the directive, toks is the tokens after the directive,
+        ifpassthru is whether we are in passthru mode, precedingtoks is the
+        tokens preceding the directive from the # token until the directive.
         """
         self.lastdirective = directive
         return True
         
-    def on_directive_unknown(self,directive,toks,ifpassthru):
+    def on_directive_unknown(self,directive,toks,ifpassthru,precedingtoks):
         """Called when the preprocessor encounters a #directive it doesn't understand.
         This is actually quite an extensive list as it currently only understands:
         
         define, include, undef, ifdef, ifndef, if, elif, else, endif
         
-        Return True or False to remove from the output, or else raise OutputDirective
-        or return None to pass through into the output.
+        Return True to remove from the output, raise OutputDirective
+        to pass through or remove, or return None to
+        pass through into the output.
         
         The default handles #error and #warning by printing to stderr and returning True
         (remove from output). For everything else it returns None (pass through into output).
+
+        directive is the directive, toks is the tokens after the directive,
+        ifpassthru is whether we are in passthru mode, precedingtoks is the
+        tokens preceding the directive from the # token until the directive.
         """
         if directive.value == 'error':
             print("%s:%d error: %s" % (directive.source,directive.lineno,''.join(tok.value for tok in toks)), file = sys.stderr)
@@ -1069,7 +1085,7 @@ class Preprocessor(PreprocessorHooks):
         my_include_times_idx = len(self.include_times)
         self.include_times.append(FileInclusionTime(self.macros['__FILE__'] if '__FILE__' in self.macros else None, source, abssource, self.include_depth))
         self.include_depth += 1
-        my_include_time_begin = time.clock()
+        my_include_time_begin = clock()
         if self.expand_filemacro:
             self.define("__FILE__ \"%s\"" % rewritten_source)
 
@@ -1114,11 +1130,13 @@ class Preprocessor(PreprocessorHooks):
             output_and_expand_line = True
             output_unexpanded_line = False
             if tok.value == '#':
+                precedingtoks = [ tok ]
                 output_and_expand_line = False
                 try:
                     # Preprocessor directive      
                     i += 1
                     while i < len(x) and x[i].type in self.t_WS:
+                        precedingtoks.append(x[i])
                         i += 1                    
                     dirtokens = self.tokenstrip(x[i:])
                     if dirtokens:
@@ -1129,15 +1147,14 @@ class Preprocessor(PreprocessorHooks):
                             print("%d:%d:%d %s:%d #%s %s" % (enable, iftrigger, ifpassthru, dirtokens[0].source, dirtokens[0].lineno, dirtokens[0].value, "".join([tok.value for tok in args])), file = self.debugout)
                             #print(ifstack)
 
-                        handling = self.on_directive_handle(dirtokens[0],args,ifpassthru)
+                        handling = self.on_directive_handle(dirtokens[0],args,ifpassthru,precedingtoks)
+                        assert handling == True or handling == None
                     else:
                         name = ""
                         args = []
-                        handling = False
+                        raise OutputDirective(Action.IgnoreAndRemove)
                         
-                    if handling == False:
-                        pass
-                    elif name == 'define':
+                    if name == 'define':
                         at_front_of_file = False
                         if enable:
                             for tok in self.expand_macros(chunk):
@@ -1186,7 +1203,7 @@ class Preprocessor(PreprocessorHooks):
                                 if res is None:
                                     ifpassthru = True
                                     ifstack[-1].rewritten = True
-                                    raise OutputDirective()
+                                    raise OutputDirective(Action.IgnoreAndPassThrough)
                                 elif res is True:
                                     iftrigger = True
                                 else:
@@ -1210,7 +1227,7 @@ class Preprocessor(PreprocessorHooks):
                                 if res is None:
                                     ifpassthru = True
                                     ifstack[-1].rewritten = True
-                                    raise OutputDirective()
+                                    raise OutputDirective(Action.IgnoreAndPassThrough)
                                 elif res is True:
                                     enable = False
                                     iftrigger = False
@@ -1236,7 +1253,7 @@ class Preprocessor(PreprocessorHooks):
                                 x[i+1].value = ' '
                                 ifpassthru = True
                                 ifstack[-1].rewritten = True
-                                raise OutputDirective()
+                                raise OutputDirective(Action.IgnoreAndPassThrough)
                             if not result:
                                 enable = False
                             else:
@@ -1260,7 +1277,7 @@ class Preprocessor(PreprocessorHooks):
                                         x[i+1].value = ' '
                                         ifpassthru = True
                                         ifstack[-1].rewritten = True
-                                        raise OutputDirective()
+                                        raise OutputDirective(Action.IgnoreAndPassThrough)
                                     if ifpassthru:
                                         # If this elif can only ever be true, simulate that
                                         if result:
@@ -1268,7 +1285,7 @@ class Preprocessor(PreprocessorHooks):
                                             newtok.type = self.t_INTEGER
                                             newtok.value = self.t_INTEGER_TYPE(result)
                                             x = x[:i+2] + [newtok] + [x[-1]]
-                                            raise OutputDirective()
+                                            raise OutputDirective(Action.IgnoreAndPassThrough)
                                         # Otherwise elide
                                         enable = False
                                     elif result:
@@ -1283,7 +1300,7 @@ class Preprocessor(PreprocessorHooks):
                             if ifstack[-1].enable:
                                 if ifpassthru:
                                     enable = True
-                                    raise OutputDirective()
+                                    raise OutputDirective(Action.IgnoreAndPassThrough)
                                 if enable:
                                     enable = False
                                 elif not iftrigger:
@@ -1304,7 +1321,7 @@ class Preprocessor(PreprocessorHooks):
                                     oldifstackentry.startlinetoks[0].source, oldifstackentry.startlinetoks[0].lineno, "".join([n.value for n in oldifstackentry.startlinetoks])), file = self.debugout)
                             skip_auto_pragma_once_possible_check = True
                             if oldifstackentry.rewritten:
-                                raise OutputDirective()
+                                raise OutputDirective(Action.IgnoreAndPassThrough)
                         else:
                             self.on_error(dirtokens[0].source,dirtokens[0].lineno,"Misplaced #endif")
                     elif name == 'pragma' and args[0].value == 'once':
@@ -1312,10 +1329,15 @@ class Preprocessor(PreprocessorHooks):
                             self.include_once[self.source] = None
                     elif enable:
                         # Unknown preprocessor directive
-                        output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru) is None)
+                        output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru, precedingtoks) is None)
 
-                except OutputDirective:
-                    output_unexpanded_line = True
+                except OutputDirective as e:
+                    if e.action == Action.IgnoreAndPassThrough:
+                        output_unexpanded_line = True
+                    elif e.action == Action.IgnoreAndRemove:
+                        pass
+                    else:
+                        assert False
 
             # If there is ever any non-whitespace output outside an include guard, auto pragma once is not possible
             if not skip_auto_pragma_once_possible_check and auto_pragma_once_possible and not ifstack and not all_whitespace:
@@ -1359,7 +1381,7 @@ class Preprocessor(PreprocessorHooks):
         elif self.auto_pragma_once_enabled and self.source not in self.include_once:
             if self.debugout is not None:
                 print("%d:%d:%d %s:%d Did not auto apply #pragma once to this file due to auto_pragma_once_possible=%d, include_guard=%s" % (enable, iftrigger, ifpassthru, self.source, 0, auto_pragma_once_possible, repr(include_guard)), file = self.debugout)
-        my_include_time_end = time.clock()
+        my_include_time_end = clock()
         self.include_times[my_include_times_idx].elapsed = my_include_time_end - my_include_time_begin
         self.include_depth -= 1
 
@@ -1425,8 +1447,7 @@ class Preprocessor(PreprocessorHooks):
                     pass
             else:
                 p = self.on_include_not_found(is_system_include,self.temp_path[0] if self.temp_path else '',filename)
-                if p is None:
-                    return
+                assert p is not None
                 path.append(p)
 
     # ----------------------------------------------------------------------

@@ -1,21 +1,25 @@
 from __future__ import absolute_import, print_function
-import unittest
+import unittest, time
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+try:
+    clock = time.process_time
+except:
+    clock = time.clock
 
 class runner(object):
     def runTest(self):
         from pcpp import Preprocessor
-        import os, time, sys
+        import os, sys
 
-        start = time.clock()
+        start = clock()
         p = Preprocessor()
         p.parse(self.input)
         oh = StringIO()
         p.write(oh)
-        end = time.clock()
+        end = clock()
         print("Preprocessed test in", end-start, "seconds")
         if oh.getvalue() != self.output:
             print("Should be:\n" + self.output, file = sys.stderr)
