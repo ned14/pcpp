@@ -414,6 +414,9 @@ changed. One now must specify the kind of ``OutputDirective`` abort one wants, a
 can now both ignore AND remove directives. ``on_directive_handle()`` and
 ``on_directive_unknown()`` now take an extra parameter ``precedingtoks``, these are the
 tokens from the ``#`` up to the directive.
+- Fix a corner case where ``FUNC(void)foo()`` expanded to ``voidfoo()`` and not
+``void foo()`` which is a very common non-conforming extension of the C preprocessor.
+Thanks to OmegaDoom for reporting this.
 
 v1.20 (7th January 2019):
 -------------------------

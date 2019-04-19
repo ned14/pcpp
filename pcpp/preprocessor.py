@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor useful for generating single include files
-# (C) 2017-2018 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2019 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -885,6 +885,16 @@ class Preprocessor(PreprocessorHooks):
                                     if not hasattr(e, 'expanded_from'):
                                         e.expanded_from = []
                                     e.expanded_from.append(t.value)
+                                # A non-conforming extension implemented by the GCC and clang preprocessors
+                                # is that an expansion of a macro with arguments where the following token is
+                                # an identifier inserts a space between the expansion and the identifier. This
+                                # differs from Boost.Wave incidentally (see https://github.com/ned14/pcpp/issues/29)
+                                if len(tokens) > j+tokcount and tokens[j+tokcount].type in self.t_ID:
+                                    #print("*** token after expansion is", tokens[j+tokcount])
+                                    newtok = copy.copy(tokens[j+tokcount])
+                                    newtok.type = self.t_SPACE
+                                    newtok.value = ' '
+                                    ex.append(newtok)
                                 #print("\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:j+tokcount])
                                 tokens[i:j+tokcount] = ex
                     self.linemacrodepth = self.linemacrodepth - 1

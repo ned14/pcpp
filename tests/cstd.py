@@ -445,3 +445,44 @@ _outcome_try_unique_name_temporary6
 _outcome_try_unique_name_temporary7
 _outcome_try_unique_name_temporary8
 """
+
+class test23(unittest.TestCase, runner):
+    input = r"""
+#define FUNC1(rettype) rettype
+#define FUNC2 void
+
+FUNC1(void)foo()
+{
+}
+
+FUNC2|foo()
+{
+}
+
+FUNC1(void)/foo()
+{
+}
+
+FUNC1(void)FUNC2.FUNC1(void)foo()
+{
+}"""
+    output = r"""
+
+
+
+void foo()
+{
+}
+
+void|foo()
+{
+}
+
+void/foo()
+{
+}
+
+void void.void foo()
+{
+}
+"""
