@@ -13,7 +13,7 @@ from __future__ import generators, print_function, absolute_import
 
 __all__ = ['Preprocessor', 'PreprocessorHooks', 'OutputDirective', 'Action']
 
-import sys, traceback, time, enum
+import sys, traceback, time
 
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
@@ -171,7 +171,7 @@ class Macro(object):
 # Override these to customise preprocessing
 # ------------------------------------------------------------------
 
-class Action(enum.IntEnum):
+class Action(object):
     """What kind of abort processing to do in OutputDirective"""
     IgnoreAndPassThrough = 0
     """Abort processing (don't execute), but pass the directive through to output"""
