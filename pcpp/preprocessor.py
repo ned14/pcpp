@@ -33,7 +33,16 @@ else:
 # -----------------------------------------------------------------------------
 
 tokens = (
-   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT1', 'CPP_COMMENT2', 'CPP_POUND','CPP_DPOUND'
+   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT1', 'CPP_COMMENT2',
+   'CPP_POUND','CPP_DPOUND', 'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
+   'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EQUAL', 'CPP_EXCLAMATION',
+   'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN', 'CPP_LBRACKET', 'CPP_RBRACKET', 'CPP_LCURLY', 'CPP_RCURLY',
+   'CPP_DOT', 'CPP_COMMA', 'CPP_SEMICOLON', 'CPP_COLON', 'CPP_BSLASH', 'CPP_SQUOTE', 'CPP_DQUOTE',
+
+   'CPP_DEREFERENCE', 'CPP_MINUSEQUAL', 'CPP_MINUSMINUS', 'CPP_LSHIFT', 'CPP_LESSEQUAL', 'CPP_RSHIFT',
+   'CPP_GREATEREQUAL', 'CPP_LOGICALOR', 'CPP_OREQUAL', 'CPP_LOGICALAND', 'CPP_ANDEQUAL', 'CPP_EQUALITY',
+   'CPP_INEQUALITY', 'CPP_XOREQUAL', 'CPP_MULTIPLYEQUAL', 'CPP_DIVIDEEQUAL', 'CPP_PLUSEQUAL', 'CPP_PLUSPLUS',
+   'CPP_PERCENTEQUAL', 'CPP_LSHIFTEQUAL', 'CPP_RSHIFTEQUAL'
 )
 
 literals = "+-*/%|&~^<>=!?()[]{}.,;:\\\'\""
@@ -46,6 +55,56 @@ def t_CPP_WS(t):
 
 t_CPP_POUND = r'\#'
 t_CPP_DPOUND = r'\#\#'
+t_CPP_PLUS = r'\+'
+t_CPP_MINUS = r'-'
+t_CPP_STAR = r'\*'
+t_CPP_FSLASH = r'/'
+t_CPP_PERCENT = r'%'
+t_CPP_BAR = r'\|'
+t_CPP_AMPERSAND = r'&'
+t_CPP_TILDE = r'~'
+t_CPP_HAT = r'\^'
+t_CPP_LESS = r'<'
+t_CPP_GREATER = r'>'
+t_CPP_EQUAL = r'='
+t_CPP_EXCLAMATION = r'!'
+t_CPP_QUESTION = r'\?'
+t_CPP_LPAREN = r'\('
+t_CPP_RPAREN = r'\)'
+t_CPP_LBRACKET = r'\['
+t_CPP_RBRACKET = r'\]'
+t_CPP_LCURLY = r'{'
+t_CPP_RCURLY = r'}'
+t_CPP_DOT = r'.'
+t_CPP_COMMA = r','
+t_CPP_SEMICOLON = r';'
+t_CPP_COLON = r':'
+t_CPP_BSLASH = r'\\'
+t_CPP_SQUOTE = r"'"
+t_CPP_DQUOTE = r'"'
+
+t_CPP_DEREFERENCE = r'->'
+t_CPP_MINUSEQUAL = r'-='
+t_CPP_MINUSMINUS = r'--'
+t_CPP_LSHIFT = r'<<'
+t_CPP_LESSEQUAL = r'<='
+t_CPP_RSHIFT = r'>>'
+t_CPP_GREATEREQUAL = r'>='
+t_CPP_LOGICALOR = r'\|\|'
+t_CPP_OREQUAL = r'\|='
+t_CPP_LOGICALAND = r'&&'
+t_CPP_ANDEQUAL = r'&='
+t_CPP_EQUALITY = r'=='
+t_CPP_INEQUALITY = r'!='
+t_CPP_XOREQUAL = r'^='
+t_CPP_MULTIPLYEQUAL = r'\*='
+t_CPP_DIVIDEEQUAL = r'/='
+t_CPP_PLUSEQUAL = r'\+='
+t_CPP_PLUSPLUS = r'\+\+'
+t_CPP_PERCENTEQUAL = r'%='
+t_CPP_LSHIFTEQUAL = r'<<='
+t_CPP_RSHIFTEQUAL = r'>>='
+
 
 # Identifier
 t_CPP_ID = r'[A-Za-z_][\w_]*'

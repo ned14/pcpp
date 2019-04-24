@@ -347,7 +347,7 @@ Additionally implemented by ``pcpp`` command line tool:
 
 Not implemented yet (donations of code welcome):
 ------------------------------------------------
-- :c:`#pragma` anything other than once.
+- :c:`#pragma` anything other than :c:`once`.
 - :c:`_Pragma` used to emit preprocessor calculated #pragma.
 - :c:`#line num`, :c:`num "file"` and :c:`NUMBER FILE`.
 
@@ -417,6 +417,7 @@ tokens from the ``#`` up to the directive.
 - Fix a corner case where ``FUNC(void)foo()`` expanded to ``voidfoo()`` and not
 ``void foo()`` which is a very common non-conforming extension of the C preprocessor.
 Thanks to OmegaDoom for reporting this.
+- Add tokens for all the C operators, to help implementation of an expression evaluator.
 
 v1.20 (7th January 2019):
 -------------------------
