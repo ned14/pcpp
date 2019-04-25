@@ -418,6 +418,7 @@ tokens from the ``#`` up to the directive.
 ``void foo()`` which is a very common non-conforming extension of the C preprocessor.
 Thanks to OmegaDoom for reporting this.
 - Add tokens for all the C operators, to help implementation of an expression evaluator.
+- Updated embedded ply to HEAD (2019-04-25)
 
 v1.20 (7th January 2019):
 -------------------------

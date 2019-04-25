@@ -8,11 +8,18 @@ from __future__ import generators, print_function, absolute_import
 import os, sys
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
-from pcpp.preprocessor import OutputDirective, Action, STRING_TYPES
+from pcpp.preprocessor import STRING_TYPES
 
+# The width of signed integer which this evaluator will use
 INTMAXBITS = 64
 
-class Int(int):
+# Some Python 3 compatibility shims
+if sys.version_info.major < 3:
+    INTBASETYPE = long
+else:
+    INTBASETYPE = int
+
+class Int(INTBASETYPE):
     """A signed integer within a preprocessor expression, bounded
     to within INT_MIN and INT_MAX. Overflow is handled like a CPU,
     despite being UB, as that's what GCC and clang do.
@@ -23,6 +30,24 @@ class Int(int):
     Int(10)
     >>> Int(5) * 2
     Int(10)
+    >>> Int(50) % 8
+    Int(2)
+    >>> -Int(5)
+    Int(-5)
+    >>> +Int(-5)
+    Int(-5)
+    >>> ~Int(5)
+    Int(-6)
+    >>> Int(6) & 2
+    Int(2)
+    >>> Int(4) | 2
+    Int(6)
+    >>> Int(6) ^ 2
+    Int(4)
+    >>> Int(2) << 2
+    Int(8)
+    >>> Int(8) >> 2
+    Int(2)
     >>> Int(9223372036854775808)
     Int(-9223372036854775808)
     >>> Int(-9223372036854775809)
@@ -46,8 +71,28 @@ class Int(int):
         return self.__class__(self.__clamp(super(Int, self).__mul__(other)))
     def __div__(self, other):
         return self.__class__(self.__clamp(super(Int, self).__div__(other)))
+    def __mod__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__mod__(other)))
+    def __neg__(self):
+        return self.__class__(self.__clamp(super(Int, self).__neg__()))
+    def __invert__(self):
+        return self.__class__(self.__clamp(super(Int, self).__invert__()))
+    def __and__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__and__(other)))
+    def __or__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__or__(other)))
+    def __pos__(self):
+        return self.__class__(self.__clamp(super(Int, self).__pos__()))
+    def __pow__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__pow__(other)))
+    def __lshift__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__lshift__(other)))
+    def __rshift__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__rshift__(other)))
+    def __xor__(self, other):
+        return self.__class__(self.__clamp(super(Int, self).__xor__(other)))
     def __repr__(self):
-        return "Int(%d)" % int(self)
+        return "Int(%d)" % INTBASETYPE(self)
 
 #def execute_expr(token):
 #    """Execute a fully macro expanded set of tokens representing an expression,
