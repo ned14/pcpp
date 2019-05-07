@@ -149,6 +149,7 @@ def t_error(t):
     t.lexer.skip(1)
     return t
 
+
 import codecs
 import re
 import copy
@@ -158,7 +159,7 @@ import os.path
 # Python 2/3 compatible way of importing a subpackage
 oldsyspath = sys.path
 sys.path = [ os.path.join( os.path.dirname( os.path.abspath(__file__) ), "ply" ) ] + sys.path
-from ply import lex
+from ply import lex, yacc
 from ply.lex import LexToken
 sys.path = oldsyspath
 del oldsyspath
