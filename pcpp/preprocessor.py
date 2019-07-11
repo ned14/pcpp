@@ -564,7 +564,7 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
 
     def group_lines(self,input,abssource):
-        """Given an input string, this function splits it into lines.  Trailing whitespace
+        r"""Given an input string, this function splits it into lines.  Trailing whitespace
         is removed.   Any line ending with \ is grouped with the next line.  This
         function forms the lowest level of the preprocessor---grouping into text into
         a line-by-line format.
@@ -1493,6 +1493,8 @@ class Preprocessor(PreprocessorHooks):
             else:
                 self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
                 return
+        if not path:
+            path = ['']
         while True:
             #print path
             for p in path:

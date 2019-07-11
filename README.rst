@@ -419,6 +419,7 @@ tokens from the ``#`` up to the directive.
 Thanks to OmegaDoom for reporting this.
 - Add tokens for all the C operators, to help implementation of an expression evaluator.
 - Updated embedded ply to HEAD (2019-04-25)
+- Fix ``#include`` not working if no ``-I`` parameters were supplied.
 
 v1.20 (7th January 2019):
 -------------------------
