@@ -50,6 +50,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--time', dest = 'time', action = 'store_true', help = 'Print the time it took to #include each file')
         argp.add_argument('--filetimes', dest = 'filetimes', metavar = 'path', type = argparse.FileType('wt'), default=None, nargs = '?', help = 'Write CSV file with time spent inside each included file, inclusive and exclusive')
         argp.add_argument('--compress', dest = 'compress', action = 'store_true', help = 'Make output as small as possible')
+        argp.add_argument('--no-include', dest = 'no_include', action = 'store_true', help = 'Do not handle the #include directive')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)

@@ -1243,7 +1243,7 @@ class Preprocessor(PreprocessorHooks):
                             if handling is None:
                                 for tok in x:
                                     yield tok
-                    elif name == 'include':
+                    elif name == 'include' and not self.args.no_include:
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
