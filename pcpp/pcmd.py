@@ -69,6 +69,7 @@ class CmdPreprocessor(Preprocessor):
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
         self.line_directive = self.args.line_directive
         self.compress = 2 if self.args.compress else 0
+        self.no_include = self.args.no_include
         if self.args.passthru_magic_macros:
             self.undef('__DATE__')
             self.undef('__TIME__')
