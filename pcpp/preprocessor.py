@@ -393,6 +393,7 @@ class Preprocessor(PreprocessorHooks):
         self.auto_pragma_once_enabled = True
         self.line_directive = '#line'
         self.compress = False
+        self.no_include = False
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
