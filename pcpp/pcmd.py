@@ -111,6 +111,10 @@ class CmdPreprocessor(Preprocessor):
             print("\nINTERNAL PREPROCESSOR ERROR AT AROUND %s:%d, FATALLY EXITING NOW\n"
                 % (self.lastdirective.source, self.lastdirective.lineno), file = sys.stderr)
             sys.exit(-99)
+        finally:
+            for i in self.args.inputs:
+                i.close()
+            self.args.output.close()
         
         if self.args.time:
             print("\nTime report:")

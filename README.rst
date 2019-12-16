@@ -377,7 +377,10 @@ Known bugs (ordered from worst to least worst):
    - :c:`(x ? y : z)` (preferred, evaluates correctly, we inject brackets
      around the subexpessions before sending to Python)
 
- Code donations of a proper lexing parser based on http://www.dabeaz.com/ply/ are welcome!
+ A proper lexing parser based on http://www.dabeaz.com/ply/'s yacc module has
+ been started and can be found in the https://github.com/ned14/pcpp/tree/yacc_expression_evaluator
+ branch. Time to complete it, is the problem, and any pull requests helping with
+ that are welcome.
 
 **We do not pass the Boost.Wave preprocessor test suite**
  A lot of bugs have been fixed since this was reported, however the chances are
@@ -394,8 +397,8 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
-v1.21 (?):
--------------------------
+v1.21 (30th September 2019):
+----------------------------
 - Fix bug where token pasting two numeric tokens did not yield a numeric token. Thanks
   to Sei-Lisa for reporting this.
 - BREAKING CHANGE: Paths emitted by pcpp into ``#line`` directives now are relative to the
@@ -410,15 +413,17 @@ v1.21 (?):
   of its use. Thanks to Sei-Lisa for reporting this.
 - Add ``--passthru-magic-macros`` command line option.
 - BREAKING CHANGE: The ``PreprocessorHooks`` and ``OutputDirective`` interface has
-changed. One now must specify the kind of ``OutputDirective`` abort one wants, and one
-can now both ignore AND remove directives. ``on_directive_handle()`` and
-``on_directive_unknown()`` now take an extra parameter ``precedingtoks``, these are the
-tokens from the ``#`` up to the directive.
+  changed. One now must specify the kind of ``OutputDirective`` abort one wants, and one
+  can now both ignore AND remove directives. ``on_directive_handle()`` and
+  ``on_directive_unknown()`` now take an extra parameter ``precedingtoks``, these are the
+  tokens from the ``#`` up to the directive.
 - Fix a corner case where ``FUNC(void)foo()`` expanded to ``voidfoo()`` and not
-``void foo()`` which is a very common non-conforming extension of the C preprocessor.
-Thanks to OmegaDoom for reporting this.
+  ``void foo()`` which is a very common non-conforming extension of the C preprocessor.
+  Thanks to OmegaDoom for reporting this.
 - Add tokens for all the C operators, to help implementation of an expression evaluator.
 - Updated embedded ply to HEAD (2019-04-25)
+- Fix ``#include`` not working if no ``-I`` parameters were supplied. Thanks to csm10495
+  for reporting this.
 
 v1.20 (7th January 2019):
 -------------------------
