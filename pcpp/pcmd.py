@@ -4,7 +4,7 @@ if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective, Action
 
-version='1.21'
+version='1.22'
 
 __all__ = []
 
@@ -114,7 +114,8 @@ class CmdPreprocessor(Preprocessor):
         finally:
             for i in self.args.inputs:
                 i.close()
-            self.args.output.close()
+            if self.args.output != sys.stdout:
+                self.args.output.close()
         
         if self.args.time:
             print("\nTime report:")

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor useful for generating single include files
-# (C) 2017-2019 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #

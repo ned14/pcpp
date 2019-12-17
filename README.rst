@@ -7,7 +7,7 @@ A C99 preprocessor written in pure Python
     :align: middle
     :target: https://travis-ci.org/ned14/pcpp
 
-\(C) 2018-2019 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2019 David Beazley http://www.dabeaz.com/
+\(C) 2018-2020 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2019 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
@@ -397,6 +397,11 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
+v1.22 (???):
+----------------------------
+- Fix bug where outputting to stdout did not combine with anything which
+printed to stdout. Thanks to Fondesa for reporting this.
+
 v1.21 (30th September 2019):
 ----------------------------
 - Fix bug where token pasting two numeric tokens did not yield a numeric token. Thanks
