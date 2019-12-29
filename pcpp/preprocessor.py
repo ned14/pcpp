@@ -1717,11 +1717,12 @@ class Preprocessor(PreprocessorHooks):
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
-            # Account for those newlines in a multiline comment
-            if toks[0].type == self.t_COMMENT1:
-                lastlineno += toks[0].value.count('\n')
             if emitlinedirective and self.line_directive is not None:
                 oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            # Account for those newlines in a multiline comment
+            for tok in toks:
+                if tok.type == self.t_COMMENT1:
+                    lastlineno += tok.value.count('\n')
             blanklines = 0
             #print toks[0].lineno, 
             for tok in toks:
