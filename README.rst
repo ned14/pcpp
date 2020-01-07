@@ -72,7 +72,7 @@ are extremely close indeed with blank line collapsing being the only difference.
 The most non-conforming part is :c:`#if` expression
 parsing (donations of a proper yacc based parser for executing :c:`#if` expressions based on
 http://www.dabeaz.com/ply/ are welcome). In practice, in most real world code you
-won't notice the departures and, if you do, the application of extra brackets to
+won't notice the departures, and, if you do, the application of extra brackets to
 group subexpressions so Python's :c:`eval()` executes right will fix it.
 
 A full, detailed list of known non-conformance with the C99 standard is below. We have
