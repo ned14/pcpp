@@ -377,7 +377,7 @@ Known bugs (ordered from worst to least worst):
    - :c:`(x ? y : z)` (preferred, evaluates correctly, we inject brackets
      around the subexpessions before sending to Python)
 
- A proper lexing parser based on `http://www.dabeaz.com/ply/`_'s yacc module has
+ A proper lexing parser based on http://www.dabeaz.com/ply/ 's yacc module has
  been started and can be found in the https://github.com/ned14/pcpp/tree/yacc_expression_evaluator
  branch. Time to complete it, is the problem, and any pull requests helping with
  that are welcome.
