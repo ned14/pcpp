@@ -71,8 +71,8 @@ are extremely close indeed with blank line collapsing being the only difference.
 
 The most non-conforming part is :c:`#if` expression
 parsing (donations of a proper yacc based parser for executing :c:`#if` expressions based on
-http://www.dabeaz.com/ply/ are welcome). In practice, in most real world code, you
-won't notice the departures and if you do, the application of extra brackets to
+http://www.dabeaz.com/ply/ are welcome). In practice, in most real world code you
+won't notice the departures, and, if you do, the application of extra brackets to
 group subexpressions so Python's :c:`eval()` executes right will fix it.
 
 A full, detailed list of known non-conformance with the C99 standard is below. We have
@@ -82,7 +82,7 @@ fixes and new unit tests for the fix are welcome.
 
 Note that most of this preprocessor was written originally by David Beazley to show
 off his excellent Python Lex-Yacc library PLY (http://www.dabeaz.com/ply/) and is
-hidden in there without being at all obvious given the number of Stackoverflow
+hidden in there without being at all obvious given the number of Stack Overflow
 questions which have asked for a pure Python C preprocessor implementation. This
 implementation fixes a lot of conformance bugs (the original was never intended to
 rigidly adhere to the C standard) and adds in a test suite based on the C11 preprocessor
@@ -184,7 +184,7 @@ Let us look at an example for pass through mode. Here is the original:
     #ifndef BOOSTLITE_CONSTEXPR
     #define BOOSTLITE_CONSTEXPR
     #endif
-    
+
 This is because ``__cpp_constexpr`` was not defined, so because of the ``--passthru-unknown-exprs`` flag
 we pass through everything inside that if block **unexecuted** i.e. defines and undefs are NOT executed by
 ``pcpp``. Let's define ``__cpp_constexpr``:
@@ -202,7 +202,7 @@ we pass through everything inside that if block **unexecuted** i.e. defines and 
     #ifndef BOOSTLITE_CONSTEXPR
     #define BOOSTLITE_CONSTEXPR
     #endif
-    
+
 So, big difference now. We execute the entire first if block as ``__cpp_constexpr`` is now defined, thus
 leaving whitespace. Let's try setting ``__cpp_constexpr`` a bit higher:
 
@@ -232,16 +232,16 @@ through mode in that it makes a macro no longer unknown, but known to be undefin
     #else
     #define __cpp_constexpr 190000
     #endif
-    
+
     #ifndef BOOSTLITE_CONSTEXPR
-    
-    
-    
+
+
+
     #endif
     #ifndef BOOSTLITE_CONSTEXPR
     #define BOOSTLITE_CONSTEXPR
     #endif
-    
+
 Here ``__cpp_constexpr`` is known to be undefined so the first clause executes, but ``__cplusplus`` is
 unknown so that entire block is passed through unexecuted. In the next test comparing ``__cpp_constexpr``
 to 201304 it is still known to be undefined, and so 0 >= 201304 is the expressions tested which is false,
@@ -261,7 +261,7 @@ preprocessor commands e.g.
 .. code-block:: c
 
     #if !defined(__cpp_constexpr)
-    #if __cplusplus >= 201402L 
+    #if __cplusplus >= 201402L
     #define __cpp_constexpr 201304
     #elif !__PCPP_ALWAYS_FALSE__     // pcpp please execute this next block
     #define __cpp_constexpr 190000
@@ -277,7 +277,7 @@ preprocessor commands e.g.
     #endif
 
 Note that ``__PCPP_ALWAYS_FALSE__`` will always be false in any other preprocessor, and it is also
-false in ``pcpp``. However it causes ``pcpp`` to execute the define of ``__cpp_constexpr`` to 190000:
+false in ``pcpp``. However, it causes ``pcpp`` to execute the define of ``__cpp_constexpr`` to 190000:
 
 ``pcpp test.h --passthru-defines --passthru-unknown-exprs``
 
@@ -303,7 +303,7 @@ This is one way of marking up ``#else`` clauses so they always execute in a norm
 and also pass through with execution with ``pcpp``. You can, of course, also place ``|| __PCPP_ALWAYS_FALSE__``
 in any ``#if`` stanza to cause it to be passed through with execution, but not affect the
 preprocessing logic otherwise.
-        
+
 What's implemented by the ``Preprocessor`` class:
 =================================================
 - Digraphs and Trigraphs
@@ -377,17 +377,17 @@ Known bugs (ordered from worst to least worst):
    - :c:`(x ? y : z)` (preferred, evaluates correctly, we inject brackets
      around the subexpessions before sending to Python)
 
- A proper lexing parser based on http://www.dabeaz.com/ply/'s yacc module has
+ A proper lexing parser based on http://www.dabeaz.com/ply/ 's yacc module has
  been started and can be found in the https://github.com/ned14/pcpp/tree/yacc_expression_evaluator
  branch. Time to complete it, is the problem, and any pull requests helping with
  that are welcome.
 
 **We do not pass the Boost.Wave preprocessor test suite**
- A lot of bugs have been fixed since this was reported, however the chances are
+ A lot of bugs have been fixed since this was reported; however, the chances are
  that ``pcpp`` still doesn't pass it. A TODO is to port the Wave test suite to
  Python and find out how bad things are. We suspect that any failures will be
- in highly estoric use cases i.e. known illegal input. If you only use valid
- input then we expect you generally won't have trouble.
+ in highly estoric use cases, i.e. known illegal input. If you only use valid
+ input, then we expect you generally won't have trouble.
 
 Customising your own preprocessor:
 ==================================
@@ -400,7 +400,7 @@ History:
 v1.22 (???):
 ----------------------------
 - Fix bug where outputting to stdout did not combine with anything which
-printed to stdout. Thanks to Fondesa for reporting this.
+  printed to stdout. Thanks to Fondesa for reporting this.
 - Fix extra newlines being inserted after a multiline comment. Thanks to virtuald
 for sending a PR fixing this.
 
@@ -413,7 +413,7 @@ v1.21 (30th September 2019):
   added search paths - files included from those locations will be emitted with a sequence
   of ``../`` to relativise the path emitted. If no path exists between the working
   directory and the path of the file being emitted, an absolute path is emitted instead.
-  
+
   If you wish to disable this new behaviour, or use different behaviour, you can
   customise the new `rewrite_paths` member variable of ``Preprocessor``.
 - Fix bug where ``__LINE__`` was expanding into the line number of its definition instead
