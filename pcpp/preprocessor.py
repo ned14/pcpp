@@ -1578,7 +1578,7 @@ class Preprocessor(PreprocessorHooks):
                     if len(a) == 0 and len(args) == 1:
                         continue
                     if len(a) > 1 or a[0].type != self.t_ID:
-                        self.on_error(a.source,a.lineno,"Invalid macro argument")
+                        self.on_error(a[0].source,a[0].lineno,"Invalid macro argument")
                         break
                 else:
                     mvalue = self.tokenstrip(linetok[1+tokcount:])
