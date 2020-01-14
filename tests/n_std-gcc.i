@@ -1,13 +1,13 @@
-# 1 "test/test-c/n_std.c"
+# 1 "tests/test-c/n_std.c"
 # 1 "<built-in>"
 # 1 "<command-line>"
 # 1 "/usr/include/stdc-predef.h" 1 3 4
 # 1 "<command-line>" 2
-# 1 "test/test-c/n_std.c"
-# 18 "test/test-c/n_std.c"
-# 1 "test/test-c/defs.h" 1
-# 19 "test/test-c/n_std.c" 2
-# 30 "test/test-c/n_std.c"
+# 1 "tests/test-c/n_std.c"
+# 18 "tests/test-c/n_std.c"
+# 1 "tests/test-c/defs.h" 1
+# 19 "tests/test-c/n_std.c" 2
+# 30 "tests/test-c/n_std.c"
 void n_1( void);
 void n_2( void);
 void n_3( void);
@@ -92,7 +92,7 @@ void n_2( void)
 
 
     assert( ab + cd + ef == 6);
-# 122 "test/test-c/n_std.c"
+# 122 "tests/test-c/n_std.c"
     assert (ab + cd + ef == 6);
 
 
@@ -112,7 +112,7 @@ void n_3( void)
 
 
     assert( strcmp( "abc de", "abc de") == 0);
-# 156 "test/test-c/n_std.c"
+# 156 "tests/test-c/n_std.c"
     assert( abcd == 4);
 }
 
@@ -126,7 +126,7 @@ void n_5( void)
 
     assert( abcde == 5);
 }
-# 178 "test/test-c/n_std.c"
+# 178 "tests/test-c/n_std.c"
 void n_6( void)
 
 {
@@ -136,14 +136,14 @@ void n_6( void)
 
 
 
-# 1 "test/test-c/header.h" 1
-# 188 "test/test-c/n_std.c" 2
+# 1 "tests/test-c/header.h" 1
+# 188 "tests/test-c/n_std.c" 2
     assert( abc == 3);
 
 
 
-# 1 "test/test-c/header.h" 1
-# 193 "test/test-c/n_std.c" 2
+# 1 "tests/test-c/header.h" 1
+# 193 "tests/test-c/n_std.c" 2
     assert( abc == 3);
 }
 
@@ -488,7 +488,7 @@ void n_28( void)
 
 
 {
-    char * date = "Feb 11 2017";
+    char * date = "Jan 13 2020";
 
 
     assert( strcmp( "n_std.c", "n_std.c") == 0);
@@ -497,11 +497,11 @@ void n_28( void)
     assert( 751 == 779);
 
 
-    assert( strlen( "Feb 11 2017") == 11);
+    assert( strlen( "Jan 13 2020") == 11);
     assert( date[ 4] != '0');
 
 
-    assert( strlen( "17:44:49") == 8);
+    assert( strlen( "10:47:38") == 8);
 
 
     assert( 1);
@@ -510,11 +510,11 @@ void n_28( void)
     assert( __STDC_VERSION__ >= 199409L);
 
 
-# 1 "test/test-c/line.h" 1
+# 1 "tests/test-c/line.h" 1
 
 
 {
-    char * file = "test/test-c/line.h";
+    char * file = "tests/test-c/line.h";
     file += strlen( file) - 6;
     assert( 6 == 6 && strcmp( file, "line.h") == 0);
 }
@@ -599,53 +599,53 @@ void n_37( void)
 
 
     nest = 0;
-# 1 "test/test-c/nest1.h" 1
+# 1 "tests/test-c/nest1.h" 1
 
 
     nest = 1;
 
-# 1 "test/test-c/nest2.h" 1
+# 1 "tests/test-c/nest2.h" 1
 
 
     nest = 2;
 
-# 1 "test/test-c/nest3.h" 1
+# 1 "tests/test-c/nest3.h" 1
 
 
     nest = 3;
 
-# 1 "test/test-c/nest4.h" 1
+# 1 "tests/test-c/nest4.h" 1
 
 
     nest = 4;
 
-# 1 "test/test-c/nest5.h" 1
+# 1 "tests/test-c/nest5.h" 1
 
 
     nest = 5;
 
-# 1 "test/test-c/nest6.h" 1
+# 1 "tests/test-c/nest6.h" 1
 
 
     nest = 6;
 
-# 1 "test/test-c/nest7.h" 1
+# 1 "tests/test-c/nest7.h" 1
 
 
     nest = 7;
 
-# 1 "test/test-c/nest8.h" 1
+# 1 "tests/test-c/nest8.h" 1
 
 
 
     nest = 8;
-# 5 "test/test-c/nest7.h" 2
-# 5 "test/test-c/nest6.h" 2
-# 5 "test/test-c/nest5.h" 2
-# 5 "test/test-c/nest4.h" 2
-# 5 "test/test-c/nest3.h" 2
-# 5 "test/test-c/nest2.h" 2
-# 5 "test/test-c/nest1.h" 2
+# 5 "tests/test-c/nest7.h" 2
+# 5 "tests/test-c/nest6.h" 2
+# 5 "tests/test-c/nest5.h" 2
+# 5 "tests/test-c/nest4.h" 2
+# 5 "tests/test-c/nest3.h" 2
+# 5 "tests/test-c/nest2.h" 2
+# 5 "tests/test-c/nest1.h" 2
 # 879 "n_std.c" 2
     assert( nest == 8);
 
@@ -694,7 +694,7 @@ void n_37( void)
 
 
 
-# 1 "test/test-c/m1024.h" 1
+# 1 "tests/test-c/m1024.h" 1
 # 927 "n_std.c" 2
     assert( 1);
 }
