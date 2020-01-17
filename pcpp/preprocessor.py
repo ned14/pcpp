@@ -1398,6 +1398,8 @@ class Preprocessor(PreprocessorHooks):
                     elif name == 'pragma' and args[0].value == 'once':
                         if enable:
                             self.include_once[self.source] = None
+                    elif name == 'line':
+                        output_and_expand_line = True  # handled in write()
                     elif enable:
                         # Unknown preprocessor directive
                         output_unexpanded_line = (self.on_directive_unknown(dirtokens[0], args, ifpassthru, precedingtoks) is None)
@@ -1654,6 +1656,11 @@ class Preprocessor(PreprocessorHooks):
         """Calls token() repeatedly, expanding tokens to their text and writing to the file like stream oh"""
         lastlineno = 0
         lastsource = None
+        lastsource_override = {}
+        class LastSourceOverride(object):
+            def __init__(self, offset, source):
+                self.offset = offset
+                self.source = source
         done = False
         blanklines = 0
         while not done:
@@ -1682,14 +1689,6 @@ class Preprocessor(PreprocessorHooks):
                 continue
             # The line in toks is not all whitespace
             emitlinedirective = (blanklines > 6) and self.line_directive is not None
-            if hasattr(toks[0], 'source'):
-                if lastsource is None:
-                    if toks[0].source is not None:
-                        emitlinedirective = True
-                    lastsource = toks[0].source
-                elif lastsource != toks[0].source:
-                    emitlinedirective = True
-                    lastsource = toks[0].source
             # Replace consecutive whitespace in output with a single space except at any indent
             first_ws = None
             for n in xrange(len(toks)-1, -1, -1):
@@ -1717,6 +1716,31 @@ class Preprocessor(PreprocessorHooks):
                         oh.write('\n')
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
+            if hasattr(toks[0], 'source'):
+                thissource = toks[0].source
+                if thissource in lastsource_override:
+                    lastlineno = lastlineno + lastsource_override[thissource].offset
+                if thissource in lastsource_override:
+                    thissource = lastsource_override[thissource].source
+                if lastsource is None:
+                    if thissource is not None:
+                        emitlinedirective = True
+                    lastsource = thissource
+                elif lastsource != thissource:
+                    emitlinedirective = True
+                    lastsource = thissource
+            # line directives are passed through macro expanded
+            if len(toks) > 1 and toks[0].value == '#':
+                if toks[1].value == 'line':
+                    if len(toks) > 3:
+                        lastsource_override[toks[0].source] = LastSourceOverride(int(toks[3].value) - toks[0].lineno - 1, lastsource)
+                        emitlinedirective = True
+                        if len(toks) > 5:
+                            lastsource_override[toks[0].source].source = toks[5].value[1:-1]
+                    else:
+                        del lastsource_override[toks[0].source]
+                        emitlinedirective = True
+                    continue
             # Account for those newlines in a multiline comment
             if emitlinedirective and self.line_directive is not None:
                 oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')

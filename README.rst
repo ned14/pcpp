@@ -403,6 +403,8 @@ v1.22 (???):
   printed to stdout. Thanks to Fondesa for reporting this.
 - Fix extra newlines being inserted after a multiline comment. Thanks to virtuald
 for sending a PR fixing this.
+- The ``t_CPP_DOT`` token was matching all characters, instead of just the dot
+character. Thanks to JasperCraeghs for sending a PR fixing this.
 
 v1.21 (30th September 2019):
 ----------------------------
