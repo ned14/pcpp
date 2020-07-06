@@ -403,6 +403,8 @@ v1.22 (???):
   printed to stdout. Thanks to Fondesa for reporting this.
 - Fix extra newlines being inserted after a multiline comment. Thanks to virtuald
 for sending a PR fixing this.
+- Fix not being able to actually specify an empty line directive. Thanks to kuri65536
+for sending a PR fixing this.
 
 v1.21 (30th September 2019):
 ----------------------------

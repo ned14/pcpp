@@ -67,6 +67,8 @@ class CmdPreprocessor(Preprocessor):
             self.debugout = open("pcpp_debug.log", "wt")
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
         self.line_directive = self.args.line_directive
+        if self.line_directive.lower() in ('nothing', 'none', ''):
+            self.line_directive = None
         self.compress = 2 if self.args.compress else 0
         if self.args.passthru_magic_macros:
             self.undef('__DATE__')

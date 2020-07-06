@@ -21,5 +21,5 @@ class runner(object):
         self.assertEqual(p.return_code, 0)
         self.assertEqual(output, shouldbe)
 
-class multiple_input_files(unittest.TestCase, runner):
+class multiline_comments(unittest.TestCase, runner):
     pass
