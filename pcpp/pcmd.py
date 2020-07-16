@@ -1,5 +1,5 @@
 from __future__ import absolute_import, print_function
-import sys, argparse, traceback, os, copy
+import sys, argparse, traceback, os, copy, io
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective, Action
@@ -50,6 +50,9 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--time', dest = 'time', action = 'store_true', help = 'Print the time it took to #include each file')
         argp.add_argument('--filetimes', dest = 'filetimes', metavar = 'path', type = argparse.FileType('wt'), default=None, nargs = '?', help = 'Write CSV file with time spent inside each included file, inclusive and exclusive')
         argp.add_argument('--compress', dest = 'compress', action = 'store_true', help = 'Make output as small as possible')
+        argp.add_argument('--assume-input-encoding', dest = 'assume_input_encoding', metavar = '<encoding>', default = None, nargs = 1, help = 'The text encoding to assume inputs are in')
+        argp.add_argument('--output-encoding', dest = 'output_encoding', metavar = '<encoding>', default = None, nargs = 1, help = 'The text encoding to use when writing files')
+        argp.add_argument('--write-bom', dest = 'write_bom', action = 'store_true', help = 'Prefix any output with a Unicode BOM')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)
@@ -76,6 +79,24 @@ class CmdPreprocessor(Preprocessor):
             self.expand_linemacro = False
             self.expand_filemacro = False
             self.expand_countermacro = False
+        if self.args.assume_input_encoding is not None:
+            self.args.assume_input_encoding = self.args.assume_input_encoding[0]
+            self.assume_encoding = self.args.assume_input_encoding
+            if len(self.args.inputs) == 1:
+                # Reopen our input files with the appropriate encoding
+                _ = self.on_file_open(False, self.args.inputs[0].name)
+                self.args.inputs[0].close()
+                self.args.inputs[0] = _
+            if self.args.output_encoding is None:
+                self.args.output_encoding = self.args.assume_input_encoding
+        if self.args.output_encoding is not None:
+            self.args.output_encoding = self.args.output_encoding[0]
+            # Reopen our output file with the appropriate encoding
+            _ = io.open(self.args.output.name, 'w', encoding = self.args.output_encoding)
+            self.args.output.close()
+            self.args.output = _
+            if self.args.write_bom:
+                self.args.output.write('\ufeff')
         
         # My own instance variables
         self.bypass_ifpassthru = False

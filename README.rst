@@ -7,7 +7,7 @@ A C99 preprocessor written in pure Python
     :align: middle
     :target: https://travis-ci.org/ned14/pcpp
 
-\(C) 2018-2020 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2019 David Beazley http://www.dabeaz.com/
+\(C) 2018-2020 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
@@ -80,6 +80,10 @@ been told that ``pcpp`` does not pass the Boost.Wave preprocessor test suite, bu
 the chances of that biting most people is low. If it does, pull requests with bug
 fixes and new unit tests for the fix are welcome.
 
+If you are on Python 2, files are parsed as strings, and unicode is not supported.
+On Python 3, input and output files can have your choice of encoding, and you can
+hook file open to inspect the encoding using ``chardet``.
+
 Note that most of this preprocessor was written originally by David Beazley to show
 off his excellent Python Lex-Yacc library PLY (http://www.dabeaz.com/ply/) and is
 hidden in there without being at all obvious given the number of Stack Overflow
@@ -138,6 +142,11 @@ The help from the command line tool ``pcpp``::
       --filetimes [path]    Write CSV file with time spent inside each included
                             file, inclusive and exclusive
       --compress            Make output as small as possible
+      --assume-input-encoding <encoding>
+                            The text encoding to assume inputs are in
+      --output-encoding <encoding>
+                            The text encoding to use when writing files
+      --write-bom           Prefix any output with a Unicode BOM
       --version             show program's version number and exit
 
     Note that so pcpp can stand in for other preprocessor tooling, it ignores any
@@ -406,6 +415,10 @@ for sending a PR fixing this.
 - Fix not being able to actually specify an empty line directive. Thanks to kuri65536
 for sending a PR fixing this.
 - Update ply submodule to latest from trunk.
+- Emit line continuations as tokens, rather than collapsing lines during parsing.
+Thanks to MathieuDuponchelle for the pull request implementing this.
+- Enable parsing and emission of files in arbitrary text encodings. This is supported
+in Python 3 or later only. Thanks to MathieuDuponchelle for the suggestion.
 
 v1.21 (30th September 2019):
 ----------------------------
