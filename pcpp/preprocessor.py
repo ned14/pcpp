@@ -221,6 +221,7 @@ class Macro(object):
         if variadic:
             self.vararg = arglist[-1]
         self.source = None
+        self.lineno = -1
     def __repr__(self):
         return "%s(%s)=%s" % (self.name, self.arglist, self.value)
 
@@ -1523,6 +1524,11 @@ class Preprocessor(PreprocessorHooks):
                 assert p is not None
                 path.append(p)
 
+    def __add_macro(self, name, macro):
+        macro.source = name.source
+        macro.lineno = name.lineno
+        self.macros[name.value] = macro
+
     # ----------------------------------------------------------------------
     # define()
     #
@@ -1545,11 +1551,11 @@ class Preprocessor(PreprocessorHooks):
                 mtype = None
             if not mtype:
                 m = Macro(name.value,[])
-                self.macros[name.value] = m
+                self.__add_macro(name, m)
             elif mtype.type in self.t_WS:
                 # A normal macro
                 m = Macro(name.value,self.tokenstrip(linetok[2:]))
-                self.macros[name.value] = m
+                self.__add_macro(name, m)
             elif mtype.value == '(':
                 # A macro with arguments
                 tokcount, args, positions = self.collect_args(linetok[1:])
@@ -1593,7 +1599,7 @@ class Preprocessor(PreprocessorHooks):
                         i += 1
                     m = Macro(name.value,mvalue,[x[0].value for x in args] if args != [[]] else [],variadic)
                     self.macro_prescan(m)
-                    self.macros[name.value] = m
+                    self.__add_macro(name, m)
             else:
                 self.on_error(name.source,name.lineno,"Bad macro definition")
         #except LookupError:
