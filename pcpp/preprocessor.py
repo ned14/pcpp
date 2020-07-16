@@ -33,7 +33,7 @@ else:
 # -----------------------------------------------------------------------------
 
 tokens = (
-   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT1', 'CPP_COMMENT2',
+   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_LINECONT', 'CPP_COMMENT1', 'CPP_COMMENT2',
    'CPP_POUND','CPP_DPOUND', 'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
    'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EQUAL', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN', 'CPP_LBRACKET', 'CPP_RBRACKET', 'CPP_LCURLY', 'CPP_RCURLY',
@@ -51,6 +51,11 @@ literals = "+-*/%|&~^<>=!?()[]{}.,;:\\\'\""
 def t_CPP_WS(t):
     r'([ \t]+|\n)'
     t.lexer.lineno += t.value.count("\n")
+    return t
+
+def t_CPP_LINECONT(t):
+    r'\\\n'
+    t.lexer.lineno += 1
     return t
 
 t_CPP_POUND = r'\#'
@@ -195,6 +200,8 @@ _trigraph_rep = {
 
 def trigraph(input):
     return _trigraph_pat.sub(lambda g: _trigraph_rep[g.group()[-1]],input)
+
+_linecont_pat = re.compile(r'\\\n')
 
 # ------------------------------------------------------------------
 # Macro object
@@ -488,7 +495,16 @@ class Preprocessor(PreprocessorHooks):
         else:
             self.t_NEWLINE = tok.type
 
-        self.t_WS = (self.t_SPACE, self.t_NEWLINE)
+        # Determine the token type for line continuations
+        self.lexer.input("\\\n")
+        tok = self.lexer.token()
+        if not tok or tok.value != "\\\n":
+            self.t_LINECONT = None
+            print("Couldn't determine token for line continuations")
+        else:
+            self.t_LINECONT = tok.type
+
+        self.t_WS = (self.t_SPACE, self.t_NEWLINE, self.t_LINECONT)
 
         self.lexer.input("##")
         tok = self.lexer.token()
@@ -559,25 +575,17 @@ class Preprocessor(PreprocessorHooks):
     # group_lines()
     #
     # Given an input string, this function splits it into lines.  Trailing whitespace
-    # is removed.   Any line ending with \ is grouped with the next line.  This
-    # function forms the lowest level of the preprocessor---grouping into text into
-    # a line-by-line format.
+    # is removed. This function forms the lowest level of the preprocessor---grouping
+    # text into a line-by-line format.
     # ----------------------------------------------------------------------
 
     def group_lines(self,input,abssource):
         r"""Given an input string, this function splits it into lines.  Trailing whitespace
-        is removed.   Any line ending with \ is grouped with the next line.  This
-        function forms the lowest level of the preprocessor---grouping into text into
-        a line-by-line format.
+        is removed. This function forms the lowest level of the preprocessor---grouping
+        text into a line-by-line format.
         """
         lex = self.lexer.clone()
         lines = [x.rstrip() for x in input.splitlines()]
-        for i in xrange(len(lines)):
-            j = i+1
-            while lines[i].endswith('\\') and (j < len(lines)):
-                lines[i] = lines[i][:-1]+lines[j]
-                lines[j] = ""
-                j += 1
 
         input = "\n".join(lines)
         lex.input(input)
@@ -590,7 +598,7 @@ class Preprocessor(PreprocessorHooks):
                 break
             tok.source = abssource
             current_line.append(tok)
-            if tok.type in self.t_WS and '\n' in tok.value:
+            if tok.type in self.t_WS and tok.value == '\n':
                 yield current_line
                 current_line = []
 
@@ -768,7 +776,11 @@ class Preprocessor(PreprocessorHooks):
                 # Strip all non-space whitespace before stringization
                 tokens = copy.copy(args[argnum])
                 for j in xrange(len(tokens)):
-                    if tokens[j].type in self.t_WS:
+                    if tokens[j].type == self.t_LINECONT:
+                        tokens[j].value = ''
+                    elif tokens[j].type == self.t_STRING:
+                        tokens[j].value = _linecont_pat.sub('', tokens[j].value)
+                    elif tokens[j].type in self.t_WS:
                         tokens[j].value = ' '
                 # Collapse all multiple whitespace too
                 j = 0
@@ -1133,7 +1145,6 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
     def parsegen(self,input,source=None,abssource=None):
         """Parse an input string"""
-
         rewritten_source = source
         if abssource:
             rewritten_source = abssource
@@ -1650,6 +1661,8 @@ class Preprocessor(PreprocessorHooks):
         try:
             while True:
                 tok = next(self.parser)
+                if tok.type == self.t_STRING:
+                    tok.value = _linecont_pat.sub('', tok.value)
                 if tok.type not in self.ignore:
                     return tok
         except StopIteration:
@@ -1672,6 +1685,8 @@ class Preprocessor(PreprocessorHooks):
                 if not tok:
                     done = True
                     break
+                if tok.type == self.t_LINECONT:
+                    continue
                 toks.append(tok)
                 if tok.value[0] == '\n':
                     break
