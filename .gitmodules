@@ -1,5 +1,5 @@
 [submodule "pcpp/ply"]
 	path = pcpp/ply
-	url = https://github.com/dabeaz/ply.git
+	url = https://github.com/ned14/ply.git
 	branch = master
 	ignore = untracked

@@ -405,6 +405,7 @@ v1.22 (???):
 for sending a PR fixing this.
 - Fix not being able to actually specify an empty line directive. Thanks to kuri65536
 for sending a PR fixing this.
+- Update ply submodule to latest from trunk.
 
 v1.21 (30th September 2019):
 ----------------------------
