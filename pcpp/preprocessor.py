@@ -1517,7 +1517,7 @@ class Preprocessor(PreprocessorHooks):
                         print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
                     return
                 try:
-                    ih = open(fulliname,"r")
+                    ih = open(fulliname,"r",encoding='utf8')
                     data = ih.read()
                     ih.close()
                     dname = os.path.dirname(fulliname)
