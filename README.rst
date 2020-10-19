@@ -413,6 +413,9 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
+v1.23 (???):
+--------------------------
+
 v1.22 (19th October 2020):
 --------------------------
 - Fix bug where outputting to stdout did not combine with anything which
