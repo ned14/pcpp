@@ -391,6 +391,13 @@ Known bugs (ordered from worst to least worst):
  branch. Time to complete it, is the problem, and any pull requests helping with
  that are welcome.
 
+**https://github.com/ned14/pcpp/issues/42** `(link) <https://github.com/ned14/pcpp/issues/42>`_
+ There is a token expansion ordering bug leading to incorrect expansion for
+ function macros which token join a parameter with a global macro, and then
+ expand the resulting macro, if and only if the parameter is also a macro.
+ This causes Boost to not be usefully preprocessable by pcpp as it breaks
+ ``BOOST_WORKAROUND``.
+
 **We do not pass the Boost.Wave preprocessor test suite**
  A lot of bugs have been fixed since this was reported; however, the chances are
  that ``pcpp`` still doesn't pass it. A TODO is to port the Wave test suite to
@@ -406,24 +413,24 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
-v1.22 (???):
-----------------------------
+v1.22 (19th October 2020):
+--------------------------
 - Fix bug where outputting to stdout did not combine with anything which
   printed to stdout. Thanks to Fondesa for reporting this.
 - Fix extra newlines being inserted after a multiline comment. Thanks to virtuald
-for sending a PR fixing this.
+  for sending a PR fixing this.
 - Fix not being able to actually specify an empty line directive. Thanks to kuri65536
-for sending a PR fixing this.
+  for sending a PR fixing this.
 - Update ply submodule to latest from trunk.
 - Emit line continuations as tokens, rather than collapsing lines during parsing.
-Thanks to MathieuDuponchelle for the pull request implementing this.
+  Thanks to MathieuDuponchelle for the pull request implementing this.
 - Enable parsing and emission of files in arbitrary text encodings. This is supported
-in Python 3 or later only. Thanks to MathieuDuponchelle for the suggestion.
+  in Python 3 or later only. Thanks to MathieuDuponchelle for the suggestion.
 - Fix bad regex for parsing floats, so now floats are correctly tokenised. Thanks
-to LynnKirby for reporting this.
+  to LynnKirby for reporting this.
 - BREAKING CHANGE: Passthrough for ``#include MACRO`` was not supported. This was not
-intentional, and to fix it required modifying the ``on_include_not_found()``
-customisation point which is a source breaking change. Thanks to schra for reporting this.
+  intentional, and to fix it required modifying the ``on_include_not_found()``
+  customisation point which is a source breaking change. Thanks to schra for reporting this.
 
 v1.21 (30th September 2019):
 ----------------------------
