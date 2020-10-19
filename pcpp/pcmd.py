@@ -180,10 +180,10 @@ class CmdPreprocessor(Preprocessor):
             filetimes.sort(reverse=True)
             for t,s,p in filetimes:
                 print(('%f,%f,%d,"%s"' % (t, s, os.stat(p).st_size, p)), file = self.args.filetimes)
-    def on_include_not_found(self,is_system_include,curdir,includepath):
+    def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
         if self.args.passthru_unfound_includes:
             raise OutputDirective(Action.IgnoreAndPassThrough)
-        return super(CmdPreprocessor, self).on_include_not_found(is_system_include,curdir,includepath)
+        return super(CmdPreprocessor, self).on_include_not_found(is_malformed,is_system_include,curdir,includepath)
 
     def on_unknown_macro_in_defined_expr(self,tok):
         if self.args.undefines:

@@ -289,16 +289,21 @@ class PreprocessorHooks(object):
             ret.seek(0)
         return ret
 
-    def on_include_not_found(self,is_system_include,curdir,includepath):
+    def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
         """Called when a #include wasn't found.
         
         Raise OutputDirective to pass through or remove, else return
         a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
         
-        The default calls self.on_error() with a suitable error message about the
-        include file not found and raises OutputDirective (pass through).
+        The default calls ``self.on_error()`` with a suitable error message about the
+        include file not found if ``is_malformed`` is False, else a suitable error
+        message about a malformed #include, and in both cases raises OutputDirective
+        (pass through).
         """
-        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+        if is_malformed:
+            self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Malformed #include statement: %s" % includepath)
+        else:
+            self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
         raise OutputDirective(Action.IgnoreAndPassThrough)
         
     def on_unknown_macro_in_defined_expr(self,tok):
@@ -1525,7 +1530,8 @@ class Preprocessor(PreprocessorHooks):
                 # Search from each nested include file, as well as formally specified paths
                 path = self.temp_path + self.path
             else:
-                self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
+                p = self.on_include_not_found(True,False,self.temp_path[0] if self.temp_path else '',tokens[0].value)
+                assert p is None
                 return
         if not path:
             path = ['']
@@ -1553,7 +1559,7 @@ class Preprocessor(PreprocessorHooks):
                 except IOError:
                     pass
             else:
-                p = self.on_include_not_found(is_system_include,self.temp_path[0] if self.temp_path else '',filename)
+                p = self.on_include_not_found(False,is_system_include,self.temp_path[0] if self.temp_path else '',filename)
                 assert p is not None
                 path.append(p)
 

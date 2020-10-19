@@ -11,12 +11,12 @@ except:
 
 class runner(object):
     def runTest(self):
-        from pcpp import Preprocessor, OutputDirective
+        from pcpp import Preprocessor, OutputDirective, Action
         import os, sys
 
         class PassThruPreprocessor(Preprocessor):
-            def on_include_not_found(self,is_system_include,curdir,includepath):
-                raise OutputDirective()
+            def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
+                raise OutputDirective(Action.IgnoreAndPassThrough)
 
             def on_unknown_macro_in_defined_expr(self,tok):
                 return None  # Pass through as expanded as possible
@@ -32,7 +32,7 @@ class runner(object):
                 if directive.value == 'error' or directive.value == 'warning':
                     super(PassThruPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru,precedingtoks)
                 # Pass through
-                raise OutputDirective()                
+                raise OutputDirective(Action.IgnoreAndPassThrough)                
 
             def on_comment(self,tok):
                 # Pass through
@@ -311,7 +311,6 @@ comment
 void shouldBeOnLineSeven();
 """
 
-
 class test19(unittest.TestCase, runner):
     input = r"""
 /*
@@ -335,4 +334,12 @@ lines
 */
 
 void shouldBeOnLineEleven();
+"""
+
+class test20(unittest.TestCase, runner):
+    input = r"""
+#include ASIO_CUSTOM_HANDLER_TRACKING
+"""
+    output = r"""
+#include ASIO_CUSTOM_HANDLER_TRACKING
 """

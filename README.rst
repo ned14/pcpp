@@ -421,6 +421,9 @@ Thanks to MathieuDuponchelle for the pull request implementing this.
 in Python 3 or later only. Thanks to MathieuDuponchelle for the suggestion.
 - Fix bad regex for parsing floats, so now floats are correctly tokenised. Thanks
 to LynnKirby for reporting this.
+- BREAKING CHANGE: Passthrough for ``#include MACRO`` was not supported. This was not
+intentional, and to fix it required modifying the ``on_include_not_found()``
+customisation point which is a source breaking change. Thanks to schra for reporting this.
 
 v1.21 (30th September 2019):
 ----------------------------
