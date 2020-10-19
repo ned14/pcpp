@@ -125,7 +125,7 @@ def CPP_INTEGER(t):
 t_CPP_INTEGER = CPP_INTEGER
 
 # Floating literal
-t_CPP_FLOAT = r'((\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
+t_CPP_FLOAT = r'((\d+)(\.\d+)(e(\+|-)?(\d+))?|(\d+)e(\+|-)?(\d+))([lL]|[fF])?'
 
 # String literal
 def t_CPP_STRING(t):

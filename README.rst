@@ -419,6 +419,8 @@ for sending a PR fixing this.
 Thanks to MathieuDuponchelle for the pull request implementing this.
 - Enable parsing and emission of files in arbitrary text encodings. This is supported
 in Python 3 or later only. Thanks to MathieuDuponchelle for the suggestion.
+- Fix bad regex for parsing floats, so now floats are correctly tokenised. Thanks
+to LynnKirby for reporting this.
 
 v1.21 (30th September 2019):
 ----------------------------
