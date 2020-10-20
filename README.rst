@@ -100,8 +100,11 @@ The help from the command line tool ``pcpp``::
     usage: pcpp [-h] [-o [path]] [-D macro[=val]] [-U macro] [-N macro] [-I path]
                 [--passthru-defines] [--passthru-unfound-includes]
                 [--passthru-unknown-exprs] [--passthru-comments]
+                [--passthru-magic-macros] [--no-expand-includes]
                 [--disable-auto-pragma-once] [--line-directive [form]] [--debug]
-                [--time] [--filetimes [path]] [--version]
+                [--time] [--filetimes [path]] [--compress]
+                [--assume-input-encoding <encoding>]
+                [--output-encoding <encoding>] [--write-bom] [--version]
                 [input [input ...]]
 
     A pure universal Python C (pre-)preprocessor implementation very useful for
@@ -109,7 +112,7 @@ The help from the command line tool ``pcpp``::
     other such build or packaging stage malarky.
 
     positional arguments:
-      input                 Files to preprocess
+      input                 Files to preprocess (use '-' for stdin)
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -130,6 +133,7 @@ The help from the command line tool ``pcpp``::
       --passthru-comments   Pass through comments unmodified
       --passthru-magic-macros
                             Pass through double underscore magic macros unmodified
+      --no-expand-includes  Evaluate but do not expand #includes
       --disable-auto-pragma-once
                             Disable the heuristics which auto apply #pragma once
                             to #include files wholly wrapped in an obvious include

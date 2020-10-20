@@ -44,6 +44,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru-unknown-exprs', dest = 'passthru_undefined_exprs', action = 'store_true', help = 'Unknown macros in expressions cause preprocessor logic to be passed through instead of executed by treating unknown macros as 0L')
         argp.add_argument('--passthru-comments', dest = 'passthru_comments', action = 'store_true', help = 'Pass through comments unmodified')
         argp.add_argument('--passthru-magic-macros', dest = 'passthru_magic_macros', action = 'store_true', help = 'Pass through double underscore magic macros unmodified')
+        argp.add_argument('--no-expand-includes', dest = 'no_expand_includes', action = 'store_true', help = 'Evaluate but do not expand #includes')
         argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
         argp.add_argument('--line-directive', dest = 'line_directive', metavar = 'form', default = '#line', nargs = '?', help = "Form of line directive to use, defaults to #line, specify nothing to disable output of line directives")
         argp.add_argument('--debug', dest = 'debug', action = 'store_true', help = 'Generate a pcpp_debug.log file logging execution')
@@ -68,6 +69,7 @@ class CmdPreprocessor(Preprocessor):
         self.define("__PCPP_ALWAYS_TRUE__ 1")
         if self.args.debug:
             self.debugout = open("pcpp_debug.log", "wt")
+        self.expand_includes = not self.args.no_expand_includes
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
         self.line_directive = self.args.line_directive
         if self.line_directive is not None and self.line_directive.lower() in ('nothing', 'none', ''):
@@ -124,6 +126,7 @@ class CmdPreprocessor(Preprocessor):
             if len(self.args.inputs) == 1:
                 self.parse(self.args.inputs[0])
             else:
+                print("Warning: Input for multiple files is currently broken when --no-expand-includes is used", file=sys.stderr)
                 input = ''
                 for i in self.args.inputs:
                     input += '#include "' + i.name + '"\n'

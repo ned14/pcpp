@@ -428,6 +428,7 @@ class Preprocessor(PreprocessorHooks):
         self.include_times = []  # list of FileInclusionTime
         self.return_code = 0
         self.debugout = None
+        self.expand_includes = True
         self.auto_pragma_once_enabled = True
         self.line_directive = '#line'
         self.compress = False
@@ -1290,6 +1291,13 @@ class Preprocessor(PreprocessorHooks):
                             oldfile = self.macros['__FILE__'] if '__FILE__' in self.macros else None
                             for tok in self.include(args):
                                 yield tok
+
+                            if not self.expand_includes:
+                                # print the #include instruction itself since
+                                # don't expand the #include
+                                for tok in x:
+                                    yield tok
+
                             if oldfile is not None:
                                 self.macros['__FILE__'] = oldfile
                             self.source = abssource
@@ -1551,8 +1559,21 @@ class Preprocessor(PreprocessorHooks):
                     dname = os.path.dirname(fulliname)
                     if dname:
                         self.temp_path.insert(0,dname)
+
                     for tok in self.parsegen(data,filename,fulliname):
+                        if self.expand_includes:
+                            yield tok
+
+                    # It is not possible to yield nothing. Thus yield an empty
+                    # token
+                    if not self.expand_includes:
+                        tok = LexToken()
+                        tok.value = ''
+                        tok.type = 'CPP_STRING'
+                        tok.lineno = 1
+                        tok.lexpos = 0
                         yield tok
+
                     if dname:
                         del self.temp_path[0]
                     return
