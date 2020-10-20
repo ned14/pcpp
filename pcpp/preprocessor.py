@@ -1161,7 +1161,7 @@ class Preprocessor(PreprocessorHooks):
             result = int(eval(expr, evalfuncts, evalvars))
         except Exception:
             print("%s:%d" % (tokens[0].source,tokens[0].lineno), "warning: couldn't evaluate expression due to", traceback.format_exc()
-            + "\nConverted expression was", expr, "with evalvars =", repr(evalvars))
+            + "\nConverted expression was", expr, "with evalvars =", repr(evalvars), file=sys.stderr)
             result = 0
         return (result, tokens) if evalvars else (result, None)
 
