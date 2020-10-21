@@ -325,7 +325,8 @@ class PreprocessorHooks(object):
         without execution, or return None to pass through the mostly expanded #if
         expression apart from the unknown item.
         
-        The default returns a token for an integer 0L, as per the C standard.
+        The default returns a token for an integer 0L for non-function-like
+        macros, as per the C standard.
         """
         tok.type = self.t_INTEGER
         tok.value = self.t_INTEGER_TYPE("0L")
@@ -581,6 +582,13 @@ class Preprocessor(PreprocessorHooks):
             tok = self.lexer.token()
             if not tok or tok.value != c:
                 print("Unable to lex '%s' required for preprocessor" % c)
+
+        self.lexer.input("(")
+        tok = self.lexer.token()
+        if not tok or tok.value != "(":
+            print("Couldn't determine token for left parenthesis")
+        else:
+            self.t_LPAREN = tok.type
 
     # ----------------------------------------------------------------------
     # add_path()
@@ -961,7 +969,7 @@ class Preprocessor(PreprocessorHooks):
                                 if len(m.arglist) > 2:
                                     self.on_error(t.source,t.lineno,"Macro %s must have at least %d arguments" % (t.value, len(m.arglist)-1))
                                 else:
-                                    self.on_error(t.source,t.lineno,"Macro %s must have at least %d argument" % (t.value, len(m.arglist)-1))
+                                    self.on_error(t.source,t.lineno,"Macro %s must have at least %d arguments" % (t.value, len(m.arglist)-1))
                                 i = j + tokcount
                             else:
                                 if m.variadic:
@@ -1079,6 +1087,22 @@ class Preprocessor(PreprocessorHooks):
             return (0, None)
         for i,t in enumerate(tokens):
             if t.type == self.t_ID:
+                j = i
+                while True:
+                    has_next_token = len(tokens) - 1 >= j + 1
+                    if has_next_token and tokens[j+1].type in self.t_WS:
+                        j += 1
+                    else:
+                        break
+                has_next_token = len(tokens) - 1 >= j + 1
+                if has_next_token:
+                    next_token = tokens[j+1]
+                    macro_is_function_like = next_token.type == self.t_LPAREN and next_token.value == '('
+                    if macro_is_function_like:
+                        self.on_error(t.source,t.lineno,"function-like macro '%s' is not defined" % t.value)
+                        empty_result = (0, None)
+                        return empty_result
+
                 repl = self.on_unknown_macro_in_expr(copy.copy(t))
                 if repl is None:
                     # Add this identifier to a dictionary of variables
