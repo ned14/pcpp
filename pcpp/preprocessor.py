@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor useful for generating single include files
-# (C) 2017-2019 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -13,7 +13,7 @@ from __future__ import generators, print_function, absolute_import
 
 __all__ = ['Preprocessor', 'PreprocessorHooks', 'OutputDirective', 'Action']
 
-import sys, traceback, time
+import sys, traceback, time, re
 
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
@@ -33,7 +33,7 @@ else:
 # -----------------------------------------------------------------------------
 
 tokens = (
-   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT1', 'CPP_COMMENT2',
+   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_LINECONT', 'CPP_COMMENT1', 'CPP_COMMENT2',
    'CPP_POUND','CPP_DPOUND', 'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
    'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EQUAL', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN', 'CPP_LBRACKET', 'CPP_RBRACKET', 'CPP_LCURLY', 'CPP_RCURLY',
@@ -52,6 +52,14 @@ def t_CPP_WS(t):
     r'([ \t]+|\n)'
     t.lexer.lineno += t.value.count("\n")
     return t
+
+# Line continuation, accept whitespace between the backslash and new line
+def t_CPP_LINECONT(t):
+    r'\\[ \t]*\n'
+    t.value = t.value[1:-1]
+    t.lexer.lineno += 1
+    return t
+_string_literal_linecont_pat = re.compile(r'\\[ \t]*\n')
 
 t_CPP_POUND = r'\#'
 t_CPP_DPOUND = r'\#\#'
@@ -75,7 +83,7 @@ t_CPP_LBRACKET = r'\['
 t_CPP_RBRACKET = r'\]'
 t_CPP_LCURLY = r'{'
 t_CPP_RCURLY = r'}'
-t_CPP_DOT = r'.'
+t_CPP_DOT = r'\.'
 t_CPP_COMMA = r','
 t_CPP_SEMICOLON = r';'
 t_CPP_COLON = r':'
@@ -117,12 +125,13 @@ def CPP_INTEGER(t):
 t_CPP_INTEGER = CPP_INTEGER
 
 # Floating literal
-t_CPP_FLOAT = r'((\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
+t_CPP_FLOAT = r'((\d+)(\.\d+)(e(\+|-)?(\d+))?|(\d+)e(\+|-)?(\d+))([lL]|[fF])?'
 
 # String literal
 def t_CPP_STRING(t):
     r'\"([^\\\n]|(\\(.|\n)))*?\"'
-    t.lexer.lineno += t.value.count("\n")
+    t.value, subs_made = _string_literal_linecont_pat.subn('', t.value)
+    t.lexer.lineno += subs_made + t.value.count("\n")
     return t
 
 # Character constant 'c' or L'c'
@@ -151,7 +160,6 @@ def t_error(t):
 
 
 import codecs
-import re
 import copy
 import time
 import os.path
@@ -222,6 +230,7 @@ class Macro(object):
         if variadic:
             self.vararg = arglist[-1]
         self.source = None
+        self.lineno = None
     def __repr__(self):
         return "%s(%s)=%s" % (self.name, self.arglist, self.value)
 
@@ -257,16 +266,45 @@ class PreprocessorHooks(object):
         print("%s:%d error: %s" % (file,line,msg), file = sys.stderr)
         self.return_code += 1
         
-    def on_include_not_found(self,is_system_include,curdir,includepath):
+    def on_file_open(self,is_system_include,includepath):
+        """Called to open a file for reading.
+        
+        This hook provides the ability to use ``chardet``, or any other mechanism,
+        to inspect a file for its text encoding, and open it appropriately. Be
+        aware that this function is used to probe for possible include file locations,
+        so ``includepath`` may not exist. If it does not, raise the appropriate
+        ``IOError`` exception.
+        
+        The default calls ``io.open(includepath, 'r', encoding = self.assume_encoding)``,
+        examines if it starts with a BOM (if so, it removes it), and returns the file
+        object opened. This raises the appropriate exception if the path was not found.
+        """
+        if sys.version_info.major < 3:
+            assert self.assume_encoding is None
+            ret = open(includepath, 'r')
+        else:
+            ret = open(includepath, 'r', encoding = self.assume_encoding)
+        bom = ret.read(1)
+        #print(repr(bom))
+        if bom != '\ufeff':
+            ret.seek(0)
+        return ret
+
+    def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
         """Called when a #include wasn't found.
         
         Raise OutputDirective to pass through or remove, else return
         a suitable path. Remember that Preprocessor.add_path() lets you add search paths.
         
-        The default calls self.on_error() with a suitable error message about the
-        include file not found and raises OutputDirective (pass through).
+        The default calls ``self.on_error()`` with a suitable error message about the
+        include file not found if ``is_malformed`` is False, else a suitable error
+        message about a malformed #include, and in both cases raises OutputDirective
+        (pass through).
         """
-        self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
+        if is_malformed:
+            self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Malformed #include statement: %s" % includepath)
+        else:
+            self.on_error(self.lastdirective.source,self.lastdirective.lineno, "Include file '%s' not found" % includepath)
         raise OutputDirective(Action.IgnoreAndPassThrough)
         
     def on_unknown_macro_in_defined_expr(self,tok):
@@ -394,6 +432,7 @@ class Preprocessor(PreprocessorHooks):
         self.auto_pragma_once_enabled = True
         self.line_directive = '#line'
         self.compress = False
+        self.assume_encoding = None
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -488,7 +527,16 @@ class Preprocessor(PreprocessorHooks):
         else:
             self.t_NEWLINE = tok.type
 
-        self.t_WS = (self.t_SPACE, self.t_NEWLINE)
+        # Determine the token type for line continuations
+        self.lexer.input("\\     \n")
+        tok = self.lexer.token()
+        if not tok or tok.value != "     ":
+            self.t_LINECONT = None
+            print("Couldn't determine token for line continuations")
+        else:
+            self.t_LINECONT = tok.type
+
+        self.t_WS = (self.t_SPACE, self.t_NEWLINE, self.t_LINECONT)
 
         self.lexer.input("##")
         tok = self.lexer.token()
@@ -559,25 +607,17 @@ class Preprocessor(PreprocessorHooks):
     # group_lines()
     #
     # Given an input string, this function splits it into lines.  Trailing whitespace
-    # is removed.   Any line ending with \ is grouped with the next line.  This
-    # function forms the lowest level of the preprocessor---grouping into text into
-    # a line-by-line format.
+    # is removed. This function forms the lowest level of the preprocessor---grouping
+    # text into a line-by-line format.
     # ----------------------------------------------------------------------
 
     def group_lines(self,input,abssource):
         r"""Given an input string, this function splits it into lines.  Trailing whitespace
-        is removed.   Any line ending with \ is grouped with the next line.  This
-        function forms the lowest level of the preprocessor---grouping into text into
-        a line-by-line format.
+        is removed. This function forms the lowest level of the preprocessor---grouping
+        text into a line-by-line format.
         """
         lex = self.lexer.clone()
         lines = [x.rstrip() for x in input.splitlines()]
-        for i in xrange(len(lines)):
-            j = i+1
-            while lines[i].endswith('\\') and (j < len(lines)):
-                lines[i] = lines[i][:-1]+lines[j]
-                lines[j] = ""
-                j += 1
 
         input = "\n".join(lines)
         lex.input(input)
@@ -590,7 +630,7 @@ class Preprocessor(PreprocessorHooks):
                 break
             tok.source = abssource
             current_line.append(tok)
-            if tok.type in self.t_WS and '\n' in tok.value:
+            if tok.type in self.t_WS and tok.value == '\n':
                 yield current_line
                 current_line = []
 
@@ -768,7 +808,7 @@ class Preprocessor(PreprocessorHooks):
                 # Strip all non-space whitespace before stringization
                 tokens = copy.copy(args[argnum])
                 for j in xrange(len(tokens)):
-                    if tokens[j].type in self.t_WS:
+                    if tokens[j].type in self.t_WS and tokens[j].type != self.t_LINECONT:
                         tokens[j].value = ' '
                 # Collapse all multiple whitespace too
                 j = 0
@@ -1133,7 +1173,6 @@ class Preprocessor(PreprocessorHooks):
     # ----------------------------------------------------------------------
     def parsegen(self,input,source=None,abssource=None):
         """Parse an input string"""
-
         rewritten_source = source
         if abssource:
             rewritten_source = abssource
@@ -1492,7 +1531,8 @@ class Preprocessor(PreprocessorHooks):
                 # Search from each nested include file, as well as formally specified paths
                 path = self.temp_path + self.path
             else:
-                self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include statement")
+                p = self.on_include_not_found(True,False,self.temp_path[0] if self.temp_path else '',tokens[0].value)
+                assert p is None
                 return
         if not path:
             path = ['']
@@ -1506,7 +1546,7 @@ class Preprocessor(PreprocessorHooks):
                         print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
                     return
                 try:
-                    ih = open(fulliname,"r")
+                    ih = self.on_file_open(is_system_include,fulliname)
                     data = ih.read()
                     ih.close()
                     dname = os.path.dirname(fulliname)
@@ -1520,7 +1560,7 @@ class Preprocessor(PreprocessorHooks):
                 except IOError:
                     pass
             else:
-                p = self.on_include_not_found(is_system_include,self.temp_path[0] if self.temp_path else '',filename)
+                p = self.on_include_not_found(False,is_system_include,self.temp_path[0] if self.temp_path else '',filename)
                 assert p is not None
                 path.append(p)
 
@@ -1536,6 +1576,10 @@ class Preprocessor(PreprocessorHooks):
             tokens = self.tokenize(tokens)
         else:
             tokens = [copy.copy(tok) for tok in tokens]
+        def add_macro(self, name, macro):
+            macro.source = name.source
+            macro.lineno = name.lineno
+            self.macros[name.value] = macro
 
         linetok = tokens
         try:
@@ -1546,11 +1590,11 @@ class Preprocessor(PreprocessorHooks):
                 mtype = None
             if not mtype:
                 m = Macro(name.value,[])
-                self.macros[name.value] = m
+                add_macro(self, name, m)
             elif mtype.type in self.t_WS:
                 # A normal macro
                 m = Macro(name.value,self.tokenstrip(linetok[2:]))
-                self.macros[name.value] = m
+                add_macro(self, name, m)
             elif mtype.value == '(':
                 # A macro with arguments
                 tokcount, args, positions = self.collect_args(linetok[1:])
@@ -1579,7 +1623,7 @@ class Preprocessor(PreprocessorHooks):
                     if len(a) == 0 and len(args) == 1:
                         continue
                     if len(a) > 1 or a[0].type != self.t_ID:
-                        self.on_error(a.source,a.lineno,"Invalid macro argument")
+                        self.on_error(a[0].source,a[0].lineno,"Invalid macro argument")
                         break
                 else:
                     mvalue = self.tokenstrip(linetok[1+tokcount:])
@@ -1594,7 +1638,7 @@ class Preprocessor(PreprocessorHooks):
                         i += 1
                     m = Macro(name.value,mvalue,[x[0].value for x in args] if args != [[]] else [],variadic)
                     self.macro_prescan(m)
-                    self.macros[name.value] = m
+                    add_macro(self, name, m)
             else:
                 self.on_error(name.source,name.lineno,"Bad macro definition")
         #except LookupError:
@@ -1668,7 +1712,7 @@ class Preprocessor(PreprocessorHooks):
                     done = True
                     break
                 toks.append(tok)
-                if tok.value[0] == '\n':
+                if tok.value and tok.value[0] == '\n':
                     break
                 if tok.type not in self.t_WS:
                     all_ws = False
@@ -1707,7 +1751,7 @@ class Preprocessor(PreprocessorHooks):
                         first_ws = None
                         if self.compress > 0:
                             # Collapse a token of many whitespace into single
-                            if toks[m].value[0] == ' ':
+                            if toks[m].value and toks[m].value[0] == ' ':
                                 toks[m].value = ' '
             if not self.compress > 1 and not emitlinedirective:
                 newlinesneeded = toks[0].lineno - lastlineno - 1
@@ -1719,10 +1763,11 @@ class Preprocessor(PreprocessorHooks):
                         newlinesneeded -= 1
             lastlineno = toks[0].lineno
             # Account for those newlines in a multiline comment
-            if toks[0].type == self.t_COMMENT1:
-                lastlineno += toks[0].value.count('\n')
             if emitlinedirective and self.line_directive is not None:
                 oh.write(self.line_directive + ' ' + str(lastlineno) + ('' if lastsource is None else (' "' + lastsource + '"' )) + '\n')
+            for tok in toks:
+                if tok.type == self.t_COMMENT1:
+                    lastlineno += tok.value.count('\n')
             blanklines = 0
             #print toks[0].lineno, 
             for tok in toks:

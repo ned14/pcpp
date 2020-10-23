@@ -486,3 +486,21 @@ void void.void foo()
 {
 }
 """
+
+class test24(unittest.TestCase, runner):
+    input = r"""
+const char *foo = "Hello"\
+"Niall"\
+;"""
+    output = r"""
+const char *foo = "Hello""Niall";
+"""
+
+class test25(unittest.TestCase, runner):
+    input = r"""
+const char *foo = "Niall \ 
+says\
+hello"\;"""
+    output = r"""
+const char *foo = "Niall sayshello"\;
+"""

@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [ 'pcpp=pcpp:main' ]
     },
+    options={'bdist_wheel':{'universal':True}},
     license='BSD',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
