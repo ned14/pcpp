@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor expression evaluator
-# (C) 2019 Niall Douglas http://www.nedproductions.biz/
+# (C) 2019-2020 Niall Douglas http://www.nedproductions.biz/
 # Started: Apr 2019
 
-from __future__ import generators, print_function, absolute_import
+from __future__ import generators, print_function, absolute_import, division
 
 import os, sys, copy
 if __name__ == '__main__' and __package__ is None:
@@ -42,6 +42,8 @@ class Value(INTBASETYPE):
     Value(7U)
     >>> Value(5) * 2
     Value(10)
+    >>> Value(5) / 2   # Must return integer
+    Value(2)
     >>> Value(50) % 8
     Value(2)
     >>> -Value(5)
@@ -100,11 +102,12 @@ class Value(INTBASETYPE):
     def __uclamp(cls, value):
         value = INTBASETYPE(value)
         return value & cls.UINT_MAX
-    def __new__(cls, value, unsigned = False):
+    def __new__(cls, value, unsigned = False, exception = None):
         if isinstance(value, Value):
             unsigned = value.unsigned
-        elif isinstance(value, INTBASETYPE) or isinstance(value, int):
-            value = cls.__sclamp(value)
+            exception = value.exception
+        elif isinstance(value, INTBASETYPE) or isinstance(value, int) or isinstance(value, float):
+            value = cls.__uclamp(value) if unsigned else cls.__sclamp(value)
         elif isinstance(value, STRING_TYPES):
             # Strip any terminators
             while not (value[-1] >= '0' and value[-1] <= '9'):
@@ -115,53 +118,118 @@ class Value(INTBASETYPE):
             value = cls.__uclamp(x) if unsigned else cls.__sclamp(x)
             #assert x == value
         else:
+            print('Unknown value type: %s' % repr(type(value)), file = sys.stderr)
             assert False  # Input is an unrecognised type
         inst = super(Value, cls).__new__(cls, value)
         inst.unsigned = unsigned
+        inst.exception = exception
         return inst
+    def value(self):
+        if self.exception is not None:
+            raise self.exception
+        return INTBASETYPE(self)
     def __add__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) + self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__add__(other))
     def __sub__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) - self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__sub__(other))
     def __mul__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) * self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__mul__(other))
     def __div__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) / self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__div__(other))
-    def __mod__(self, other):
+    def __truediv__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) / self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__truediv__(other))
+    def __mod__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) % self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__mod__(other))
     def __neg__(self):
+        if self.exception is not None:
+            return self
         return Value(super(Value, self).__neg__(), self.unsigned)
     def __invert__(self):
+        if self.exception is not None:
+            return self
         return Value(super(Value, self).__invert__(), self.unsigned)
     def __and__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) & self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__and__(other))
     def __or__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) | self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__or__(other))
     def __pos__(self):
+        if self.exception is not None:
+            return self
         return Value(super(Value, self).__pos__())
     def __pow__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) ** self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__pow__(other))
     def __lshift__(self, other):
+        if self.exception is not None:
+            return self
         # Ignore other signedness
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) << self.__uclamp(other), True) if (self.unsigned) else Value(super(Value, self).__lshift__(other))
     def __rshift__(self, other):
+        if self.exception is not None:
+            return self
         # Ignore other signedness
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) >> self.__uclamp(other), True) if (self.unsigned) else Value(super(Value, self).__rshift__(other))
     def __xor__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) ^ self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__xor__(other))
     def __repr__(self):
-        if self.unsigned:
+        if self.exception is not None:
+            return "Exception(%s)" % repr(self.exception)
+        elif self.unsigned:
             return "Value(%dU)" % INTBASETYPE(self)
         else:
             return "Value(%d)" % INTBASETYPE(self)
@@ -172,22 +240,46 @@ class Value(INTBASETYPE):
     def __cmp__(self, other):
         assert False
     def __lt__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) < self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) < self.__sclamp(other), False)
     def __le__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) <= self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) <= self.__sclamp(other), False)
     def __eq__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) == self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) == self.__sclamp(other), False)
     def __ne__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) != self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) != self.__sclamp(other), False)
     def __ge__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) >= self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) >= self.__sclamp(other), False)
     def __gt__(self, other):
+        if self.exception is not None:
+            return self
         other = Value(other)
+        if other.exception is not None:
+            return other
         return Value(self.__uclamp(self) > self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) > self.__sclamp(other), False)
 
         
@@ -264,10 +356,13 @@ def p_expression_unop(p):
     expression : CPP_EXCLAMATION expression
               | CPP_TILDE expression
     """
-    if p[1] == '!':
-        p[0] = Value(0) if (INTBASETYPE(Value(p[2]))!=0) else Value(1)
-    elif p[1] == '~':
-        p[0] = ~Value(p[2])
+    try:
+        if p[1] == '!':
+            p[0] = Value(0) if (Value(p[2]).value()!=0) else Value(1)
+        elif p[1] == '~':
+            p[0] = ~Value(p[2])
+    except Exception as e:
+        p[0] = Value(0, exception = e)
 
 def p_expression_binop(p):
     """
@@ -292,48 +387,59 @@ def p_expression_binop(p):
               | expression CPP_COMMA expression
     """
     # print [repr(p[i]) for i in range(0,4)]
-    if p[2] == '*':
-        p[0] = Value(p[1]) * Value(p[3])
-    elif p[2] == '/':
-        p[0] = Value(p[1]) / Value(p[3])
-    elif p[2] == '%':
-        p[0] = Value(p[1]) % Value(p[3])
-    elif p[2] == '+':
-        p[0] = Value(p[1]) + Value(p[3])
-    elif p[2] == '-':
-        p[0] = Value(p[1]) - Value(p[3])
-    elif p[2] == '<<':
-        p[0] = Value(p[1]) << Value(p[3])
-    elif p[2] == '>>':
-        p[0] = Value(p[1]) >> Value(p[3])
-    elif p[2] == '<':
-        p[0] = Value(p[1]) < Value(p[3])
-    elif p[2] == '<=':
-        p[0] = Value(p[1]) <= Value(p[3])
-    elif p[2] == '>':
-        p[0] = Value(p[1]) > Value(p[3])
-    elif p[2] == '>=':
-        p[0] = Value(p[1]) >= Value(p[3])
-    elif p[2] == '==':
-        p[0] = Value(p[1]) == Value(p[3])
-    elif p[2] == '!=':
-        p[0] = Value(p[1]) != Value(p[3])
-    elif p[2] == '&':
-        p[0] = Value(p[1]) & Value(p[3])
-    elif p[2] == '^':
-        p[0] = Value(p[1]) ^ Value(p[3])
-    elif p[2] == '|':
-        p[0] = Value(p[1]) | Value(p[3])
-    elif p[2] == '&&':
-        p[0] = Value(1) if (INTBASETYPE(Value(p[1]))!=0 and INTBASETYPE(Value(p[3]))!=0) else Value(0)
-    elif p[2] == '||':
-        p[0] = Value(1) if (INTBASETYPE(Value(p[1]))!=0 or INTBASETYPE(Value(p[3]))!=0) else Value(0)
-    elif p[2] == ',':
-        p[0] = Value(p[3])
+    try:
+        if p[2] == '*':
+            p[0] = Value(p[1]) * Value(p[3])
+        elif p[2] == '/':
+            p[0] = Value(p[1]) / Value(p[3])
+        elif p[2] == '%':
+            p[0] = Value(p[1]) % Value(p[3])
+        elif p[2] == '+':
+            p[0] = Value(p[1]) + Value(p[3])
+        elif p[2] == '-':
+            p[0] = Value(p[1]) - Value(p[3])
+        elif p[2] == '<<':
+            p[0] = Value(p[1]) << Value(p[3])
+        elif p[2] == '>>':
+            p[0] = Value(p[1]) >> Value(p[3])
+        elif p[2] == '<':
+            p[0] = Value(p[1]) < Value(p[3])
+        elif p[2] == '<=':
+            p[0] = Value(p[1]) <= Value(p[3])
+        elif p[2] == '>':
+            p[0] = Value(p[1]) > Value(p[3])
+        elif p[2] == '>=':
+            p[0] = Value(p[1]) >= Value(p[3])
+        elif p[2] == '==':
+            p[0] = Value(p[1]) == Value(p[3])
+        elif p[2] == '!=':
+            p[0] = Value(p[1]) != Value(p[3])
+        elif p[2] == '&':
+            p[0] = Value(p[1]) & Value(p[3])
+        elif p[2] == '^':
+            p[0] = Value(p[1]) ^ Value(p[3])
+        elif p[2] == '|':
+            p[0] = Value(p[1]) | Value(p[3])
+        elif p[2] == '&&':
+            p[0] = Value(1) if (Value(p[1]).value()!=0 and Value(p[3]).value()!=0) else Value(0)
+        elif p[2] == '||':
+            p[0] = Value(1) if (Value(p[1]).value()!=0 or Value(p[3]).value()!=0) else Value(0)
+        elif p[2] == ',':
+            p[0] = Value(p[3])
+    except Exception as e:
+        p[0] = Value(0, exception = e)
 
 def p_expression_conditional(p):
     'expression : expression CPP_QUESTION expression CPP_COLON expression'
-    p[0] = Value(p[3]) if (INTBASETYPE(Value(p[1]))!=0) else Value(p[5])
+    try:
+        # Output type must cast up to unsigned if either input is unsigned
+        p[0] = Value(p[3]) if (Value(p[1]).value()!=0) else Value(p[5])
+        try:
+            p[0] = Value(p[0].value(), unsigned = Value(p[3]).unsigned or Value(p[5]).unsigned)
+        except:
+            pass
+    except Exception as e:
+        p[0] = Value(0, exception = e)
 
 
 class Evaluator(object):
@@ -363,11 +469,19 @@ class Evaluator(object):
     Value(1)
     >>> e('(1)?2:3')
     Value(2)
+    >>> e('(1 ? -1 : 0) <= 0')
+    Value(1)
+    >>> e('(1 ? -1 : 0U)')       # Output type of ? must be common between both choices
+    Value(18446744073709551615U)
     >>> e('(1 ? -1 : 0U) <= 0')
+    Value(0U)
+    >>> e('1 && 10 / 0')
+    Exception(ZeroDivisionError('division by zero'))
+    >>> e('0 && 10 / 0')         # && must shortcut
     Value(0)
-    >>> e('0 && 10 / 0')
-    Value(0)
-    >>> e('0 ? 10 / 0 : 0')
+    >>> e('1 ? 10 / 0 : 0')
+    Exception(ZeroDivisionError('division by zero'))
+    >>> e('0 ? 10 / 0 : 0')      # ? must shortcut
     Value(0)
     >>> e('(3 ^ 5) != 6 || (3 | 5) != 7 || (3 & 5) != 1')
     Value(0)
