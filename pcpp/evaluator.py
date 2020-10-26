@@ -8,7 +8,7 @@ from __future__ import generators, print_function, absolute_import, division
 import sys, os, re, codecs, copy
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
-from pcpp.parser import STRING_TYPES, yacc, default_lexer
+from pcpp.parser import STRING_TYPES, yacc, default_lexer, in_production
 
 # The width of signed integer which this evaluator will use
 INTMAXBITS = 64
@@ -656,7 +656,7 @@ class Evaluator(object):
 
     def __init__(self, lexer = None):
         self.lexer = lexer if lexer is not None else default_lexer()
-        self.parser = yacc.yacc()
+        self.parser = yacc.yacc(optimize=in_production,debug=not in_production)
 
     class __lexer(object):
 

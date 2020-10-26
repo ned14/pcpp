@@ -13,6 +13,8 @@ from __future__ import generators, print_function, absolute_import, division
 
 import sys, re, os
 
+in_production = 1  # Set to 0 if editing pcpp implementation!
+
 # Some Python 3 compatibility shims
 if sys.version_info.major < 3:
     STRING_TYPES = (str, unicode)
@@ -193,7 +195,7 @@ def trigraph(input):
     return _trigraph_pat.sub(lambda g: _trigraph_rep[g.group()[-1]],input)
 
 def default_lexer():
-    return lex.lex()
+    return lex.lex(optimize=in_production)
 
 # ------------------------------------------------------------------
 # Macro object
