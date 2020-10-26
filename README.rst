@@ -59,26 +59,21 @@ partial preprocessing algorithms:
 
 Standards (non-)compliance
 --------------------------
-``pcpp`` passes a modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_ unit
-test suite. Modifications done were to clarify ternary operators with extra brackets,
-plus those testing the unusual special quirks in expression evaluation (see detailed
-description below). It also passes the list of "preprocessor torture" expansion fragments
+``pcpp`` passes a very slightly modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_
+unit test suite. The only modifications done were to disable the digraph and trigraphs tests.
+It also passes the list of "preprocessor torture" expansion fragments
 in the C11 standard, correctly expanding some very complex recursive macro expansions
 where expansions cause new macro expansions to be formed. In this, it handily beats
 the MSVC preprocessor and ought to handle most C99 preprocessor metaprogramming.
 If you compare its output side-by-side to that of GCC or clang's preprocessor, results
 are extremely close indeed with blank line collapsing being the only difference.
 
-The most non-conforming part is :c:`#if` expression
-parsing (donations of a proper yacc based parser for executing :c:`#if` expressions based on
-http://www.dabeaz.com/ply/ are welcome). In practice, in most real world code you
-won't notice the departures, and, if you do, the application of extra brackets to
-group subexpressions so Python's :c:`eval()` executes right will fix it.
+As of v1.23 (Oct 2020), a proper yacc based expression evaluator for :c:`#if`
+expressions is used which is standards conforming, and fixes a large number of
+problems found in the previous Python :c:`eval()` based expression evaluator.
 
-A full, detailed list of known non-conformance with the C99 standard is below. We have
-been told that ``pcpp`` does not pass the Boost.Wave preprocessor test suite, but
-the chances of that biting most people is low. If it does, pull requests with bug
-fixes and new unit tests for the fix are welcome.
+A full, detailed list of known non-conformance with the C99 standard is below.
+Pull requests with bug fixes and new unit tests for the fix are welcome.
 
 If you are on Python 2, files are parsed as strings, and unicode is not supported.
 On Python 3, input and output files can have your choice of encoding, and you can
@@ -362,48 +357,12 @@ Not implemented yet (donations of code welcome):
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
-**Expression evaluation is a bit broken**
- Currently :c:`#if` expressions are evaluated by converting them into Python
- expressions and calling :c:`eval()` on them. This works surprisingly well
- most of the time, but because Python is not C, corner cases break.
- These are the known such broken corner cases:
-
- - Unary operator evaluation will break for evil expressions such as :c:`-!+!9`
-   because logical NOT in Python results in a boolean, not an integer, and
-   a unary plus or negative boolean is invalid syntax in Python
- - Similarly expressions which assume that boolean operations output either
-   a zero or a one will fail e.g. :c:`(2 || 3) == 0`
- - Python has no concept of an unsigned integer and C expressions relying
-   on unsigned integer semantics will fail badly e.g. :c:`-1 <= 0U`
-   is supposed to be evaluated as false in the C preprocessor, but it will be
-   evaluated as true under this implementation. To be honest
-   if your preprocessor logic is relying on those sorts of behaviours, you should rewrite it.
- - Without a back tracking parser, the C ternary operator is hard to accurately
-   convert into a Python ternary operation, so you need to help it by using one
-   of these two forms:
-
-   - :c:`(x) ? y : z` (z gets evaluated according to Python not C precedence)
-   - :c:`(x ? y : z)` (preferred, evaluates correctly, we inject brackets
-     around the subexpessions before sending to Python)
-
- A proper lexing parser based on http://www.dabeaz.com/ply/ 's yacc module has
- been started and can be found in the https://github.com/ned14/pcpp/tree/yacc_expression_evaluator
- branch. Time to complete it, is the problem, and any pull requests helping with
- that are welcome.
-
 **https://github.com/ned14/pcpp/issues/42** `(link) <https://github.com/ned14/pcpp/issues/42>`_
  There is a token expansion ordering bug leading to incorrect expansion for
  function macros which token join a parameter with a global macro, and then
  expand the resulting macro, if and only if the parameter is also a macro.
  This causes Boost to not be usefully preprocessable by pcpp as it breaks
  ``BOOST_WORKAROUND``.
-
-**We do not pass the Boost.Wave preprocessor test suite**
- A lot of bugs have been fixed since this was reported; however, the chances are
- that ``pcpp`` still doesn't pass it. A TODO is to port the Wave test suite to
- Python and find out how bad things are. We suspect that any failures will be
- in highly estoric use cases, i.e. known illegal input. If you only use valid
- input, then we expect you generally won't have trouble.
 
 Customising your own preprocessor:
 ==================================
@@ -415,6 +374,13 @@ History:
 ========
 v1.23 (???):
 --------------------------
+- Thanks to a 5km limit covid lockdown in my country, a public holiday where we were
+  supposed to be away meant I was stuck at home instead. I took the full day to finish
+  the https://github.com/ned14/pcpp/tree/yacc_expression_evaluator branch which is a
+  proper C preprocessor expression evaluator based on http://www.dabeaz.com/ply/ 's
+  yacc module. This was a very long outstanding piece of work which had been in
+  progress for many years. It just needed a full day of my time to get it done, and
+  now it is indeed done at long last.
 
 v1.22 (19th October 2020):
 --------------------------
