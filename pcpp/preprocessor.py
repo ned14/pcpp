@@ -9,7 +9,7 @@
 # This edition substantially improves on standards conforming output,
 # getting quite close to what clang or GCC outputs.
 
-from __future__ import generators, print_function, absolute_import
+from __future__ import generators, print_function, absolute_import, division
 
 __all__ = ['Preprocessor', 'PreprocessorHooks', 'OutputDirective', 'Action']
 

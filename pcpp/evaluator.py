@@ -5,7 +5,7 @@
 
 from __future__ import generators, print_function, absolute_import, division
 
-import os, sys, copy
+import os, sys, copy, re, codecs
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, yacc, STRING_TYPES
@@ -18,6 +18,18 @@ if sys.version_info.major < 3:
     INTBASETYPE = long
 else:
     INTBASETYPE = int
+
+# Precompile the regular expression for correctly expanding unicode escape
+# sequences in Python 2 and 3. See https://stackoverflow.com/questions/4020539/process-escape-sequences-in-a-string-in-python
+# for more information.
+_expand_escape_sequences_pat = re.compile(r'''
+    ( \\U........      # 8-digit hex escapes
+    | \\u....          # 4-digit hex escapes
+    | \\x..            # 2-digit hex escapes
+    | \\[0-7]{1,3}     # Octal escapes
+    | \\N\{[^}]+\}     # Unicode characters by name
+    | \\[\\'"abfnrtv]  # Single-character escapes
+)''', re.UNICODE | re.VERBOSE)
 
 class Value(INTBASETYPE):
     """A signed or unsigned integer within a preprocessor expression, bounded
@@ -88,6 +100,24 @@ class Value(INTBASETYPE):
     Traceback (most recent call last):
     ...
     AssertionError
+    >>> Value('0x3f')
+    Value(63)
+    >>> Value('077')
+    Value(63)
+    >>> Value("'N'")
+    Value(78)
+    >>> Value("L'N'")
+    Value(78)
+    >>> Value("'\\n'")
+    Value(10)
+    >>> Value("'\\\\n'")
+    Value(10)
+    >>> Value("'\\\\'")
+    Value(92)
+    >>> Value("'\\'")
+    Traceback (most recent call last):
+    ...
+    SyntaxError: Empty character escape sequence
     """
     INT_MIN = -(1 << (INTMAXBITS - 1))
     INT_MAX = (1 << (INTMAXBITS - 1)) - 1
@@ -109,12 +139,38 @@ class Value(INTBASETYPE):
         elif isinstance(value, INTBASETYPE) or isinstance(value, int) or isinstance(value, float):
             value = cls.__uclamp(value) if unsigned else cls.__sclamp(value)
         elif isinstance(value, STRING_TYPES):
-            # Strip any terminators
-            while not (value[-1] >= '0' and value[-1] <= '9'):
-                if value[-1] == 'u' or value[-1] == 'U':
-                    unsigned = True
-                value = value[:-1]
-            x = INTBASETYPE(value)
+            if (value.startswith("L'") or value[0] == "'") and value[-1] == "'":
+                startidx = 2 if value.startswith("L'") else 1
+                #print("1. ***", value, file = sys.stderr)
+                value = value[startidx:-1]
+                if len(value) == 0:
+                    raise SyntaxError('Empty character escape sequence')
+                #print("2. ***", value, file = sys.stderr)
+                value = _expand_escape_sequences_pat.sub(lambda x: codecs.decode(x.group(0), 'unicode-escape'), value)
+                #print("3. ***", value, file = sys.stderr)
+                x = INTBASETYPE(ord(value))
+                #print("4. ***", x, file = sys.stderr)
+            elif value.startswith('0x') or value.startswith('0X'):
+                # Strip any terminators
+                while not ((value[-1] >= '0' and value[-1] <= '9') or (value[-1] >= 'a' and value[-1] <= 'f') or (value[-1] >= 'A' and value[-1] <= 'F')):
+                    if value[-1] == 'u' or value[-1] == 'U':
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value, base = 16)
+            elif value.startswith('0'):
+                # Strip any terminators
+                while not (value[-1] >= '0' and value[-1] <= '7'):
+                    if value[-1] == 'u' or value[-1] == 'U':
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value, base = 8)
+            else:
+                # Strip any terminators
+                while not (value[-1] >= '0' and value[-1] <= '9'):
+                    if value[-1] == 'u' or value[-1] == 'U':
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value)
             value = cls.__uclamp(x) if unsigned else cls.__sclamp(x)
             #assert x == value
         else:
@@ -300,16 +356,17 @@ class Value(INTBASETYPE):
 
 # The subset of tokens from Preprocessor used in preprocessor expressions
 tokens = (
-   'CPP_ID','CPP_INTEGER', 'CPP_CHAR', 'CPP_WS', 
+   'CPP_INTEGER', 'CPP_CHAR', 
    'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
-   'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EQUAL', 'CPP_EXCLAMATION',
+   'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN',
-   'CPP_COMMA', 'CPP_COLON', 'CPP_BSLASH', 'CPP_SQUOTE', 
+   'CPP_COMMA', 'CPP_COLON',
 
    'CPP_LSHIFT', 'CPP_LESSEQUAL', 'CPP_RSHIFT',
    'CPP_GREATEREQUAL', 'CPP_LOGICALOR', 'CPP_LOGICALAND', 'CPP_EQUALITY',
    'CPP_INEQUALITY'
 )
+# 'CPP_ID', 'CPP_WS', 'CPP_EQUAL',  'CPP_BSLASH', 'CPP_SQUOTE',
 
 precedence = (
     ('left', 'CPP_COMMA'),                                                     # 15
@@ -331,12 +388,16 @@ precedence = (
 
 def p_error(p):
     if p:
-        raise Exception("Syntax error at '%s'" % p)
+        raise SyntaxError("around token '%s' type %s lineno %d column %d" % (p.value, p.type, p.lineno, p.lexpos))
     else:
-        raise Exception("Syntax error at EOF")
+        raise SyntaxError("at EOF")
 
 def p_expression_number(p):
     'expression : CPP_INTEGER'
+    p[0] = Value(p[1])
+
+def p_expression_character(p):
+    'expression : CPP_CHAR'
     p[0] = Value(p[1])
 
 def p_expression_group(t):
@@ -491,6 +552,84 @@ class Evaluator(object):
     Value(0)
     >>> e('-1 << 3U > 0')
     Value(0)
+    >>> e("'N' == 78")
+    Value(1)
+    >>> e('0x3f == 63')
+    Value(1)
+    >>> e("'\\\\n'")
+    Value(10)
+    >>> e("'\\\\\\\\'")
+    Value(92)
+    >>> e("'\\\\n' == 0xA")
+    Value(1)
+    >>> e("'\\\\\\\\' == 0x5c")
+    Value(1)
+    >>> e("L'\\\\0' == 0")
+    Value(1)
+    >>> e('12 == 12')
+    Value(1)
+    >>> e('12L == 12')
+    Value(1)
+    >>> e('-1 >= 0U')
+    Value(1U)
+    >>> e('(1<<2) == 4')
+    Value(1)
+    >>> e('(-!+!9) == -1')
+    Value(1)
+    >>> e('(2 || 3) == 1')
+    Value(1)
+    >>> e('1L * 3 != 3')
+    Value(0)
+    >>> e('(!1L != 0) || (-1L != -1)')
+    Value(0)
+    >>> e('0177777 == 65535')
+    Value(1)
+    >>> e('0Xffff != 65535 || 0XFfFf == 65535')
+    Value(1)
+    >>> e('0L != 0 || 0l != 0')
+    Value(0)
+    >>> e('1U != 1 || 1u == 1')
+    Value(1)
+    >>> e('0 <= -1')
+    Value(0)
+    >>> e('1 << 2 != 4 || 8 >> 1 == 4')
+    Value(1)
+    >>> e('(3 ^ 5) == 6')
+    Value(1)
+    >>> e('(3 | 5) == 7')
+    Value(1)
+    >>> e('(3 & 5) == 1')
+    Value(1)
+    >>> e('(3 ^ 5) != 6 || (3 | 5) != 7 || (3 & 5) != 1')
+    Value(0)
+    >>> e('(0 ? 1 : 2) != 2')
+    Value(0)
+    >>> e('-1 << 3U > 0')
+    Value(0)
+    >>> e('0 && 10 / 0')
+    Value(0)
+    >>> e('not_defined && 10 / not_defined')
+    Traceback (most recent call last):
+    ...
+    SyntaxError: around token 'not_defined' type CPP_ID lineno 3 column 0
+    >>> e('0 && 10 / 0 > 1')
+    Value(0)
+    >>> e('(0) ? 10 / 0 : 0')
+    Value(0)
+    >>> e('0 == 0 || 10 / 0 > 1')
+    Value(1)
+    >>> e('(15 >> 2 >> 1 != 1) || (3 << 2 << 1 != 24)')
+    Value(0)
+    >>> e('(1 | 2) == 3 && 4 != 5 || 0')
+    Value(1)
+    >>> e('1  >  0')
+    Value(1)
+    >>> e("'\123' != 83")
+    Value(0)
+    >>> e("'\x1b' != '\033'")
+    Value(0)
+    >>> e('0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0')
+    Value(1)
     """
 
     def __init__(self, preprocessor):
@@ -511,38 +650,6 @@ class Evaluator(object):
         if isinstance(string,list):
             string = ''.join(string)
         return self.parser.parse(string, lexer = self.lexer, tokenfunc = self.__nexttoken)
-
-
-
-# L'\0' == 0
-# 12 == 12
-# 12L == 12
-# -1 >= 0U
-# (1<<2) == 4
-# (-!+!9) == -1
-# (2 || 3) == 1
-# 1L * 3 != 3
-# (!1L != 0) || (-1L != -1)
-# 0177777 != 65535
-# 0Xffff != 65535 || 0XFfFf != 65535
-# 0L != 0 || 0l != 0
-# 1U != 1 || 1u != 1
-# 0 <= -1
-# 1 << 2 != 4 || 8 >> 1 != 4
-# (3 ^ 5) != 6 || (3 | 5) != 7 || (3 & 5) != 1
-# (0 ? 1 : 2) != 2
-# -1 << 3U > 0
-# 0 && 10 / 0
-# not_defined && 10 / not_defined
-# 0 && 10 / 0 > 1
-# (0) ? 10 / 0 : 0
-# 0 == 0 || 10 / 0 > 1
-# (15 >> 2 >> 1 != 1) || (3 << 2 << 1 != 24)
-# (1 | 2) == 3 && 4 != 5 || 0
-#  1  >  0
-# '\123' != 83
-# '\x1b' != '\033'
-# 0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0
 
 
 if __name__ == "__main__":
