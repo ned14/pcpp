@@ -5,10 +5,10 @@
 
 from __future__ import generators, print_function, absolute_import, division
 
-import os, sys, copy, re, codecs
+import sys, os, re, codecs, copy
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
-from pcpp.preprocessor import Preprocessor, yacc, STRING_TYPES
+from pcpp.parser import STRING_TYPES, yacc, default_lexer
 
 # The width of signed integer which this evaluator will use
 INTMAXBITS = 64
@@ -388,7 +388,7 @@ precedence = (
 
 def p_error(p):
     if p:
-        raise SyntaxError("around token '%s' type %s lineno %d column %d" % (p.value, p.type, p.lineno, p.lexpos))
+        raise SyntaxError("around token '%s' type %s" % (p.value, p.type))
     else:
         raise SyntaxError("at EOF")
 
@@ -502,12 +502,24 @@ def p_expression_conditional(p):
     except Exception as e:
         p[0] = Value(0, exception = e)
 
+#def p_expression_defined1(p):
+#    "expression : CPP_ID CPP_ID"
+#    if p[1] != 'defined':
+#        raise SyntaxError('Unknown identifier %s' % p[1])
+#    p[0] = Value(0)
+
+#def p_expression_defined2(p):
+#    "expression : CPP_ID CPP_LPAREN CPP_ID CPP_RPAREN"
+#    if p[1] != 'defined':
+#        raise SyntaxError('Unknown identifier %s' % p[1])
+#    p[0] = Value(0)
+
+
 
 class Evaluator(object):
     """Evaluator of #if C preprocessor expressions.
     
-    >>> p = Preprocessor()
-    >>> e = Evaluator(p)
+    >>> e = Evaluator()
     >>> e('5')
     Value(5)
     >>> e('5+6')
@@ -536,12 +548,12 @@ class Evaluator(object):
     Value(18446744073709551615U)
     >>> e('(1 ? -1 : 0U) <= 0')
     Value(0U)
-    >>> e('1 && 10 / 0')
-    Exception(ZeroDivisionError('division by zero'))
+    >>> e('1 && 10 / 0')         # doctest: +ELLIPSIS
+    Exception(ZeroDivisionError('division by zero'...
     >>> e('0 && 10 / 0')         # && must shortcut
     Value(0)
-    >>> e('1 ? 10 / 0 : 0')
-    Exception(ZeroDivisionError('division by zero'))
+    >>> e('1 ? 10 / 0 : 0')      # doctest: +ELLIPSIS
+    Exception(ZeroDivisionError('division by zero'...
     >>> e('0 ? 10 / 0 : 0')      # ? must shortcut
     Value(0)
     >>> e('(3 ^ 5) != 6 || (3 | 5) != 7 || (3 & 5) != 1')
@@ -611,7 +623,7 @@ class Evaluator(object):
     >>> e('not_defined && 10 / not_defined')
     Traceback (most recent call last):
     ...
-    SyntaxError: around token 'not_defined' type CPP_ID lineno 3 column 0
+    SyntaxError: around token 'not_defined' type CPP_ID
     >>> e('0 && 10 / 0 > 1')
     Value(0)
     >>> e('(0) ? 10 / 0 : 0')
@@ -631,25 +643,49 @@ class Evaluator(object):
     >>> e('0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0')
     Value(1)
     """
+#    >>> e('defined X')
+#    Value(0)
+#    >>> e('defined(X)')
+#    Value(0)
+#    >>> e('defined((X))')
+#    Traceback (most recent call last):
+#    ...
+#    SyntaxError: around token '(' type CPP_LPAREN
+#    >>> e('defined X && UNKNOWN')  # must shortcut 
+#    Value(0)
 
-    def __init__(self, preprocessor):
-        self.preprocessor = preprocessor
-        self.lexer = copy.copy(self.preprocessor.lexer)
+    def __init__(self, lexer = None):
+        self.lexer = lexer if lexer is not None else default_lexer()
         self.parser = yacc.yacc()
-        
-    def __nexttoken(self):
-        while True:
-            tok = self.lexer.token()
-            if not tok or tok.type != 'CPP_WS':
-                return tok
 
-    def __call__(self, string):
+    class __lexer(object):
+
+        def __init__(self):
+            self.__toks = []
+
+        def input(self, toks):
+            self.__toks = [tok for tok in toks if tok.type != 'CPP_WS' and tok.type != 'CPP_LINECONT']
+            self.__idx = 0
+
+        def token(self):
+            if self.__idx >= len(self.__toks):
+                return None
+            self.__idx = self.__idx + 1
+            return self.__toks[self.__idx - 1]
+            
+    def __call__(self, input):
         """Execute a fully macro expanded set of tokens representing an expression,
         returning the result of the evaluation.
         """
-        if isinstance(string,list):
-            string = ''.join(string)
-        return self.parser.parse(string, lexer = self.lexer, tokenfunc = self.__nexttoken)
+        if not isinstance(input,list):
+            self.lexer.input(input)
+            input = []
+            while True:
+                tok = self.lexer.token()
+                if not tok:
+                    break
+                input.append(tok)
+        return self.parser.parse(input, lexer = self.__lexer())
 
 
 if __name__ == "__main__":

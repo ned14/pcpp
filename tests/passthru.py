@@ -228,7 +228,7 @@ class test10(unittest.TestCase, runner):
 #endif
 """
     output = r"""#if !defined(__cpp_constexpr)
-#if __cplusplus >= 201402
+#if __cplusplus >= 201402L
 #define __cpp_constexpr 201304  // relaxed constexpr
 #else
 #define __cpp_constexpr 190000

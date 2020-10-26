@@ -41,7 +41,7 @@ correct
 """
 
 class eval2(unittest.TestCase, runner):
-    input = r"""#if (1<<2) == 4
+    input = r"""#if 1<<2 == 4
 correct
 #endif"""
     output = r"""

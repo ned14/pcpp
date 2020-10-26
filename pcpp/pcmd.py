@@ -1,4 +1,10 @@
-from __future__ import absolute_import, print_function
+#!/usr/bin/python
+# Python C99 conforming preprocessor command line
+# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
+# Started: March 2017
+
+from __future__ import generators, print_function, absolute_import, division
+
 import sys, argparse, traceback, os, copy, io
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
