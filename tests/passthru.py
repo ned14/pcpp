@@ -21,7 +21,10 @@ class runner(object):
             def on_unknown_macro_in_defined_expr(self,tok):
                 return None  # Pass through as expanded as possible
                 
-            def on_unknown_macro_in_expr(self,tok):
+            def on_unknown_macro_in_expr(self,ident):
+                return None  # Pass through as expanded as possible
+                
+            def on_unknown_macro_function_in_expr(self,ident):
                 return None  # Pass through as expanded as possible
                 
             def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
@@ -342,4 +345,16 @@ class test20(unittest.TestCase, runner):
 """
     output = r"""
 #include ASIO_CUSTOM_HANDLER_TRACKING
+"""
+
+class test21(unittest.TestCase, runner):
+    input = r"""
+#if !FOO(5)
+hi
+#endif
+"""
+    output = r"""
+#if !FOO(5)
+hi
+#endif
 """

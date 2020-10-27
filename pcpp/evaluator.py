@@ -356,7 +356,7 @@ class Value(INTBASETYPE):
 
 # The subset of tokens from Preprocessor used in preprocessor expressions
 tokens = (
-   'CPP_INTEGER', 'CPP_CHAR', 
+   'CPP_ID', 'CPP_INTEGER', 'CPP_CHAR', 
    'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
    'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN',
@@ -366,7 +366,7 @@ tokens = (
    'CPP_GREATEREQUAL', 'CPP_LOGICALOR', 'CPP_LOGICALAND', 'CPP_EQUALITY',
    'CPP_INEQUALITY'
 )
-# 'CPP_ID', 'CPP_WS', 'CPP_EQUAL',  'CPP_BSLASH', 'CPP_SQUOTE',
+# 'CPP_WS', 'CPP_EQUAL',  'CPP_BSLASH', 'CPP_SQUOTE',
 
 precedence = (
     ('left', 'CPP_COMMA'),                                                     # 15
@@ -502,18 +502,19 @@ def p_expression_conditional(p):
     except Exception as e:
         p[0] = Value(0, exception = e)
 
-#def p_expression_defined1(p):
-#    "expression : CPP_ID CPP_ID"
-#    if p[1] != 'defined':
-#        raise SyntaxError('Unknown identifier %s' % p[1])
-#    p[0] = Value(0)
+def p_expression_function_call(p):
+    "expression : CPP_ID CPP_LPAREN expression CPP_RPAREN"
+    try:
+        p.lexer.on_function_call(p)
+    except Exception as e:
+        p[0] = Value(0, exception = e)
 
-#def p_expression_defined2(p):
-#    "expression : CPP_ID CPP_LPAREN CPP_ID CPP_RPAREN"
-#    if p[1] != 'defined':
-#        raise SyntaxError('Unknown identifier %s' % p[1])
-#    p[0] = Value(0)
-
+def p_expression_identifier(p):
+    "expression : CPP_ID"
+    try:
+        p.lexer.on_identifier(p)
+    except Exception as e:
+        p[0] = Value(0, exception = e)
 
 
 class Evaluator(object):
@@ -620,10 +621,8 @@ class Evaluator(object):
     Value(0)
     >>> e('0 && 10 / 0')
     Value(0)
-    >>> e('not_defined && 10 / not_defined')
-    Traceback (most recent call last):
-    ...
-    SyntaxError: around token 'not_defined' type CPP_ID
+    >>> e('not_defined && 10 / not_defined')  # doctest: +ELLIPSIS
+    Exception(SyntaxError('Unknown identifier not_defined'...
     >>> e('0 && 10 / 0 > 1')
     Value(0)
     >>> e('(0) ? 10 / 0 : 0')
@@ -642,17 +641,17 @@ class Evaluator(object):
     Value(0)
     >>> e('0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0')
     Value(1)
+    >>> e('test_function(X)', functions={'test_function':lambda x: 55})
+    Value(55)
+    >>> e('test_identifier', identifiers={'test_identifier':11})
+    Value(11)
+    >>> e('defined(X)', functions={'defined':lambda x: 55})
+    Value(55)
+    >>> e('defined(X)')  # doctest: +ELLIPSIS
+    Exception(SyntaxError('Unknown function defined'...
     """
-#    >>> e('defined X')
-#    Value(0)
-#    >>> e('defined(X)')
-#    Value(0)
-#    >>> e('defined((X))')
-#    Traceback (most recent call last):
-#    ...
-#    SyntaxError: around token '(' type CPP_LPAREN
-#    >>> e('defined X && UNKNOWN')  # must shortcut 
-#    Value(0)
+#    >>> e('defined X', functions={'defined':lambda x: 55})
+#    Value(55)
 
     def __init__(self, lexer = None):
         self.lexer = lexer if lexer is not None else default_lexer()
@@ -660,8 +659,10 @@ class Evaluator(object):
 
     class __lexer(object):
 
-        def __init__(self):
+        def __init__(self, functions, identifiers):
             self.__toks = []
+            self.__functions = functions
+            self.__identifiers = identifiers
 
         def input(self, toks):
             self.__toks = [tok for tok in toks if tok.type != 'CPP_WS' and tok.type != 'CPP_LINECONT']
@@ -672,8 +673,18 @@ class Evaluator(object):
                 return None
             self.__idx = self.__idx + 1
             return self.__toks[self.__idx - 1]
+
+        def on_function_call(self, p):
+            if p[1] not in self.__functions:
+                raise SyntaxError('Unknown function %s' % p[1])
+            p[0] = Value(self.__functions[p[1]](p[3]))
+
+        def on_identifier(self, p):
+            if p[1] not in self.__identifiers:
+                raise SyntaxError('Unknown identifier %s' % p[1])
+            p[0] = Value(self.__identifiers[p[1]])
             
-    def __call__(self, input):
+    def __call__(self, input, functions = {}, identifiers = {}):
         """Execute a fully macro expanded set of tokens representing an expression,
         returning the result of the evaluation.
         """
@@ -685,7 +696,7 @@ class Evaluator(object):
                 if not tok:
                     break
                 input.append(tok)
-        return self.parser.parse(input, lexer = self.__lexer())
+        return self.parser.parse(input, lexer = self.__lexer(functions, identifiers))
 
 
 if __name__ == "__main__":

@@ -379,8 +379,12 @@ v1.23 (???):
   the https://github.com/ned14/pcpp/tree/yacc_expression_evaluator branch which is a
   proper C preprocessor expression evaluator based on http://www.dabeaz.com/ply/ 's
   yacc module. This was a very long outstanding piece of work which had been in
-  progress for many years. It just needed a full day of my time to get it done, and
-  now it is indeed done at long last.
+  progress for nearly two years. It just needed a full day of my time to get it done,
+  and now it is indeed done at long last.
+- BREAKING CHANGE: Thanks to the new expression evaluator, fix a long standing bug
+  where unknown function macros in expressions were parsed as ``0(0)`` which obviously
+  enough does not work. Fixing this changes how the ``on_unknown_macro_in_expr()``
+  hook works, and there is now an added ``on_unknown_macro_function_in_expr()`` hook.
 
 v1.22 (19th October 2020):
 --------------------------

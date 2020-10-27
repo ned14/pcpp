@@ -504,3 +504,18 @@ hello"\;"""
     output = r"""
 const char *foo = "Niall sayshello"\;
 """
+
+class test26(unittest.TestCase, runner):
+    input = r"""
+#if BOO(FOO)
+fail
+#else
+success
+#endif
+"""
+    output = r"""
+
+
+
+success
+"""

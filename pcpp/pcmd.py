@@ -199,13 +199,21 @@ class CmdPreprocessor(Preprocessor):
             return None  # Pass through as expanded as possible
         return super(CmdPreprocessor, self).on_unknown_macro_in_defined_expr(tok)
         
-    def on_unknown_macro_in_expr(self,tok):
+    def on_unknown_macro_in_expr(self,ident):
         if self.args.undefines:
-            if tok.value in self.args.undefines:
-                return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
+            if ident in self.args.undefines:
+                return super(CmdPreprocessor, self).on_unknown_macro_in_expr(ident)
         if self.args.passthru_undefined_exprs:
             return None  # Pass through as expanded as possible
-        return super(CmdPreprocessor, self).on_unknown_macro_in_expr(tok)
+        return super(CmdPreprocessor, self).on_unknown_macro_in_expr(ident)
+        
+    def on_unknown_macro_function_in_expr(self,ident):
+        if self.args.undefines:
+            if ident in self.args.undefines:
+                return super(CmdPreprocessor, self).on_unknown_macro_function_in_expr(ident)
+        if self.args.passthru_undefined_exprs:
+            return None  # Pass through as expanded as possible
+        return super(CmdPreprocessor, self).on_unknown_macro_function_in_expr(ident)
         
     def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
         if ifpassthru:

@@ -668,7 +668,7 @@ class Preprocessor(PreprocessorHooks):
             return (0, None)
         # tokens = tokenize(line)
         # Search for defined macros
-        evalvars = {}
+        partial_expansion = False
         def replace_defined(tokens):
             i = 0
             while i < len(tokens):
@@ -686,8 +686,7 @@ class Preprocessor(PreprocessorHooks):
                             else:
                                 repl = self.on_unknown_macro_in_defined_expr(tokens[j])
                                 if repl is None:
-                                    # Add this identifier to a dictionary of variables
-                                    evalvars[tokens[j].value] = 0
+                                    partial_expansion = True
                                     result = 'defined('+tokens[j].value+')'
                                 else:
                                     result = "1L" if repl else "0L"
@@ -715,30 +714,48 @@ class Preprocessor(PreprocessorHooks):
         tokens = replace_defined(tokens)
         if not tokens:
             return (0, None)
-        for i,t in enumerate(tokens):
-            if t.type == self.t_ID:
-                repl = self.on_unknown_macro_in_expr(copy.copy(t))
+        class IndirectToMacroHook(object):
+            def __init__(self, p):
+                self.__preprocessor = p
+                self.partial_expansion = False
+            def __contains__(self, key):
+                return True
+            def __getitem__(self, key):
+                if key.startswith('defined('):
+                    self.partial_expansion = True
+                    return 0
+                repl = self.__preprocessor.on_unknown_macro_in_expr(key)
+                #print("*** IndirectToMacroHook[", key, "] returns", repl, file = sys.stderr)
                 if repl is None:
-                    # Add this identifier to a dictionary of variables
-                    evalvars[t.value] = 0
-                else:
-                    tokens[i] = t = repl
-        tokens_after_subst = tokens
-        if evalvars:
-            tokens_after_subst = []
-            for tok in tokens:
-                if tok.type == 'CPP_ID' and tok.value in evalvars:
-                    tok = copy.copy(tok)
-                    tok.type = 'CPP_INTEGER'
-                    tok.value = evalvars[tok.value]
-                tokens_after_subst.append(tok)
+                    self.partial_expansion = True
+                    return key
+                return repl
+        evalvars = IndirectToMacroHook(self)
+        class IndirectToMacroFunctionHook(object):
+            def __init__(self, p):
+                self.__preprocessor = p
+                self.partial_expansion = False
+            def __contains__(self, key):
+                return True
+            def __getitem__(self, key):
+                repl = self.__preprocessor.on_unknown_macro_function_in_expr(key)
+                #print("*** IndirectToMacroFunctionHook[", key, "] returns", repl, file = sys.stderr)
+                if repl is None:
+                    self.partial_expansion = True
+                    return key
+                return repl
+        evalfuncts = IndirectToMacroFunctionHook(self)
         try:
-            result = self.evaluator(tokens_after_subst).value()
+            result = self.evaluator(tokens, functions = evalfuncts, identifiers = evalvars).value()
+            partial_expansion = partial_expansion or evalvars.partial_expansion or evalfuncts.partial_expansion
+        except OutputDirective:
+            raise
         except Exception as e:
-            if not evalvars:
+            partial_expansion = partial_expansion or evalvars.partial_expansion or evalfuncts.partial_expansion
+            if not partial_expansion:
                 self.on_error(tokens[0].source,tokens[0].lineno,"Could not evaluate expression due to %s (passed to evaluator: '%s')" % (repr(e), ''.join([tok.value for tok in tokens])))
             result = 0
-        return (result, tokens) if evalvars else (result, None)
+        return (result, tokens) if partial_expansion else (result, None)
 
     # ----------------------------------------------------------------------
     # parsegen()

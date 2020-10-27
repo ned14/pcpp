@@ -311,18 +311,26 @@ class PreprocessorHooks(object):
         """
         return False
 
-    def on_unknown_macro_in_expr(self,tok):
-        """Called when an expression passed to an #if contained something unknown.
+    def on_unknown_macro_in_expr(self,ident):
+        """Called when an expression passed to an #if contained an unknown identifier.
         
-        Return what value it should be, raise OutputDirective to pass through
-        without execution, or return None to pass through the mostly expanded #if
-        expression apart from the unknown item.
+        Return what value the expression evaluator ought to use, or return None to
+        pass through the mostly expanded #if expression.
         
-        The default returns a token for an integer 0L, as per the C standard.
+        The default returns an integer 0, as per the C standard.
         """
-        tok.type = self.t_INTEGER
-        tok.value = self.t_INTEGER_TYPE("0L")
-        return tok
+        return 0
+    
+    def on_unknown_macro_function_in_expr(self,ident):
+        """Called when an expression passed to an #if contained an unknown function.
+        
+        Return a callable which will be invoked by the expression evaluator to
+        evaluate the input to the function, or return None to pass through the
+        mostly expanded #if expression.
+        
+        The default returns a lambda which returns integer 0, as per the C standard.
+        """
+        return lambda x : 0
     
     def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
         """Called when there is one of
