@@ -62,6 +62,7 @@ class Preprocessor(PreprocessorHooks):
         self.path = []           # list of -I formal search paths for includes
         self.temp_path = []      # list of temporary search paths for includes
         self.rewrite_paths = [(re.escape(os.path.abspath('') + os.sep) + '(.*)', '\\1')]
+        self.passthru_includes = None
         self.include_once = {}
         self.include_depth = 0
         self.include_times = []  # list of FileInclusionTime
@@ -880,8 +881,19 @@ class Preprocessor(PreprocessorHooks):
                                 yield tok
                             chunk = []
                             oldfile = self.macros['__FILE__'] if '__FILE__' in self.macros else None
-                            for tok in self.include(args):
-                                yield tok
+                            if args and args[0].value != '<' and args[0].type != self.t_STRING:
+                                args = self.tokenstrip(self.expand_macros(args))
+                            #print('***', ''.join([x.value for x in args]), file = sys.stderr)
+                            if self.passthru_includes is not None and self.passthru_includes.match(''.join([x.value for x in args])):
+                                for tok in precedingtoks:
+                                    yield tok
+                                for tok in dirtokens:
+                                    yield tok
+                                for tok in self.include(args):
+                                    pass
+                            else:
+                                for tok in self.include(args):
+                                    yield tok
                             if oldfile is not None:
                                 self.macros['__FILE__'] = oldfile
                             self.source = abssource

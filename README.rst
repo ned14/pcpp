@@ -57,6 +57,13 @@ partial preprocessing algorithms:
 **passthru-magic-macros**
   Don't expand ``__DATE__``, ``__TIME__``, ``__FILE__``, ``__LINE__`` nor ``__COUNTER__``.
 
+**passthru-includes**
+  Don't expand those ``#include`` whose arguments match the supplied regular expression
+  into the output, however still execute those includes. This lets you generate output
+  with macros from nested includes expanded, however those ``#include`` matching
+  the regular expression are passed through into the output.
+
+
 Standards (non-)compliance
 --------------------------
 ``pcpp`` passes a very slightly modified edition of the `mcpp <http://mcpp.sourceforge.net/>`_
@@ -125,6 +132,9 @@ The help from the command line tool ``pcpp``::
       --passthru-comments   Pass through comments unmodified
       --passthru-magic-macros
                             Pass through double underscore magic macros unmodified
+      --passthru-includes <regex>
+                            Regular expression for which #includes to not expand.
+                            #includes, if found, are always executed
       --disable-auto-pragma-once
                             Disable the heuristics which auto apply #pragma once
                             to #include files wholly wrapped in an obvious include
@@ -372,7 +382,7 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
-v1.23 (???):
+v1.30 (???):
 --------------------------
 - Thanks to a 5km limit covid lockdown in my country, a public holiday where we were
   supposed to be away meant I was stuck at home instead. I took the full day to finish
@@ -385,6 +395,9 @@ v1.23 (???):
   where unknown function macros in expressions were parsed as ``0(0)`` which obviously
   enough does not work. Fixing this changes how the ``on_unknown_macro_in_expr()``
   hook works, and there is now an added ``on_unknown_macro_function_in_expr()`` hook.
+- Add a new passthru option ``--passthru-includes`` which enables selected ``#include``
+  to be passed through, in addition to being executed. Thanks to schra for suggesting
+  this, including a PR.
 
 v1.22 (19th October 2020):
 --------------------------

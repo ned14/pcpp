@@ -5,12 +5,12 @@
 
 from __future__ import generators, print_function, absolute_import, division
 
-import sys, argparse, traceback, os, copy, io
+import sys, argparse, traceback, os, copy, io, re
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective, Action
 
-version='1.23'
+version='1.30'
 
 __all__ = []
 
@@ -50,6 +50,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru-unknown-exprs', dest = 'passthru_undefined_exprs', action = 'store_true', help = 'Unknown macros in expressions cause preprocessor logic to be passed through instead of executed by treating unknown macros as 0L')
         argp.add_argument('--passthru-comments', dest = 'passthru_comments', action = 'store_true', help = 'Pass through comments unmodified')
         argp.add_argument('--passthru-magic-macros', dest = 'passthru_magic_macros', action = 'store_true', help = 'Pass through double underscore magic macros unmodified')
+        argp.add_argument('--passthru-includes', dest = 'passthru_includes', metavar = '<regex>', default = None, nargs = 1, help = "Regular expression for which #includes to not expand. #includes, if found, are always executed")
         argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
         argp.add_argument('--line-directive', dest = 'line_directive', metavar = 'form', default = '#line', nargs = '?', help = "Form of line directive to use, defaults to #line, specify nothing to disable output of line directives")
         argp.add_argument('--debug', dest = 'debug', action = 'store_true', help = 'Generate a pcpp_debug.log file logging execution')
@@ -78,6 +79,8 @@ class CmdPreprocessor(Preprocessor):
         self.line_directive = self.args.line_directive
         if self.line_directive is not None and self.line_directive.lower() in ('nothing', 'none', ''):
             self.line_directive = None
+        if self.args.passthru_includes is not None:
+            self.passthru_includes = re.compile(self.args.passthru_includes[0])
         self.compress = 2 if self.args.compress else 0
         if self.args.passthru_magic_macros:
             self.undef('__DATE__')
