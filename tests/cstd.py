@@ -531,5 +531,5 @@ class test27(unittest.TestCase, runner):
 BOOST_WORKAROUND(BOOST_MSVC,==1916)
 """
     output = r"""#line 8
-((0 + 0 == 0) &&       (1916 != 0) && (1 % (( (1916 ==1916) ) + 1)))
+((0 + 0 == 0) && (1916 != 0) && (1 % (( (1916 ==1916) ) + 1)))
 """

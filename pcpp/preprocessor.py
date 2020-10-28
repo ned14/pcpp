@@ -1333,6 +1333,14 @@ class Preprocessor(PreprocessorHooks):
                     toks = [ tok ]
                 blanklines += toks[0].value.count('\n')
                 continue
+            # Filter out line continuations, collapsing before and after if needs be
+            for n in xrange(len(toks)-1, -1, -1):
+                if toks[n].type in self.t_LINECONT:
+                    if n > 0 and n < len(toks) - 1 and toks[n-1].type in self.t_WS and toks[n+1].type in self.t_WS:
+                        toks[n-1].value = toks[n-1].value[0]
+                        del toks[n:n+2]
+                    else:
+                        del toks[n]
             # The line in toks is not all whitespace
             emitlinedirective = (blanklines > 6) and self.line_directive is not None
             if hasattr(toks[0], 'source'):
@@ -1345,6 +1353,7 @@ class Preprocessor(PreprocessorHooks):
                     lastsource = toks[0].source
             # Replace consecutive whitespace in output with a single space except at any indent
             first_ws = None
+            #print(toks)
             for n in xrange(len(toks)-1, -1, -1):
                 tok = toks[n]
                 if first_ws is None:
