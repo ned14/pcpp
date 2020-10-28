@@ -389,6 +389,7 @@ class Preprocessor(PreprocessorHooks):
         macro.var_comma_patch = []       # Variadic macro comma patch
         i = 0
         #print("BEFORE", macro.value)
+        #print("BEFORE", [x.value for x in macro.value])
         while i < len(macro.value):
             if macro.value[i].type == self.t_ID and macro.value[i].value in macro.arglist:
                 argnum = macro.arglist.index(macro.value[i].value)
@@ -424,6 +425,8 @@ class Preprocessor(PreprocessorHooks):
             i += 1
         macro.patch.sort(key=lambda x: x[2],reverse=True)
         #print("AFTER", macro.value)
+        #print("AFTER", [x.value for x in macro.value])
+        #print(macro.patch)
 
     # ----------------------------------------------------------------------
     # macro_expand_args()
@@ -477,13 +480,15 @@ class Preprocessor(PreprocessorHooks):
         #print("***", macro)
         #print(macro.patch)
         for ptype, argnum, i in macro.patch:
+            #print([x.value for x in rep])
             # Concatenation.   Argument is left unexpanded
             if ptype == 't':
                 rep[i:i+1] = args[argnum]
             # Normal expansion.  Argument is macro expanded first
             elif ptype == 'e':
+                #print('*** Function macro arg', rep[i], 'replace with', args[argnum], 'which expands into', self.expand_macros(copy.copy(args[argnum])))
                 if argnum not in expanded:
-                    expanded[argnum] = self.expand_macros(args[argnum])
+                    expanded[argnum] = self.expand_macros(copy.copy(args[argnum]))
                 rep[i:i+1] = expanded[argnum]
 
         # Get rid of removed comma if necessary
@@ -554,9 +559,9 @@ class Preprocessor(PreprocessorHooks):
             if not hasattr(tok, 'expanded_from'):
                 tok.expanded_from = []
         i = 0
-        #print "*** EXPAND MACROS in", "".join([t.value for t in tokens]), "expanding_from=", expanding_from
-        #print tokens
-        #print [(t.value, t.expanded_from) for t in tokens]
+        #print("*** EXPAND MACROS in", "".join([t.value for t in tokens]), "expanding_from=", expanding_from)
+        #print(tokens)
+        #print([(t.value, t.expanded_from) for t in tokens])
         while i < len(tokens):
             t = tokens[i]
             if self.linemacrodepth == 0:
@@ -570,7 +575,7 @@ class Preprocessor(PreprocessorHooks):
                         # A simple macro
                         rep = [copy.copy(_x) for _x in m.value]
                         ex = self.expand_macros(rep, expanding_from + [t.value])
-                        #print "\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:i+1]
+                        #print("\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:i+1])
                         for e in ex:
                             e.source = t.source
                             e.lineno = t.lineno
@@ -634,7 +639,7 @@ class Preprocessor(PreprocessorHooks):
                                     newtok.type = self.t_SPACE
                                     newtok.value = ' '
                                     ex.append(newtok)
-                                #print("\nExpanding macro", m, "\ninto", ex, "\nreplacing", tokens[i:j+tokcount])
+                                #print("\nExpanding macro", m, "\n\ninto", ex, "\n\nreplacing", tokens[i:j+tokcount])
                                 tokens[i:j+tokcount] = ex
                     self.linemacrodepth = self.linemacrodepth - 1
                     if self.linemacrodepth == 0:

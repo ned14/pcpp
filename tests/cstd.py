@@ -519,3 +519,17 @@ success
 
 success
 """
+
+class test27(unittest.TestCase, runner):
+    input = r"""
+#define BOOST_WORKAROUND(symbol, test)                \
+       ((symbol ## _WORKAROUND_GUARD + 0 == 0) &&     \
+       (symbol != 0) && (1 % (( (symbol test) ) + 1)))
+
+#define BOOST_MSVC 1916
+#define BOOST_MSVC_WORKAROUND_GUARD 0
+BOOST_WORKAROUND(BOOST_MSVC,==1916)
+"""
+    output = r"""#line 8
+((0 + 0 == 0) &&       (1916 != 0) && (1 % (( (1916 ==1916) ) + 1)))
+"""

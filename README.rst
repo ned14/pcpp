@@ -370,12 +370,7 @@ Not implemented yet (donations of code welcome):
 
 Known bugs (ordered from worst to least worst):
 -----------------------------------------------
-**https://github.com/ned14/pcpp/issues/42** `(link) <https://github.com/ned14/pcpp/issues/42>`_
- There is a token expansion ordering bug leading to incorrect expansion for
- function macros which token join a parameter with a global macro, and then
- expand the resulting macro, if and only if the parameter is also a macro.
- This causes Boost to not be usefully preprocessable by pcpp as it breaks
- ``BOOST_WORKAROUND``.
+None presently known.
 
 Customising your own preprocessor:
 ==================================
@@ -401,6 +396,10 @@ v1.30 (???):
 - Add a new passthru option ``--passthru-includes`` which enables selected ``#include``
   to be passed through, in addition to being executed. Thanks to schra for suggesting
   this, including a PR.
+- Fix a token expansion ordering bug whereby if a function macro used the same
+  macro in more than one argument, expansion in one argument evaluation caused overly
+  eager expansion in later argument evaluations. This fix ought to fix pcpp's ability
+  to parse Boost (untested). Thanks to joaquintides for reporting this.
 
 v1.22 (19th October 2020):
 --------------------------
