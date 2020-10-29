@@ -358,3 +358,15 @@ hi
 hi
 #endif
 """
+
+class test22(unittest.TestCase, runner):
+    input = r"""
+#if !__has_include(<variant>)
+hi
+#endif
+"""
+    output = r"""
+#if !__has_include(<variant>)
+hi
+#endif
+"""

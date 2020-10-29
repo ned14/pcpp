@@ -356,7 +356,7 @@ class Value(INTBASETYPE):
 
 # The subset of tokens from Preprocessor used in preprocessor expressions
 tokens = (
-   'CPP_ID', 'CPP_INTEGER', 'CPP_CHAR', 
+   'CPP_ID', 'CPP_INTEGER', 'CPP_CHAR', 'CPP_STRING',
    'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
    'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN',
@@ -399,6 +399,13 @@ def p_expression_number(p):
 def p_expression_character(p):
     'expression : CPP_CHAR'
     p[0] = Value(p[1])
+
+def p_expression_string(p):
+    """
+    expression : CPP_STRING
+              | CPP_LESS expression CPP_GREATER
+    """
+    p[0] = p[1]
 
 def p_expression_group(t):
     'expression : CPP_LPAREN expression CPP_RPAREN'
@@ -649,6 +656,10 @@ class Evaluator(object):
     Value(55)
     >>> e('defined(X)')  # doctest: +ELLIPSIS
     Exception(SyntaxError('Unknown function defined'...
+    >>> e('__has_include("variant")')  # doctest: +ELLIPSIS
+    Exception(SyntaxError('Unknown function __has_include'...
+    >>> e('__has_include(<variant>)')  # doctest: +ELLIPSIS
+    Exception(SyntaxError('Unknown function __has_include'...
     """
 #    >>> e('defined X', functions={'defined':lambda x: 55})
 #    Value(55)
