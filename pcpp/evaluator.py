@@ -674,7 +674,7 @@ class Evaluator(object):
 
     def __init__(self, lexer = None):
         self.lexer = lexer if lexer is not None else default_lexer()
-        self.parser = yacc.yacc(optimize=in_production,debug=not in_production)
+        self.parser = yacc.yacc(optimize=in_production,debug=not in_production,write_tables=not in_production)
 
     class __lexer(object):
 
