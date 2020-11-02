@@ -370,3 +370,11 @@ hi
 hi
 #endif
 """
+
+class test23(unittest.TestCase, runner):
+    input = r"""
+#if 0  // Do NOT enable weakened implicit construction for these types
+hi
+#endif
+"""
+    output = r""""""

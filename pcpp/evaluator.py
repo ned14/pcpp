@@ -660,6 +660,14 @@ class Evaluator(object):
     Exception(SyntaxError('Unknown function __has_include'...
     >>> e('__has_include(<variant>)')  # doctest: +ELLIPSIS
     Exception(SyntaxError('Unknown function __has_include'...
+    >>> e('5  // comment')
+    Value(5)
+    >>> e('5  /* comment */')
+    Value(5)
+    >>> e('5  /* comment // more */')
+    Value(5)
+    >>> e('5  // /* comment */')
+    Value(5)
     """
 #    >>> e('defined X', functions={'defined':lambda x: 55})
 #    Value(55)
@@ -676,7 +684,7 @@ class Evaluator(object):
             self.__identifiers = identifiers
 
         def input(self, toks):
-            self.__toks = [tok for tok in toks if tok.type != 'CPP_WS' and tok.type != 'CPP_LINECONT']
+            self.__toks = [tok for tok in toks if tok.type != 'CPP_WS' and tok.type != 'CPP_LINECONT' and tok.type != 'CPP_COMMENT1' and tok.type != 'CPP_COMMENT2']
             self.__idx = 0
 
         def token(self):
