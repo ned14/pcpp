@@ -376,7 +376,7 @@ Customising your own preprocessor:
 ==================================
 See the API reference docs at https://ned14.github.io/pcpp/
 
-You can find an example of overriding the ``on_*()`` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcpp_cmd.py
+You can find an example of overriding the ``on_*()`` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcmd.py
 
 History:
 ========
