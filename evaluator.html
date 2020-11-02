@@ -1,0 +1,1910 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.5.3" />
+<title>pcpp.evaluator API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.name small{font-weight:normal}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase;cursor:pointer}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title"><code>pcpp.evaluator</code> module</h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">#!/usr/bin/python
+# Python C99 conforming preprocessor expression evaluator
+# (C) 2019-2020 Niall Douglas http://www.nedproductions.biz/
+# Started: Apr 2019
+
+from __future__ import generators, print_function, absolute_import, division
+
+import sys, os, re, codecs, copy
+if __name__ == &#39;__main__&#39; and __package__ is None:
+    sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
+from pcpp.parser import STRING_TYPES, yacc, default_lexer, in_production
+
+# The width of signed integer which this evaluator will use
+INTMAXBITS = 64
+
+# Some Python 3 compatibility shims
+if sys.version_info.major &lt; 3:
+    INTBASETYPE = long
+else:
+    INTBASETYPE = int
+
+# Precompile the regular expression for correctly expanding unicode escape
+# sequences in Python 2 and 3. See https://stackoverflow.com/questions/4020539/process-escape-sequences-in-a-string-in-python
+# for more information.
+_expand_escape_sequences_pat = re.compile(r&#39;&#39;&#39;
+    ( \\U........      # 8-digit hex escapes
+    | \\u....          # 4-digit hex escapes
+    | \\x..            # 2-digit hex escapes
+    | \\[0-7]{1,3}     # Octal escapes
+    | \\N\{[^}]+\}     # Unicode characters by name
+    | \\[\\&#39;&#34;abfnrtv]  # Single-character escapes
+)&#39;&#39;&#39;, re.UNICODE | re.VERBOSE)
+
+class Value(INTBASETYPE):
+    &#34;&#34;&#34;A signed or unsigned integer within a preprocessor expression, bounded
+    to within INT_MIN and INT_MAX, or 0 and UINT_MAX. Signed overflow is handled
+    like a two&#39;s complement CPU, despite being UB, as that&#39;s what GCC and clang do.
+    
+    &gt;&gt;&gt; Value(5)
+    Value(5)
+    &gt;&gt;&gt; Value(&#39;5L&#39;)
+    Value(5)
+    &gt;&gt;&gt; Value(&#39;5U&#39;)
+    Value(5U)
+    &gt;&gt;&gt; Value(&#39;0&#39;)
+    Value(0)
+    &gt;&gt;&gt; Value(&#39;0U&#39;)
+    Value(0U)
+    &gt;&gt;&gt; Value(&#39;-1U&#39;)
+    Value(18446744073709551615U)
+    &gt;&gt;&gt; Value(5) * Value(2)
+    Value(10)
+    &gt;&gt;&gt; Value(5) + Value(&#39;2u&#39;)
+    Value(7U)
+    &gt;&gt;&gt; Value(5) * 2
+    Value(10)
+    &gt;&gt;&gt; Value(5) / 2   # Must return integer
+    Value(2)
+    &gt;&gt;&gt; Value(50) % 8
+    Value(2)
+    &gt;&gt;&gt; -Value(5)
+    Value(-5)
+    &gt;&gt;&gt; +Value(-5)
+    Value(-5)
+    &gt;&gt;&gt; ~Value(5)
+    Value(-6)
+    &gt;&gt;&gt; Value(6) &amp; 2
+    Value(2)
+    &gt;&gt;&gt; Value(4) | 2
+    Value(6)
+    &gt;&gt;&gt; Value(6) ^ 2
+    Value(4)
+    &gt;&gt;&gt; Value(2) &lt;&lt; 2
+    Value(8)
+    &gt;&gt;&gt; Value(8) &gt;&gt; 2
+    Value(2)
+    &gt;&gt;&gt; Value(9223372036854775808)
+    Value(-9223372036854775808)
+    &gt;&gt;&gt; Value(-9223372036854775809)
+    Value(9223372036854775807)
+    &gt;&gt;&gt; Value(18446744073709551615)
+    Value(-1)
+    &gt;&gt;&gt; Value(False)
+    Value(0)
+    &gt;&gt;&gt; Value(True)
+    Value(1)
+    &gt;&gt;&gt; Value(5) == Value(6)
+    Value(0)
+    &gt;&gt;&gt; Value(5) == Value(5)
+    Value(1)
+    &gt;&gt;&gt; not Value(2)
+    Traceback (most recent call last):
+    ...
+    AssertionError
+    &gt;&gt;&gt; Value(4) and Value(2)
+    Traceback (most recent call last):
+    ...
+    AssertionError
+    &gt;&gt;&gt; Value(5) and not Value(6)
+    Traceback (most recent call last):
+    ...
+    AssertionError
+    &gt;&gt;&gt; Value(&#39;0x3f&#39;)
+    Value(63)
+    &gt;&gt;&gt; Value(&#39;077&#39;)
+    Value(63)
+    &gt;&gt;&gt; Value(&#34;&#39;N&#39;&#34;)
+    Value(78)
+    &gt;&gt;&gt; Value(&#34;L&#39;N&#39;&#34;)
+    Value(78)
+    &gt;&gt;&gt; Value(&#34;&#39;\\n&#39;&#34;)
+    Value(10)
+    &gt;&gt;&gt; Value(&#34;&#39;\\\\n&#39;&#34;)
+    Value(10)
+    &gt;&gt;&gt; Value(&#34;&#39;\\\\&#39;&#34;)
+    Value(92)
+    &gt;&gt;&gt; Value(&#34;&#39;\\&#39;&#34;)
+    Traceback (most recent call last):
+    ...
+    SyntaxError: Empty character escape sequence
+    &#34;&#34;&#34;
+    INT_MIN = -(1 &lt;&lt; (INTMAXBITS - 1))
+    INT_MAX = (1 &lt;&lt; (INTMAXBITS - 1)) - 1
+    INT_MASK = (1 &lt;&lt; INTMAXBITS) - 1
+    UINT_MIN = 0
+    UINT_MAX = (1 &lt;&lt; INTMAXBITS) - 1
+    @classmethod
+    def __sclamp(cls, value):
+        value = INTBASETYPE(value)
+        return ((value - cls.INT_MIN) &amp; cls.INT_MASK) + cls.INT_MIN
+    @classmethod
+    def __uclamp(cls, value):
+        value = INTBASETYPE(value)
+        return value &amp; cls.UINT_MAX
+    def __new__(cls, value, unsigned = False, exception = None):
+        if isinstance(value, Value):
+            unsigned = value.unsigned
+            exception = value.exception
+        elif isinstance(value, INTBASETYPE) or isinstance(value, int) or isinstance(value, float):
+            value = cls.__uclamp(value) if unsigned else cls.__sclamp(value)
+        elif isinstance(value, STRING_TYPES):
+            if (value.startswith(&#34;L&#39;&#34;) or value[0] == &#34;&#39;&#34;) and value[-1] == &#34;&#39;&#34;:
+                startidx = 2 if value.startswith(&#34;L&#39;&#34;) else 1
+                #print(&#34;1. ***&#34;, value, file = sys.stderr)
+                value = value[startidx:-1]
+                if len(value) == 0:
+                    raise SyntaxError(&#39;Empty character escape sequence&#39;)
+                #print(&#34;2. ***&#34;, value, file = sys.stderr)
+                value = _expand_escape_sequences_pat.sub(lambda x: codecs.decode(x.group(0), &#39;unicode-escape&#39;), value)
+                #print(&#34;3. ***&#34;, value, file = sys.stderr)
+                x = INTBASETYPE(ord(value))
+                #print(&#34;4. ***&#34;, x, file = sys.stderr)
+            elif value.startswith(&#39;0x&#39;) or value.startswith(&#39;0X&#39;):
+                # Strip any terminators
+                while not ((value[-1] &gt;= &#39;0&#39; and value[-1] &lt;= &#39;9&#39;) or (value[-1] &gt;= &#39;a&#39; and value[-1] &lt;= &#39;f&#39;) or (value[-1] &gt;= &#39;A&#39; and value[-1] &lt;= &#39;F&#39;)):
+                    if value[-1] == &#39;u&#39; or value[-1] == &#39;U&#39;:
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value, base = 16)
+            elif value.startswith(&#39;0&#39;):
+                # Strip any terminators
+                while not (value[-1] &gt;= &#39;0&#39; and value[-1] &lt;= &#39;7&#39;):
+                    if value[-1] == &#39;u&#39; or value[-1] == &#39;U&#39;:
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value, base = 8)
+            else:
+                # Strip any terminators
+                while not (value[-1] &gt;= &#39;0&#39; and value[-1] &lt;= &#39;9&#39;):
+                    if value[-1] == &#39;u&#39; or value[-1] == &#39;U&#39;:
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value)
+            value = cls.__uclamp(x) if unsigned else cls.__sclamp(x)
+            #assert x == value
+        else:
+            print(&#39;Unknown value type: %s&#39; % repr(type(value)), file = sys.stderr)
+            assert False  # Input is an unrecognised type
+        inst = super(Value, cls).__new__(cls, value)
+        inst.unsigned = unsigned
+        inst.exception = exception
+        return inst
+    def value(self):
+        if self.exception is not None:
+            raise self.exception
+        return INTBASETYPE(self)
+    def __add__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) + self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__add__(other))
+    def __sub__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) - self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__sub__(other))
+    def __mul__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) * self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__mul__(other))
+    def __div__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) / self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__div__(other))
+    def __truediv__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) / self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__truediv__(other))
+    def __mod__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) % self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__mod__(other))
+    def __neg__(self):
+        if self.exception is not None:
+            return self
+        return Value(super(Value, self).__neg__(), self.unsigned)
+    def __invert__(self):
+        if self.exception is not None:
+            return self
+        return Value(super(Value, self).__invert__(), self.unsigned)
+    def __and__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &amp; self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__and__(other))
+    def __or__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) | self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__or__(other))
+    def __pos__(self):
+        if self.exception is not None:
+            return self
+        return Value(super(Value, self).__pos__())
+    def __pow__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) ** self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__pow__(other))
+    def __lshift__(self, other):
+        if self.exception is not None:
+            return self
+        # Ignore other signedness
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &lt;&lt; self.__uclamp(other), True) if (self.unsigned) else Value(super(Value, self).__lshift__(other))
+    def __rshift__(self, other):
+        if self.exception is not None:
+            return self
+        # Ignore other signedness
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &gt;&gt; self.__uclamp(other), True) if (self.unsigned) else Value(super(Value, self).__rshift__(other))
+    def __xor__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) ^ self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__xor__(other))
+    def __repr__(self):
+        if self.exception is not None:
+            return &#34;Exception(%s)&#34; % repr(self.exception)
+        elif self.unsigned:
+            return &#34;Value(%dU)&#34; % INTBASETYPE(self)
+        else:
+            return &#34;Value(%d)&#34; % INTBASETYPE(self)
+    def __bool__(self):
+        assert False  # Do not use Python logical operations
+    def __nonzero__(self):
+        assert False  # Do not use Python logical operations
+    def __cmp__(self, other):
+        assert False
+    def __lt__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &lt; self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &lt; self.__sclamp(other), False)
+    def __le__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &lt;= self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &lt;= self.__sclamp(other), False)
+    def __eq__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) == self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) == self.__sclamp(other), False)
+    def __ne__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) != self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) != self.__sclamp(other), False)
+    def __ge__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &gt;= self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &gt;= self.__sclamp(other), False)
+    def __gt__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &gt; self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &gt; self.__sclamp(other), False)
+
+        
+# PLY yacc specification
+# Valid C preprocessor expression items:
+#   - Integer constants
+#   - Character constants
+#   - Addition, subtraction, multiplication, division, bitwise and-or-xor, shifts,
+#     comparisons, logical and-or-not
+#   - defined()
+#
+# The C preprocessor does not support:
+#   - assignment
+#   - increment and decrement
+#   - array indexing, indirection
+#   - casting
+#   - sizeof, alignof
+
+# The subset of tokens from Preprocessor used in preprocessor expressions
+tokens = (
+   &#39;CPP_ID&#39;, &#39;CPP_INTEGER&#39;, &#39;CPP_CHAR&#39;, &#39;CPP_STRING&#39;,
+   &#39;CPP_PLUS&#39;, &#39;CPP_MINUS&#39;, &#39;CPP_STAR&#39;, &#39;CPP_FSLASH&#39;, &#39;CPP_PERCENT&#39;, &#39;CPP_BAR&#39;,
+   &#39;CPP_AMPERSAND&#39;, &#39;CPP_TILDE&#39;, &#39;CPP_HAT&#39;, &#39;CPP_LESS&#39;, &#39;CPP_GREATER&#39;, &#39;CPP_EXCLAMATION&#39;,
+   &#39;CPP_QUESTION&#39;, &#39;CPP_LPAREN&#39;, &#39;CPP_RPAREN&#39;,
+   &#39;CPP_COMMA&#39;, &#39;CPP_COLON&#39;,
+
+   &#39;CPP_LSHIFT&#39;, &#39;CPP_LESSEQUAL&#39;, &#39;CPP_RSHIFT&#39;,
+   &#39;CPP_GREATEREQUAL&#39;, &#39;CPP_LOGICALOR&#39;, &#39;CPP_LOGICALAND&#39;, &#39;CPP_EQUALITY&#39;,
+   &#39;CPP_INEQUALITY&#39;
+)
+# &#39;CPP_WS&#39;, &#39;CPP_EQUAL&#39;,  &#39;CPP_BSLASH&#39;, &#39;CPP_SQUOTE&#39;,
+
+precedence = (
+    (&#39;left&#39;, &#39;CPP_COMMA&#39;),                                                     # 15
+                                                                               # 14 (assignments, unused)
+    (&#39;left&#39;, &#39;CPP_QUESTION&#39;, &#39;CPP_COLON&#39;),                                     # 13
+    (&#39;left&#39;, &#39;CPP_LOGICALOR&#39;),                                                 # 12
+    (&#39;left&#39;, &#39;CPP_LOGICALAND&#39;),                                                # 11
+    (&#39;left&#39;, &#39;CPP_BAR&#39;),                                                       # 10
+    (&#39;left&#39;, &#39;CPP_HAT&#39;),                                                       # 9
+    (&#39;left&#39;, &#39;CPP_AMPERSAND&#39;),                                                 # 8
+    (&#39;left&#39;, &#39;CPP_EQUALITY&#39;, &#39;CPP_INEQUALITY&#39;),                                # 7
+    (&#39;left&#39;, &#39;CPP_LESS&#39;, &#39;CPP_LESSEQUAL&#39;, &#39;CPP_GREATER&#39;, &#39;CPP_GREATEREQUAL&#39;),  # 6
+    (&#39;left&#39;, &#39;CPP_LSHIFT&#39;, &#39;CPP_RSHIFT&#39;),                                      # 5
+    (&#39;left&#39;, &#39;CPP_PLUS&#39;, &#39;CPP_MINUS&#39;),                                         # 4
+    (&#39;left&#39;, &#39;CPP_STAR&#39;, &#39;CPP_FSLASH&#39;, &#39;CPP_PERCENT&#39;),                         # 3
+    (&#39;right&#39;, &#39;UPLUS&#39;, &#39;UMINUS&#39;, &#39;CPP_EXCLAMATION&#39;, &#39;CPP_TILDE&#39;),              # 2
+                                                                               # 1 (unused in the C preprocessor)
+)
+
+def p_error(p):
+    if p:
+        raise SyntaxError(&#34;around token &#39;%s&#39; type %s&#34; % (p.value, p.type))
+    else:
+        raise SyntaxError(&#34;at EOF&#34;)
+
+def p_expression_number(p):
+    &#39;expression : CPP_INTEGER&#39;
+    p[0] = Value(p[1])
+
+def p_expression_character(p):
+    &#39;expression : CPP_CHAR&#39;
+    p[0] = Value(p[1])
+
+def p_expression_string(p):
+    &#34;&#34;&#34;
+    expression : CPP_STRING
+              | CPP_LESS expression CPP_GREATER
+    &#34;&#34;&#34;
+    p[0] = p[1]
+
+def p_expression_group(t):
+    &#39;expression : CPP_LPAREN expression CPP_RPAREN&#39;
+    t[0] = t[2]
+
+def p_expression_uplus(p):
+    &#39;expression : CPP_PLUS expression %prec UPLUS&#39;
+    p[0] = +Value(p[2])
+
+def p_expression_uminus(p):
+    &#39;expression : CPP_MINUS expression %prec UMINUS&#39;
+    p[0] = -Value(p[2])
+
+def p_expression_unop(p):
+    &#34;&#34;&#34;
+    expression : CPP_EXCLAMATION expression
+              | CPP_TILDE expression
+    &#34;&#34;&#34;
+    try:
+        if p[1] == &#39;!&#39;:
+            p[0] = Value(0) if (Value(p[2]).value()!=0) else Value(1)
+        elif p[1] == &#39;~&#39;:
+            p[0] = ~Value(p[2])
+    except Exception as e:
+        p[0] = Value(0, exception = e)
+
+def p_expression_binop(p):
+    &#34;&#34;&#34;
+    expression : expression CPP_STAR expression
+              | expression CPP_FSLASH expression
+              | expression CPP_PERCENT expression
+              | expression CPP_PLUS expression
+              | expression CPP_MINUS expression
+              | expression CPP_LSHIFT expression
+              | expression CPP_RSHIFT expression
+              | expression CPP_LESS expression
+              | expression CPP_LESSEQUAL expression
+              | expression CPP_GREATER expression
+              | expression CPP_GREATEREQUAL expression
+              | expression CPP_EQUALITY expression
+              | expression CPP_INEQUALITY expression
+              | expression CPP_AMPERSAND expression
+              | expression CPP_HAT expression
+              | expression CPP_BAR expression
+              | expression CPP_LOGICALAND expression
+              | expression CPP_LOGICALOR expression
+              | expression CPP_COMMA expression
+    &#34;&#34;&#34;
+    # print [repr(p[i]) for i in range(0,4)]
+    try:
+        if p[2] == &#39;*&#39;:
+            p[0] = Value(p[1]) * Value(p[3])
+        elif p[2] == &#39;/&#39;:
+            p[0] = Value(p[1]) / Value(p[3])
+        elif p[2] == &#39;%&#39;:
+            p[0] = Value(p[1]) % Value(p[3])
+        elif p[2] == &#39;+&#39;:
+            p[0] = Value(p[1]) + Value(p[3])
+        elif p[2] == &#39;-&#39;:
+            p[0] = Value(p[1]) - Value(p[3])
+        elif p[2] == &#39;&lt;&lt;&#39;:
+            p[0] = Value(p[1]) &lt;&lt; Value(p[3])
+        elif p[2] == &#39;&gt;&gt;&#39;:
+            p[0] = Value(p[1]) &gt;&gt; Value(p[3])
+        elif p[2] == &#39;&lt;&#39;:
+            p[0] = Value(p[1]) &lt; Value(p[3])
+        elif p[2] == &#39;&lt;=&#39;:
+            p[0] = Value(p[1]) &lt;= Value(p[3])
+        elif p[2] == &#39;&gt;&#39;:
+            p[0] = Value(p[1]) &gt; Value(p[3])
+        elif p[2] == &#39;&gt;=&#39;:
+            p[0] = Value(p[1]) &gt;= Value(p[3])
+        elif p[2] == &#39;==&#39;:
+            p[0] = Value(p[1]) == Value(p[3])
+        elif p[2] == &#39;!=&#39;:
+            p[0] = Value(p[1]) != Value(p[3])
+        elif p[2] == &#39;&amp;&#39;:
+            p[0] = Value(p[1]) &amp; Value(p[3])
+        elif p[2] == &#39;^&#39;:
+            p[0] = Value(p[1]) ^ Value(p[3])
+        elif p[2] == &#39;|&#39;:
+            p[0] = Value(p[1]) | Value(p[3])
+        elif p[2] == &#39;&amp;&amp;&#39;:
+            p[0] = Value(1) if (Value(p[1]).value()!=0 and Value(p[3]).value()!=0) else Value(0)
+        elif p[2] == &#39;||&#39;:
+            p[0] = Value(1) if (Value(p[1]).value()!=0 or Value(p[3]).value()!=0) else Value(0)
+        elif p[2] == &#39;,&#39;:
+            p[0] = Value(p[3])
+    except Exception as e:
+        p[0] = Value(0, exception = e)
+
+def p_expression_conditional(p):
+    &#39;expression : expression CPP_QUESTION expression CPP_COLON expression&#39;
+    try:
+        # Output type must cast up to unsigned if either input is unsigned
+        p[0] = Value(p[3]) if (Value(p[1]).value()!=0) else Value(p[5])
+        try:
+            p[0] = Value(p[0].value(), unsigned = Value(p[3]).unsigned or Value(p[5]).unsigned)
+        except:
+            pass
+    except Exception as e:
+        p[0] = Value(0, exception = e)
+
+def p_expression_function_call(p):
+    &#34;expression : CPP_ID CPP_LPAREN expression CPP_RPAREN&#34;
+    try:
+        p.lexer.on_function_call(p)
+    except Exception as e:
+        p[0] = Value(0, exception = e)
+
+def p_expression_identifier(p):
+    &#34;expression : CPP_ID&#34;
+    try:
+        p.lexer.on_identifier(p)
+    except Exception as e:
+        p[0] = Value(0, exception = e)
+
+
+class Evaluator(object):
+    &#34;&#34;&#34;Evaluator of #if C preprocessor expressions.
+    
+    &gt;&gt;&gt; e = Evaluator()
+    &gt;&gt;&gt; e(&#39;5&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5+6&#39;)
+    Value(11)
+    &gt;&gt;&gt; e(&#39;5+6*2&#39;)
+    Value(17)
+    &gt;&gt;&gt; e(&#39;5/2+6*2&#39;)
+    Value(14)
+    &gt;&gt;&gt; e(&#39;5 &lt; 6 &lt;= 7&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;5 &lt; 6 &amp;&amp; 8 &gt; 7&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;18446744073709551615 == -1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;-9223372036854775809 == 9223372036854775807&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;-1 &lt; 0U&#39;)
+    Value(0U)
+    &gt;&gt;&gt; e(&#39;(( 0L &amp;&amp; 0) || (!0L &amp;&amp; !0 ))&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(1)?2:3&#39;)
+    Value(2)
+    &gt;&gt;&gt; e(&#39;(1 ? -1 : 0) &lt;= 0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(1 ? -1 : 0U)&#39;)       # Output type of ? must be common between both choices
+    Value(18446744073709551615U)
+    &gt;&gt;&gt; e(&#39;(1 ? -1 : 0U) &lt;= 0&#39;)
+    Value(0U)
+    &gt;&gt;&gt; e(&#39;1 &amp;&amp; 10 / 0&#39;)         # doctest: +ELLIPSIS
+    Exception(ZeroDivisionError(&#39;division by zero&#39;...
+    &gt;&gt;&gt; e(&#39;0 &amp;&amp; 10 / 0&#39;)         # &amp;&amp; must shortcut
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1 ? 10 / 0 : 0&#39;)      # doctest: +ELLIPSIS
+    Exception(ZeroDivisionError(&#39;division by zero&#39;...
+    &gt;&gt;&gt; e(&#39;0 ? 10 / 0 : 0&#39;)      # ? must shortcut
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(3 ^ 5) != 6 || (3 | 5) != 7 || (3 &amp; 5) != 1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1 &lt;&lt; 2 != 4 || 8 &gt;&gt; 1 != 4&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(2 || 3) != 1 || (2 &amp;&amp; 3) != 1 || (0 || 4) != 1 || (0 &amp;&amp; 5) != 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;-1 &lt;&lt; 3U &gt; 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#34;&#39;N&#39; == 78&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0x3f == 63&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\n&#39;&#34;)
+    Value(10)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\\\\\&#39;&#34;)
+    Value(92)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\n&#39; == 0xA&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\\\\\&#39; == 0x5c&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;L&#39;\\\\0&#39; == 0&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;12 == 12&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;12L == 12&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;-1 &gt;= 0U&#39;)
+    Value(1U)
+    &gt;&gt;&gt; e(&#39;(1&lt;&lt;2) == 4&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(-!+!9) == -1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(2 || 3) == 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;1L * 3 != 3&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(!1L != 0) || (-1L != -1)&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0177777 == 65535&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0Xffff != 65535 || 0XFfFf == 65535&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0L != 0 || 0l != 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1U != 1 || 1u == 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0 &lt;= -1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1 &lt;&lt; 2 != 4 || 8 &gt;&gt; 1 == 4&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 ^ 5) == 6&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 | 5) == 7&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 &amp; 5) == 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 ^ 5) != 6 || (3 | 5) != 7 || (3 &amp; 5) != 1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(0 ? 1 : 2) != 2&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;-1 &lt;&lt; 3U &gt; 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0 &amp;&amp; 10 / 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;not_defined &amp;&amp; 10 / not_defined&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown identifier not_defined&#39;...
+    &gt;&gt;&gt; e(&#39;0 &amp;&amp; 10 / 0 &gt; 1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(0) ? 10 / 0 : 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0 == 0 || 10 / 0 &gt; 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(15 &gt;&gt; 2 &gt;&gt; 1 != 1) || (3 &lt;&lt; 2 &lt;&lt; 1 != 24)&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(1 | 2) == 3 &amp;&amp; 4 != 5 || 0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;1  &gt;  0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;&#39;\123&#39; != 83&#34;)
+    Value(0)
+    &gt;&gt;&gt; e(&#34;&#39;\x1b&#39; != &#39;\033&#39;&#34;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;test_function(X)&#39;, functions={&#39;test_function&#39;:lambda x: 55})
+    Value(55)
+    &gt;&gt;&gt; e(&#39;test_identifier&#39;, identifiers={&#39;test_identifier&#39;:11})
+    Value(11)
+    &gt;&gt;&gt; e(&#39;defined(X)&#39;, functions={&#39;defined&#39;:lambda x: 55})
+    Value(55)
+    &gt;&gt;&gt; e(&#39;defined(X)&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown function defined&#39;...
+    &gt;&gt;&gt; e(&#39;__has_include(&#34;variant&#34;)&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown function __has_include&#39;...
+    &gt;&gt;&gt; e(&#39;__has_include(&lt;variant&gt;)&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown function __has_include&#39;...
+    &gt;&gt;&gt; e(&#39;5  // comment&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5  /* comment */&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5  /* comment // more */&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5  // /* comment */&#39;)
+    Value(5)
+    &#34;&#34;&#34;
+#    &gt;&gt;&gt; e(&#39;defined X&#39;, functions={&#39;defined&#39;:lambda x: 55})
+#    Value(55)
+
+    def __init__(self, lexer = None):
+        self.lexer = lexer if lexer is not None else default_lexer()
+        self.parser = yacc.yacc(optimize=in_production,debug=not in_production,write_tables=not in_production)
+
+    class __lexer(object):
+
+        def __init__(self, functions, identifiers):
+            self.__toks = []
+            self.__functions = functions
+            self.__identifiers = identifiers
+
+        def input(self, toks):
+            self.__toks = [tok for tok in toks if tok.type != &#39;CPP_WS&#39; and tok.type != &#39;CPP_LINECONT&#39; and tok.type != &#39;CPP_COMMENT1&#39; and tok.type != &#39;CPP_COMMENT2&#39;]
+            self.__idx = 0
+
+        def token(self):
+            if self.__idx &gt;= len(self.__toks):
+                return None
+            self.__idx = self.__idx + 1
+            return self.__toks[self.__idx - 1]
+
+        def on_function_call(self, p):
+            if p[1] not in self.__functions:
+                raise SyntaxError(&#39;Unknown function %s&#39; % p[1])
+            p[0] = Value(self.__functions[p[1]](p[3]))
+
+        def on_identifier(self, p):
+            if p[1] not in self.__identifiers:
+                raise SyntaxError(&#39;Unknown identifier %s&#39; % p[1])
+            p[0] = Value(self.__identifiers[p[1]])
+            
+    def __call__(self, input, functions = {}, identifiers = {}):
+        &#34;&#34;&#34;Execute a fully macro expanded set of tokens representing an expression,
+        returning the result of the evaluation.
+        &#34;&#34;&#34;
+        if not isinstance(input,list):
+            self.lexer.input(input)
+            input = []
+            while True:
+                tok = self.lexer.token()
+                if not tok:
+                    break
+                input.append(tok)
+        return self.parser.parse(input, lexer = self.__lexer(functions, identifiers))
+
+
+if __name__ == &#34;__main__&#34;:
+    import doctest
+    doctest.testmod()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pcpp.evaluator.p_error"><code class="name flex">
+<span>def <span class="ident">p_error</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_error(p):
+    if p:
+        raise SyntaxError(&#34;around token &#39;%s&#39; type %s&#34; % (p.value, p.type))
+    else:
+        raise SyntaxError(&#34;at EOF&#34;)</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_binop"><code class="name flex">
+<span>def <span class="ident">p_expression_binop</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>expression</code> <code>CPP_STAR</code> <code>expression</code></dt>
+<dd>| expression CPP_FSLASH expression
+| expression CPP_PERCENT expression
+| expression CPP_PLUS expression
+| expression CPP_MINUS expression
+| expression CPP_LSHIFT expression
+| expression CPP_RSHIFT expression
+| expression CPP_LESS expression
+| expression CPP_LESSEQUAL expression
+| expression CPP_GREATER expression
+| expression CPP_GREATEREQUAL expression
+| expression CPP_EQUALITY expression
+| expression CPP_INEQUALITY expression
+| expression CPP_AMPERSAND expression
+| expression CPP_HAT expression
+| expression CPP_BAR expression
+| expression CPP_LOGICALAND expression
+| expression CPP_LOGICALOR expression
+| expression CPP_COMMA expression</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_binop(p):
+    &#34;&#34;&#34;
+    expression : expression CPP_STAR expression
+              | expression CPP_FSLASH expression
+              | expression CPP_PERCENT expression
+              | expression CPP_PLUS expression
+              | expression CPP_MINUS expression
+              | expression CPP_LSHIFT expression
+              | expression CPP_RSHIFT expression
+              | expression CPP_LESS expression
+              | expression CPP_LESSEQUAL expression
+              | expression CPP_GREATER expression
+              | expression CPP_GREATEREQUAL expression
+              | expression CPP_EQUALITY expression
+              | expression CPP_INEQUALITY expression
+              | expression CPP_AMPERSAND expression
+              | expression CPP_HAT expression
+              | expression CPP_BAR expression
+              | expression CPP_LOGICALAND expression
+              | expression CPP_LOGICALOR expression
+              | expression CPP_COMMA expression
+    &#34;&#34;&#34;
+    # print [repr(p[i]) for i in range(0,4)]
+    try:
+        if p[2] == &#39;*&#39;:
+            p[0] = Value(p[1]) * Value(p[3])
+        elif p[2] == &#39;/&#39;:
+            p[0] = Value(p[1]) / Value(p[3])
+        elif p[2] == &#39;%&#39;:
+            p[0] = Value(p[1]) % Value(p[3])
+        elif p[2] == &#39;+&#39;:
+            p[0] = Value(p[1]) + Value(p[3])
+        elif p[2] == &#39;-&#39;:
+            p[0] = Value(p[1]) - Value(p[3])
+        elif p[2] == &#39;&lt;&lt;&#39;:
+            p[0] = Value(p[1]) &lt;&lt; Value(p[3])
+        elif p[2] == &#39;&gt;&gt;&#39;:
+            p[0] = Value(p[1]) &gt;&gt; Value(p[3])
+        elif p[2] == &#39;&lt;&#39;:
+            p[0] = Value(p[1]) &lt; Value(p[3])
+        elif p[2] == &#39;&lt;=&#39;:
+            p[0] = Value(p[1]) &lt;= Value(p[3])
+        elif p[2] == &#39;&gt;&#39;:
+            p[0] = Value(p[1]) &gt; Value(p[3])
+        elif p[2] == &#39;&gt;=&#39;:
+            p[0] = Value(p[1]) &gt;= Value(p[3])
+        elif p[2] == &#39;==&#39;:
+            p[0] = Value(p[1]) == Value(p[3])
+        elif p[2] == &#39;!=&#39;:
+            p[0] = Value(p[1]) != Value(p[3])
+        elif p[2] == &#39;&amp;&#39;:
+            p[0] = Value(p[1]) &amp; Value(p[3])
+        elif p[2] == &#39;^&#39;:
+            p[0] = Value(p[1]) ^ Value(p[3])
+        elif p[2] == &#39;|&#39;:
+            p[0] = Value(p[1]) | Value(p[3])
+        elif p[2] == &#39;&amp;&amp;&#39;:
+            p[0] = Value(1) if (Value(p[1]).value()!=0 and Value(p[3]).value()!=0) else Value(0)
+        elif p[2] == &#39;||&#39;:
+            p[0] = Value(1) if (Value(p[1]).value()!=0 or Value(p[3]).value()!=0) else Value(0)
+        elif p[2] == &#39;,&#39;:
+            p[0] = Value(p[3])
+    except Exception as e:
+        p[0] = Value(0, exception = e)</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_character"><code class="name flex">
+<span>def <span class="ident">p_expression_character</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_CHAR</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_character(p):
+    &#39;expression : CPP_CHAR&#39;
+    p[0] = Value(p[1])</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_conditional"><code class="name flex">
+<span>def <span class="ident">p_expression_conditional</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>expression</code> <code>CPP_QUESTION</code> <code>expression</code> <code>CPP_COLON</code> <code>expression</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_conditional(p):
+    &#39;expression : expression CPP_QUESTION expression CPP_COLON expression&#39;
+    try:
+        # Output type must cast up to unsigned if either input is unsigned
+        p[0] = Value(p[3]) if (Value(p[1]).value()!=0) else Value(p[5])
+        try:
+            p[0] = Value(p[0].value(), unsigned = Value(p[3]).unsigned or Value(p[5]).unsigned)
+        except:
+            pass
+    except Exception as e:
+        p[0] = Value(0, exception = e)</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_function_call"><code class="name flex">
+<span>def <span class="ident">p_expression_function_call</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_ID</code> <code>CPP_LPAREN</code> <code>expression</code> <code>CPP_RPAREN</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_function_call(p):
+    &#34;expression : CPP_ID CPP_LPAREN expression CPP_RPAREN&#34;
+    try:
+        p.lexer.on_function_call(p)
+    except Exception as e:
+        p[0] = Value(0, exception = e)</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_group"><code class="name flex">
+<span>def <span class="ident">p_expression_group</span></span>(<span>t)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_LPAREN</code> <code>expression</code> <code>CPP_RPAREN</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_group(t):
+    &#39;expression : CPP_LPAREN expression CPP_RPAREN&#39;
+    t[0] = t[2]</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_identifier"><code class="name flex">
+<span>def <span class="ident">p_expression_identifier</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_ID</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_identifier(p):
+    &#34;expression : CPP_ID&#34;
+    try:
+        p.lexer.on_identifier(p)
+    except Exception as e:
+        p[0] = Value(0, exception = e)</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_number"><code class="name flex">
+<span>def <span class="ident">p_expression_number</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_INTEGER</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_number(p):
+    &#39;expression : CPP_INTEGER&#39;
+    p[0] = Value(p[1])</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_string"><code class="name flex">
+<span>def <span class="ident">p_expression_string</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_STRING</code></dt>
+<dd>| CPP_LESS expression CPP_GREATER</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_string(p):
+    &#34;&#34;&#34;
+    expression : CPP_STRING
+              | CPP_LESS expression CPP_GREATER
+    &#34;&#34;&#34;
+    p[0] = p[1]</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_uminus"><code class="name flex">
+<span>def <span class="ident">p_expression_uminus</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_MINUS</code> <code>expression</code> %<code>prec</code> <code>UMINUS</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_uminus(p):
+    &#39;expression : CPP_MINUS expression %prec UMINUS&#39;
+    p[0] = -Value(p[2])</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_unop"><code class="name flex">
+<span>def <span class="ident">p_expression_unop</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_EXCLAMATION</code> <code>expression</code></dt>
+<dd>| CPP_TILDE expression</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_unop(p):
+    &#34;&#34;&#34;
+    expression : CPP_EXCLAMATION expression
+              | CPP_TILDE expression
+    &#34;&#34;&#34;
+    try:
+        if p[1] == &#39;!&#39;:
+            p[0] = Value(0) if (Value(p[2]).value()!=0) else Value(1)
+        elif p[1] == &#39;~&#39;:
+            p[0] = ~Value(p[2])
+    except Exception as e:
+        p[0] = Value(0, exception = e)</code></pre>
+</details>
+</dd>
+<dt id="pcpp.evaluator.p_expression_uplus"><code class="name flex">
+<span>def <span class="ident">p_expression_uplus</span></span>(<span>p)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>CPP_PLUS</code> <code>expression</code> %<code>prec</code> <code>UPLUS</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def p_expression_uplus(p):
+    &#39;expression : CPP_PLUS expression %prec UPLUS&#39;
+    p[0] = +Value(p[2])</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pcpp.evaluator.Evaluator"><code class="flex name class">
+<span>class <span class="ident">Evaluator</span></span>
+</code></dt>
+<dd>
+<section class="desc"><p>Evaluator of #if C preprocessor expressions.</p>
+<pre><code>&gt;&gt;&gt; e = Evaluator()
+&gt;&gt;&gt; e('5')
+Value(5)
+&gt;&gt;&gt; e('5+6')
+Value(11)
+&gt;&gt;&gt; e('5+6*2')
+Value(17)
+&gt;&gt;&gt; e('5/2+6*2')
+Value(14)
+&gt;&gt;&gt; e('5 &lt; 6 &lt;= 7')
+Value(1)
+&gt;&gt;&gt; e('5 &lt; 6 &amp;&amp; 8 &gt; 7')
+Value(1)
+&gt;&gt;&gt; e('18446744073709551615 == -1')
+Value(1)
+&gt;&gt;&gt; e('-9223372036854775809 == 9223372036854775807')
+Value(1)
+&gt;&gt;&gt; e('-1 &lt; 0U')
+Value(0U)
+&gt;&gt;&gt; e('(( 0L &amp;&amp; 0) || (!0L &amp;&amp; !0 ))')
+Value(1)
+&gt;&gt;&gt; e('(1)?2:3')
+Value(2)
+&gt;&gt;&gt; e('(1 ? -1 : 0) &lt;= 0')
+Value(1)
+&gt;&gt;&gt; e('(1 ? -1 : 0U)')       # Output type of ? must be common between both choices
+Value(18446744073709551615U)
+&gt;&gt;&gt; e('(1 ? -1 : 0U) &lt;= 0')
+Value(0U)
+&gt;&gt;&gt; e('1 &amp;&amp; 10 / 0')         # doctest: +ELLIPSIS
+Exception(ZeroDivisionError('division by zero'...
+&gt;&gt;&gt; e('0 &amp;&amp; 10 / 0')         # &amp;&amp; must shortcut
+Value(0)
+&gt;&gt;&gt; e('1 ? 10 / 0 : 0')      # doctest: +ELLIPSIS
+Exception(ZeroDivisionError('division by zero'...
+&gt;&gt;&gt; e('0 ? 10 / 0 : 0')      # ? must shortcut
+Value(0)
+&gt;&gt;&gt; e('(3 ^ 5) != 6 || (3 | 5) != 7 || (3 &amp; 5) != 1')
+Value(0)
+&gt;&gt;&gt; e('1 &lt;&lt; 2 != 4 || 8 &gt;&gt; 1 != 4')
+Value(0)
+&gt;&gt;&gt; e('(2 || 3) != 1 || (2 &amp;&amp; 3) != 1 || (0 || 4) != 1 || (0 &amp;&amp; 5) != 0')
+Value(0)
+&gt;&gt;&gt; e('-1 &lt;&lt; 3U &gt; 0')
+Value(0)
+&gt;&gt;&gt; e("'N' == 78")
+Value(1)
+&gt;&gt;&gt; e('0x3f == 63')
+Value(1)
+&gt;&gt;&gt; e("'\\n'")
+Value(10)
+&gt;&gt;&gt; e("'\\\\'")
+Value(92)
+&gt;&gt;&gt; e("'\\n' == 0xA")
+Value(1)
+&gt;&gt;&gt; e("'\\\\' == 0x5c")
+Value(1)
+&gt;&gt;&gt; e("L'\\0' == 0")
+Value(1)
+&gt;&gt;&gt; e('12 == 12')
+Value(1)
+&gt;&gt;&gt; e('12L == 12')
+Value(1)
+&gt;&gt;&gt; e('-1 &gt;= 0U')
+Value(1U)
+&gt;&gt;&gt; e('(1&lt;&lt;2) == 4')
+Value(1)
+&gt;&gt;&gt; e('(-!+!9) == -1')
+Value(1)
+&gt;&gt;&gt; e('(2 || 3) == 1')
+Value(1)
+&gt;&gt;&gt; e('1L * 3 != 3')
+Value(0)
+&gt;&gt;&gt; e('(!1L != 0) || (-1L != -1)')
+Value(0)
+&gt;&gt;&gt; e('0177777 == 65535')
+Value(1)
+&gt;&gt;&gt; e('0Xffff != 65535 || 0XFfFf == 65535')
+Value(1)
+&gt;&gt;&gt; e('0L != 0 || 0l != 0')
+Value(0)
+&gt;&gt;&gt; e('1U != 1 || 1u == 1')
+Value(1)
+&gt;&gt;&gt; e('0 &lt;= -1')
+Value(0)
+&gt;&gt;&gt; e('1 &lt;&lt; 2 != 4 || 8 &gt;&gt; 1 == 4')
+Value(1)
+&gt;&gt;&gt; e('(3 ^ 5) == 6')
+Value(1)
+&gt;&gt;&gt; e('(3 | 5) == 7')
+Value(1)
+&gt;&gt;&gt; e('(3 &amp; 5) == 1')
+Value(1)
+&gt;&gt;&gt; e('(3 ^ 5) != 6 || (3 | 5) != 7 || (3 &amp; 5) != 1')
+Value(0)
+&gt;&gt;&gt; e('(0 ? 1 : 2) != 2')
+Value(0)
+&gt;&gt;&gt; e('-1 &lt;&lt; 3U &gt; 0')
+Value(0)
+&gt;&gt;&gt; e('0 &amp;&amp; 10 / 0')
+Value(0)
+&gt;&gt;&gt; e('not_defined &amp;&amp; 10 / not_defined')  # doctest: +ELLIPSIS
+Exception(SyntaxError('Unknown identifier not_defined'...
+&gt;&gt;&gt; e('0 &amp;&amp; 10 / 0 &gt; 1')
+Value(0)
+&gt;&gt;&gt; e('(0) ? 10 / 0 : 0')
+Value(0)
+&gt;&gt;&gt; e('0 == 0 || 10 / 0 &gt; 1')
+Value(1)
+&gt;&gt;&gt; e('(15 &gt;&gt; 2 &gt;&gt; 1 != 1) || (3 &lt;&lt; 2 &lt;&lt; 1 != 24)')
+Value(0)
+&gt;&gt;&gt; e('(1 | 2) == 3 &amp;&amp; 4 != 5 || 0')
+Value(1)
+&gt;&gt;&gt; e('1  &gt;  0')
+Value(1)
+&gt;&gt;&gt; e("'S' != 83")
+Value(0)
+&gt;&gt;&gt; e("'' != ''")
+Value(0)
+&gt;&gt;&gt; e('0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0')
+Value(1)
+&gt;&gt;&gt; e('test_function(X)', functions={'test_function':lambda x: 55})
+Value(55)
+&gt;&gt;&gt; e('test_identifier', identifiers={'test_identifier':11})
+Value(11)
+&gt;&gt;&gt; e('defined(X)', functions={'defined':lambda x: 55})
+Value(55)
+&gt;&gt;&gt; e('defined(X)')  # doctest: +ELLIPSIS
+Exception(SyntaxError('Unknown function defined'...
+&gt;&gt;&gt; e('__has_include("variant")')  # doctest: +ELLIPSIS
+Exception(SyntaxError('Unknown function __has_include'...
+&gt;&gt;&gt; e('__has_include(&lt;variant&gt;)')  # doctest: +ELLIPSIS
+Exception(SyntaxError('Unknown function __has_include'...
+&gt;&gt;&gt; e('5  // comment')
+Value(5)
+&gt;&gt;&gt; e('5  /* comment */')
+Value(5)
+&gt;&gt;&gt; e('5  /* comment // more */')
+Value(5)
+&gt;&gt;&gt; e('5  // /* comment */')
+</code></pre>
+<p>Value(5)</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class Evaluator(object):
+    &#34;&#34;&#34;Evaluator of #if C preprocessor expressions.
+    
+    &gt;&gt;&gt; e = Evaluator()
+    &gt;&gt;&gt; e(&#39;5&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5+6&#39;)
+    Value(11)
+    &gt;&gt;&gt; e(&#39;5+6*2&#39;)
+    Value(17)
+    &gt;&gt;&gt; e(&#39;5/2+6*2&#39;)
+    Value(14)
+    &gt;&gt;&gt; e(&#39;5 &lt; 6 &lt;= 7&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;5 &lt; 6 &amp;&amp; 8 &gt; 7&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;18446744073709551615 == -1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;-9223372036854775809 == 9223372036854775807&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;-1 &lt; 0U&#39;)
+    Value(0U)
+    &gt;&gt;&gt; e(&#39;(( 0L &amp;&amp; 0) || (!0L &amp;&amp; !0 ))&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(1)?2:3&#39;)
+    Value(2)
+    &gt;&gt;&gt; e(&#39;(1 ? -1 : 0) &lt;= 0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(1 ? -1 : 0U)&#39;)       # Output type of ? must be common between both choices
+    Value(18446744073709551615U)
+    &gt;&gt;&gt; e(&#39;(1 ? -1 : 0U) &lt;= 0&#39;)
+    Value(0U)
+    &gt;&gt;&gt; e(&#39;1 &amp;&amp; 10 / 0&#39;)         # doctest: +ELLIPSIS
+    Exception(ZeroDivisionError(&#39;division by zero&#39;...
+    &gt;&gt;&gt; e(&#39;0 &amp;&amp; 10 / 0&#39;)         # &amp;&amp; must shortcut
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1 ? 10 / 0 : 0&#39;)      # doctest: +ELLIPSIS
+    Exception(ZeroDivisionError(&#39;division by zero&#39;...
+    &gt;&gt;&gt; e(&#39;0 ? 10 / 0 : 0&#39;)      # ? must shortcut
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(3 ^ 5) != 6 || (3 | 5) != 7 || (3 &amp; 5) != 1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1 &lt;&lt; 2 != 4 || 8 &gt;&gt; 1 != 4&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(2 || 3) != 1 || (2 &amp;&amp; 3) != 1 || (0 || 4) != 1 || (0 &amp;&amp; 5) != 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;-1 &lt;&lt; 3U &gt; 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#34;&#39;N&#39; == 78&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0x3f == 63&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\n&#39;&#34;)
+    Value(10)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\\\\\&#39;&#34;)
+    Value(92)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\n&#39; == 0xA&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;&#39;\\\\\\\\&#39; == 0x5c&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;L&#39;\\\\0&#39; == 0&#34;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;12 == 12&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;12L == 12&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;-1 &gt;= 0U&#39;)
+    Value(1U)
+    &gt;&gt;&gt; e(&#39;(1&lt;&lt;2) == 4&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(-!+!9) == -1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(2 || 3) == 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;1L * 3 != 3&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(!1L != 0) || (-1L != -1)&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0177777 == 65535&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0Xffff != 65535 || 0XFfFf == 65535&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0L != 0 || 0l != 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1U != 1 || 1u == 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;0 &lt;= -1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;1 &lt;&lt; 2 != 4 || 8 &gt;&gt; 1 == 4&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 ^ 5) == 6&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 | 5) == 7&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 &amp; 5) == 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(3 ^ 5) != 6 || (3 | 5) != 7 || (3 &amp; 5) != 1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(0 ? 1 : 2) != 2&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;-1 &lt;&lt; 3U &gt; 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0 &amp;&amp; 10 / 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;not_defined &amp;&amp; 10 / not_defined&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown identifier not_defined&#39;...
+    &gt;&gt;&gt; e(&#39;0 &amp;&amp; 10 / 0 &gt; 1&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(0) ? 10 / 0 : 0&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0 == 0 || 10 / 0 &gt; 1&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;(15 &gt;&gt; 2 &gt;&gt; 1 != 1) || (3 &lt;&lt; 2 &lt;&lt; 1 != 24)&#39;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;(1 | 2) == 3 &amp;&amp; 4 != 5 || 0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;1  &gt;  0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#34;&#39;\123&#39; != 83&#34;)
+    Value(0)
+    &gt;&gt;&gt; e(&#34;&#39;\x1b&#39; != &#39;\033&#39;&#34;)
+    Value(0)
+    &gt;&gt;&gt; e(&#39;0 + (1 - (2 + (3 - (4 + (5 - (6 + (7 - (8 + (9 - (10 + (11 - (12 +          (13 - (14 + (15 - (16 + (17 - (18 + (19 - (20 + (21 - (22 + (23 -           (24 + (25 - (26 + (27 - (28 + (29 - (30 + (31 - (32 + 0))))))))))           )))))))))))))))))))))) == 0&#39;)
+    Value(1)
+    &gt;&gt;&gt; e(&#39;test_function(X)&#39;, functions={&#39;test_function&#39;:lambda x: 55})
+    Value(55)
+    &gt;&gt;&gt; e(&#39;test_identifier&#39;, identifiers={&#39;test_identifier&#39;:11})
+    Value(11)
+    &gt;&gt;&gt; e(&#39;defined(X)&#39;, functions={&#39;defined&#39;:lambda x: 55})
+    Value(55)
+    &gt;&gt;&gt; e(&#39;defined(X)&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown function defined&#39;...
+    &gt;&gt;&gt; e(&#39;__has_include(&#34;variant&#34;)&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown function __has_include&#39;...
+    &gt;&gt;&gt; e(&#39;__has_include(&lt;variant&gt;)&#39;)  # doctest: +ELLIPSIS
+    Exception(SyntaxError(&#39;Unknown function __has_include&#39;...
+    &gt;&gt;&gt; e(&#39;5  // comment&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5  /* comment */&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5  /* comment // more */&#39;)
+    Value(5)
+    &gt;&gt;&gt; e(&#39;5  // /* comment */&#39;)
+    Value(5)
+    &#34;&#34;&#34;
+#    &gt;&gt;&gt; e(&#39;defined X&#39;, functions={&#39;defined&#39;:lambda x: 55})
+#    Value(55)
+
+    def __init__(self, lexer = None):
+        self.lexer = lexer if lexer is not None else default_lexer()
+        self.parser = yacc.yacc(optimize=in_production,debug=not in_production,write_tables=not in_production)
+
+    class __lexer(object):
+
+        def __init__(self, functions, identifiers):
+            self.__toks = []
+            self.__functions = functions
+            self.__identifiers = identifiers
+
+        def input(self, toks):
+            self.__toks = [tok for tok in toks if tok.type != &#39;CPP_WS&#39; and tok.type != &#39;CPP_LINECONT&#39; and tok.type != &#39;CPP_COMMENT1&#39; and tok.type != &#39;CPP_COMMENT2&#39;]
+            self.__idx = 0
+
+        def token(self):
+            if self.__idx &gt;= len(self.__toks):
+                return None
+            self.__idx = self.__idx + 1
+            return self.__toks[self.__idx - 1]
+
+        def on_function_call(self, p):
+            if p[1] not in self.__functions:
+                raise SyntaxError(&#39;Unknown function %s&#39; % p[1])
+            p[0] = Value(self.__functions[p[1]](p[3]))
+
+        def on_identifier(self, p):
+            if p[1] not in self.__identifiers:
+                raise SyntaxError(&#39;Unknown identifier %s&#39; % p[1])
+            p[0] = Value(self.__identifiers[p[1]])
+            
+    def __call__(self, input, functions = {}, identifiers = {}):
+        &#34;&#34;&#34;Execute a fully macro expanded set of tokens representing an expression,
+        returning the result of the evaluation.
+        &#34;&#34;&#34;
+        if not isinstance(input,list):
+            self.lexer.input(input)
+            input = []
+            while True:
+                tok = self.lexer.token()
+                if not tok:
+                    break
+                input.append(tok)
+        return self.parser.parse(input, lexer = self.__lexer(functions, identifiers))</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="pcpp.evaluator.Evaluator.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, lexer=None)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Initialize self.
+See help(type(self)) for accurate signature.</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def __init__(self, lexer = None):
+    self.lexer = lexer if lexer is not None else default_lexer()
+    self.parser = yacc.yacc(optimize=in_production,debug=not in_production,write_tables=not in_production)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="pcpp.evaluator.Value"><code class="flex name class">
+<span>class <span class="ident">Value</span></span>
+<span>(</span><span><small>ancestors:</small> builtins.int)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>A signed or unsigned integer within a preprocessor expression, bounded
+to within INT_MIN and INT_MAX, or 0 and UINT_MAX. Signed overflow is handled
+like a two's complement CPU, despite being UB, as that's what GCC and clang do.</p>
+<pre><code>&gt;&gt;&gt; Value(5)
+Value(5)
+&gt;&gt;&gt; Value('5L')
+Value(5)
+&gt;&gt;&gt; Value('5U')
+Value(5U)
+&gt;&gt;&gt; Value('0')
+Value(0)
+&gt;&gt;&gt; Value('0U')
+Value(0U)
+&gt;&gt;&gt; Value('-1U')
+Value(18446744073709551615U)
+&gt;&gt;&gt; Value(5) * Value(2)
+Value(10)
+&gt;&gt;&gt; Value(5) + Value('2u')
+Value(7U)
+&gt;&gt;&gt; Value(5) * 2
+Value(10)
+&gt;&gt;&gt; Value(5) / 2   # Must return integer
+Value(2)
+&gt;&gt;&gt; Value(50) % 8
+Value(2)
+&gt;&gt;&gt; -Value(5)
+Value(-5)
+&gt;&gt;&gt; +Value(-5)
+Value(-5)
+&gt;&gt;&gt; ~Value(5)
+Value(-6)
+&gt;&gt;&gt; Value(6) &amp; 2
+Value(2)
+&gt;&gt;&gt; Value(4) | 2
+Value(6)
+&gt;&gt;&gt; Value(6) ^ 2
+Value(4)
+&gt;&gt;&gt; Value(2) &lt;&lt; 2
+Value(8)
+&gt;&gt;&gt; Value(8) &gt;&gt; 2
+Value(2)
+&gt;&gt;&gt; Value(9223372036854775808)
+Value(-9223372036854775808)
+&gt;&gt;&gt; Value(-9223372036854775809)
+Value(9223372036854775807)
+&gt;&gt;&gt; Value(18446744073709551615)
+Value(-1)
+&gt;&gt;&gt; Value(False)
+Value(0)
+&gt;&gt;&gt; Value(True)
+Value(1)
+&gt;&gt;&gt; Value(5) == Value(6)
+Value(0)
+&gt;&gt;&gt; Value(5) == Value(5)
+Value(1)
+&gt;&gt;&gt; not Value(2)
+Traceback (most recent call last):
+</code></pre>
+<p>&hellip;
+AssertionError</p>
+<pre><code>&gt;&gt;&gt; Value(4) and Value(2)
+Traceback (most recent call last):
+</code></pre>
+<p>&hellip;
+AssertionError</p>
+<pre><code>&gt;&gt;&gt; Value(5) and not Value(6)
+Traceback (most recent call last):
+</code></pre>
+<p>&hellip;
+AssertionError</p>
+<pre><code>&gt;&gt;&gt; Value('0x3f')
+Value(63)
+&gt;&gt;&gt; Value('077')
+Value(63)
+&gt;&gt;&gt; Value("'N'")
+Value(78)
+&gt;&gt;&gt; Value("L'N'")
+Value(78)
+&gt;&gt;&gt; Value("'\n'")
+Value(10)
+&gt;&gt;&gt; Value("'\\n'")
+Value(10)
+&gt;&gt;&gt; Value("'\\'")
+Value(92)
+&gt;&gt;&gt; Value("'\'")
+Traceback (most recent call last):
+</code></pre>
+<dl>
+<dt>&hellip;</dt>
+<dt><strong><code>SyntaxError</code></strong> :&ensp;<code>Empty</code> <code>character</code> <code>escape</code> <code>sequence</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class Value(INTBASETYPE):
+    &#34;&#34;&#34;A signed or unsigned integer within a preprocessor expression, bounded
+    to within INT_MIN and INT_MAX, or 0 and UINT_MAX. Signed overflow is handled
+    like a two&#39;s complement CPU, despite being UB, as that&#39;s what GCC and clang do.
+    
+    &gt;&gt;&gt; Value(5)
+    Value(5)
+    &gt;&gt;&gt; Value(&#39;5L&#39;)
+    Value(5)
+    &gt;&gt;&gt; Value(&#39;5U&#39;)
+    Value(5U)
+    &gt;&gt;&gt; Value(&#39;0&#39;)
+    Value(0)
+    &gt;&gt;&gt; Value(&#39;0U&#39;)
+    Value(0U)
+    &gt;&gt;&gt; Value(&#39;-1U&#39;)
+    Value(18446744073709551615U)
+    &gt;&gt;&gt; Value(5) * Value(2)
+    Value(10)
+    &gt;&gt;&gt; Value(5) + Value(&#39;2u&#39;)
+    Value(7U)
+    &gt;&gt;&gt; Value(5) * 2
+    Value(10)
+    &gt;&gt;&gt; Value(5) / 2   # Must return integer
+    Value(2)
+    &gt;&gt;&gt; Value(50) % 8
+    Value(2)
+    &gt;&gt;&gt; -Value(5)
+    Value(-5)
+    &gt;&gt;&gt; +Value(-5)
+    Value(-5)
+    &gt;&gt;&gt; ~Value(5)
+    Value(-6)
+    &gt;&gt;&gt; Value(6) &amp; 2
+    Value(2)
+    &gt;&gt;&gt; Value(4) | 2
+    Value(6)
+    &gt;&gt;&gt; Value(6) ^ 2
+    Value(4)
+    &gt;&gt;&gt; Value(2) &lt;&lt; 2
+    Value(8)
+    &gt;&gt;&gt; Value(8) &gt;&gt; 2
+    Value(2)
+    &gt;&gt;&gt; Value(9223372036854775808)
+    Value(-9223372036854775808)
+    &gt;&gt;&gt; Value(-9223372036854775809)
+    Value(9223372036854775807)
+    &gt;&gt;&gt; Value(18446744073709551615)
+    Value(-1)
+    &gt;&gt;&gt; Value(False)
+    Value(0)
+    &gt;&gt;&gt; Value(True)
+    Value(1)
+    &gt;&gt;&gt; Value(5) == Value(6)
+    Value(0)
+    &gt;&gt;&gt; Value(5) == Value(5)
+    Value(1)
+    &gt;&gt;&gt; not Value(2)
+    Traceback (most recent call last):
+    ...
+    AssertionError
+    &gt;&gt;&gt; Value(4) and Value(2)
+    Traceback (most recent call last):
+    ...
+    AssertionError
+    &gt;&gt;&gt; Value(5) and not Value(6)
+    Traceback (most recent call last):
+    ...
+    AssertionError
+    &gt;&gt;&gt; Value(&#39;0x3f&#39;)
+    Value(63)
+    &gt;&gt;&gt; Value(&#39;077&#39;)
+    Value(63)
+    &gt;&gt;&gt; Value(&#34;&#39;N&#39;&#34;)
+    Value(78)
+    &gt;&gt;&gt; Value(&#34;L&#39;N&#39;&#34;)
+    Value(78)
+    &gt;&gt;&gt; Value(&#34;&#39;\\n&#39;&#34;)
+    Value(10)
+    &gt;&gt;&gt; Value(&#34;&#39;\\\\n&#39;&#34;)
+    Value(10)
+    &gt;&gt;&gt; Value(&#34;&#39;\\\\&#39;&#34;)
+    Value(92)
+    &gt;&gt;&gt; Value(&#34;&#39;\\&#39;&#34;)
+    Traceback (most recent call last):
+    ...
+    SyntaxError: Empty character escape sequence
+    &#34;&#34;&#34;
+    INT_MIN = -(1 &lt;&lt; (INTMAXBITS - 1))
+    INT_MAX = (1 &lt;&lt; (INTMAXBITS - 1)) - 1
+    INT_MASK = (1 &lt;&lt; INTMAXBITS) - 1
+    UINT_MIN = 0
+    UINT_MAX = (1 &lt;&lt; INTMAXBITS) - 1
+    @classmethod
+    def __sclamp(cls, value):
+        value = INTBASETYPE(value)
+        return ((value - cls.INT_MIN) &amp; cls.INT_MASK) + cls.INT_MIN
+    @classmethod
+    def __uclamp(cls, value):
+        value = INTBASETYPE(value)
+        return value &amp; cls.UINT_MAX
+    def __new__(cls, value, unsigned = False, exception = None):
+        if isinstance(value, Value):
+            unsigned = value.unsigned
+            exception = value.exception
+        elif isinstance(value, INTBASETYPE) or isinstance(value, int) or isinstance(value, float):
+            value = cls.__uclamp(value) if unsigned else cls.__sclamp(value)
+        elif isinstance(value, STRING_TYPES):
+            if (value.startswith(&#34;L&#39;&#34;) or value[0] == &#34;&#39;&#34;) and value[-1] == &#34;&#39;&#34;:
+                startidx = 2 if value.startswith(&#34;L&#39;&#34;) else 1
+                #print(&#34;1. ***&#34;, value, file = sys.stderr)
+                value = value[startidx:-1]
+                if len(value) == 0:
+                    raise SyntaxError(&#39;Empty character escape sequence&#39;)
+                #print(&#34;2. ***&#34;, value, file = sys.stderr)
+                value = _expand_escape_sequences_pat.sub(lambda x: codecs.decode(x.group(0), &#39;unicode-escape&#39;), value)
+                #print(&#34;3. ***&#34;, value, file = sys.stderr)
+                x = INTBASETYPE(ord(value))
+                #print(&#34;4. ***&#34;, x, file = sys.stderr)
+            elif value.startswith(&#39;0x&#39;) or value.startswith(&#39;0X&#39;):
+                # Strip any terminators
+                while not ((value[-1] &gt;= &#39;0&#39; and value[-1] &lt;= &#39;9&#39;) or (value[-1] &gt;= &#39;a&#39; and value[-1] &lt;= &#39;f&#39;) or (value[-1] &gt;= &#39;A&#39; and value[-1] &lt;= &#39;F&#39;)):
+                    if value[-1] == &#39;u&#39; or value[-1] == &#39;U&#39;:
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value, base = 16)
+            elif value.startswith(&#39;0&#39;):
+                # Strip any terminators
+                while not (value[-1] &gt;= &#39;0&#39; and value[-1] &lt;= &#39;7&#39;):
+                    if value[-1] == &#39;u&#39; or value[-1] == &#39;U&#39;:
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value, base = 8)
+            else:
+                # Strip any terminators
+                while not (value[-1] &gt;= &#39;0&#39; and value[-1] &lt;= &#39;9&#39;):
+                    if value[-1] == &#39;u&#39; or value[-1] == &#39;U&#39;:
+                        unsigned = True
+                    value = value[:-1]
+                x = INTBASETYPE(value)
+            value = cls.__uclamp(x) if unsigned else cls.__sclamp(x)
+            #assert x == value
+        else:
+            print(&#39;Unknown value type: %s&#39; % repr(type(value)), file = sys.stderr)
+            assert False  # Input is an unrecognised type
+        inst = super(Value, cls).__new__(cls, value)
+        inst.unsigned = unsigned
+        inst.exception = exception
+        return inst
+    def value(self):
+        if self.exception is not None:
+            raise self.exception
+        return INTBASETYPE(self)
+    def __add__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) + self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__add__(other))
+    def __sub__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) - self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__sub__(other))
+    def __mul__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) * self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__mul__(other))
+    def __div__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) / self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__div__(other))
+    def __truediv__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) / self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__truediv__(other))
+    def __mod__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) % self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__mod__(other))
+    def __neg__(self):
+        if self.exception is not None:
+            return self
+        return Value(super(Value, self).__neg__(), self.unsigned)
+    def __invert__(self):
+        if self.exception is not None:
+            return self
+        return Value(super(Value, self).__invert__(), self.unsigned)
+    def __and__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &amp; self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__and__(other))
+    def __or__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) | self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__or__(other))
+    def __pos__(self):
+        if self.exception is not None:
+            return self
+        return Value(super(Value, self).__pos__())
+    def __pow__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) ** self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__pow__(other))
+    def __lshift__(self, other):
+        if self.exception is not None:
+            return self
+        # Ignore other signedness
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &lt;&lt; self.__uclamp(other), True) if (self.unsigned) else Value(super(Value, self).__lshift__(other))
+    def __rshift__(self, other):
+        if self.exception is not None:
+            return self
+        # Ignore other signedness
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &gt;&gt; self.__uclamp(other), True) if (self.unsigned) else Value(super(Value, self).__rshift__(other))
+    def __xor__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) ^ self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(super(Value, self).__xor__(other))
+    def __repr__(self):
+        if self.exception is not None:
+            return &#34;Exception(%s)&#34; % repr(self.exception)
+        elif self.unsigned:
+            return &#34;Value(%dU)&#34; % INTBASETYPE(self)
+        else:
+            return &#34;Value(%d)&#34; % INTBASETYPE(self)
+    def __bool__(self):
+        assert False  # Do not use Python logical operations
+    def __nonzero__(self):
+        assert False  # Do not use Python logical operations
+    def __cmp__(self, other):
+        assert False
+    def __lt__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &lt; self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &lt; self.__sclamp(other), False)
+    def __le__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &lt;= self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &lt;= self.__sclamp(other), False)
+    def __eq__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) == self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) == self.__sclamp(other), False)
+    def __ne__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) != self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) != self.__sclamp(other), False)
+    def __ge__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &gt;= self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &gt;= self.__sclamp(other), False)
+    def __gt__(self, other):
+        if self.exception is not None:
+            return self
+        other = Value(other)
+        if other.exception is not None:
+            return other
+        return Value(self.__uclamp(self) &gt; self.__uclamp(other), True) if (self.unsigned or other.unsigned) else Value(self.__sclamp(self) &gt; self.__sclamp(other), False)</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="pcpp.evaluator.Value.INT_MASK"><code class="name">var <span class="ident">INT_MASK</span></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+<dt id="pcpp.evaluator.Value.INT_MAX"><code class="name">var <span class="ident">INT_MAX</span></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+<dt id="pcpp.evaluator.Value.INT_MIN"><code class="name">var <span class="ident">INT_MIN</span></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+<dt id="pcpp.evaluator.Value.UINT_MAX"><code class="name">var <span class="ident">UINT_MAX</span></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+<dt id="pcpp.evaluator.Value.UINT_MIN"><code class="name">var <span class="ident">UINT_MIN</span></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pcpp.evaluator.Value.value"><code class="name flex">
+<span>def <span class="ident">value</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def value(self):
+    if self.exception is not None:
+        raise self.exception
+    return INTBASETYPE(self)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pcpp" href="index.html">pcpp</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pcpp.evaluator.p_error" href="#pcpp.evaluator.p_error">p_error</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_binop" href="#pcpp.evaluator.p_expression_binop">p_expression_binop</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_character" href="#pcpp.evaluator.p_expression_character">p_expression_character</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_conditional" href="#pcpp.evaluator.p_expression_conditional">p_expression_conditional</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_function_call" href="#pcpp.evaluator.p_expression_function_call">p_expression_function_call</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_group" href="#pcpp.evaluator.p_expression_group">p_expression_group</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_identifier" href="#pcpp.evaluator.p_expression_identifier">p_expression_identifier</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_number" href="#pcpp.evaluator.p_expression_number">p_expression_number</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_string" href="#pcpp.evaluator.p_expression_string">p_expression_string</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_uminus" href="#pcpp.evaluator.p_expression_uminus">p_expression_uminus</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_unop" href="#pcpp.evaluator.p_expression_unop">p_expression_unop</a></code></li>
+<li><code><a title="pcpp.evaluator.p_expression_uplus" href="#pcpp.evaluator.p_expression_uplus">p_expression_uplus</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pcpp.evaluator.Evaluator" href="#pcpp.evaluator.Evaluator">Evaluator</a></code></h4>
+<ul class="">
+<li><code><a title="pcpp.evaluator.Evaluator.__init__" href="#pcpp.evaluator.Evaluator.__init__">__init__</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pcpp.evaluator.Value" href="#pcpp.evaluator.Value">Value</a></code></h4>
+<ul class="two-column">
+<li><code><a title="pcpp.evaluator.Value.INT_MASK" href="#pcpp.evaluator.Value.INT_MASK">INT_MASK</a></code></li>
+<li><code><a title="pcpp.evaluator.Value.INT_MAX" href="#pcpp.evaluator.Value.INT_MAX">INT_MAX</a></code></li>
+<li><code><a title="pcpp.evaluator.Value.INT_MIN" href="#pcpp.evaluator.Value.INT_MIN">INT_MIN</a></code></li>
+<li><code><a title="pcpp.evaluator.Value.UINT_MAX" href="#pcpp.evaluator.Value.UINT_MAX">UINT_MAX</a></code></li>
+<li><code><a title="pcpp.evaluator.Value.UINT_MIN" href="#pcpp.evaluator.Value.UINT_MIN">UINT_MIN</a></code></li>
+<li><code><a title="pcpp.evaluator.Value.value" href="#pcpp.evaluator.Value.value">value</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.3</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

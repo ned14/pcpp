@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.5.3" />
+<title>pcpp.pcmd API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.name small{font-weight:normal}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase;cursor:pointer}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title"><code>pcpp.pcmd</code> module</h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">#!/usr/bin/python
+# Python C99 conforming preprocessor command line
+# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
+# Started: March 2017
+
+from __future__ import generators, print_function, absolute_import, division
+
+import sys, argparse, traceback, os, copy, io, re
+if __name__ == &#39;__main__&#39; and __package__ is None:
+    sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
+from pcpp.preprocessor import Preprocessor, OutputDirective, Action
+
+version=&#39;1.30&#39;
+
+__all__ = []
+
+class FileAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super(FileAction, self).__init__(option_strings, dest, **kwargs)
+        
+    def __call__(self, parser, namespace, values, option_string=None):
+        if getattr(namespace, self.dest)[0] == sys.stdin:
+            items = []
+        else:
+            items = copy.copy(getattr(namespace, self.dest))
+        items += [argparse.FileType(&#39;rt&#39;)(value) for value in values]
+        setattr(namespace, self.dest, items)
+
+class CmdPreprocessor(Preprocessor):
+    def __init__(self, argv):
+        if len(argv) &lt; 2:
+            argv = [argv[0], &#39;--help&#39;]
+        argp = argparse.ArgumentParser(prog=&#39;pcpp&#39;,
+            description=
+    &#39;&#39;&#39;A pure universal Python C (pre-)preprocessor implementation very useful for
+    pre-preprocessing header only C++ libraries into single file includes and
+    other such build or packaging stage malarky.&#39;&#39;&#39;,
+            epilog=
+    &#39;&#39;&#39;Note that so pcpp can stand in for other preprocessor tooling, it
+    ignores any arguments it does not understand.&#39;&#39;&#39;)
+        argp.add_argument(&#39;inputs&#39;, metavar = &#39;input&#39;, default = [sys.stdin], nargs = &#39;*&#39;, action = FileAction, help = &#39;Files to preprocess (use \&#39;-\&#39; for stdin)&#39;)
+        argp.add_argument(&#39;-o&#39;, dest = &#39;output&#39;, metavar = &#39;path&#39;, type = argparse.FileType(&#39;wt&#39;), default=sys.stdout, nargs = &#39;?&#39;, help = &#39;Output to a file instead of stdout&#39;)
+        argp.add_argument(&#39;-D&#39;, dest = &#39;defines&#39;, metavar = &#39;macro[=val]&#39;, nargs = 1, action = &#39;append&#39;, help = &#39;Predefine name as a macro [with value]&#39;)
+        argp.add_argument(&#39;-U&#39;, dest = &#39;undefines&#39;, metavar = &#39;macro&#39;, nargs = 1, action = &#39;append&#39;, help = &#39;Pre-undefine name as a macro&#39;)
+        argp.add_argument(&#39;-N&#39;, dest = &#39;nevers&#39;, metavar = &#39;macro&#39;, nargs = 1, action = &#39;append&#39;, help = &#39;Never define name as a macro, even if defined during the preprocessing.&#39;)
+        argp.add_argument(&#39;-I&#39;, dest = &#39;includes&#39;, metavar = &#39;path&#39;, nargs = 1, action = &#39;append&#39;, help = &#34;Path to search for unfound #include&#39;s&#34;)
+        #argp.add_argument(&#39;--passthru&#39;, dest = &#39;passthru&#39;, action = &#39;store_true&#39;, help = &#39;Pass through everything unexecuted except for #include and include guards (which need to be the first thing in an include file&#39;)
+        argp.add_argument(&#39;--passthru-defines&#39;, dest = &#39;passthru_defines&#39;, action = &#39;store_true&#39;, help = &#39;Pass through but still execute #defines and #undefs if not always removed by preprocessor logic&#39;)
+        argp.add_argument(&#39;--passthru-unfound-includes&#39;, dest = &#39;passthru_unfound_includes&#39;, action = &#39;store_true&#39;, help = &#39;Pass through #includes not found without execution&#39;)
+        argp.add_argument(&#39;--passthru-unknown-exprs&#39;, dest = &#39;passthru_undefined_exprs&#39;, action = &#39;store_true&#39;, help = &#39;Unknown macros in expressions cause preprocessor logic to be passed through instead of executed by treating unknown macros as 0L&#39;)
+        argp.add_argument(&#39;--passthru-comments&#39;, dest = &#39;passthru_comments&#39;, action = &#39;store_true&#39;, help = &#39;Pass through comments unmodified&#39;)
+        argp.add_argument(&#39;--passthru-magic-macros&#39;, dest = &#39;passthru_magic_macros&#39;, action = &#39;store_true&#39;, help = &#39;Pass through double underscore magic macros unmodified&#39;)
+        argp.add_argument(&#39;--passthru-includes&#39;, dest = &#39;passthru_includes&#39;, metavar = &#39;&lt;regex&gt;&#39;, default = None, nargs = 1, help = &#34;Regular expression for which #includes to not expand. #includes, if found, are always executed&#34;)
+        argp.add_argument(&#39;--disable-auto-pragma-once&#39;, dest = &#39;auto_pragma_once_disabled&#39;, action = &#39;store_true&#39;, default = False, help = &#39;Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro&#39;)
+        argp.add_argument(&#39;--line-directive&#39;, dest = &#39;line_directive&#39;, metavar = &#39;form&#39;, default = &#39;#line&#39;, nargs = &#39;?&#39;, help = &#34;Form of line directive to use, defaults to #line, specify nothing to disable output of line directives&#34;)
+        argp.add_argument(&#39;--debug&#39;, dest = &#39;debug&#39;, action = &#39;store_true&#39;, help = &#39;Generate a pcpp_debug.log file logging execution&#39;)
+        argp.add_argument(&#39;--time&#39;, dest = &#39;time&#39;, action = &#39;store_true&#39;, help = &#39;Print the time it took to #include each file&#39;)
+        argp.add_argument(&#39;--filetimes&#39;, dest = &#39;filetimes&#39;, metavar = &#39;path&#39;, type = argparse.FileType(&#39;wt&#39;), default=None, nargs = &#39;?&#39;, help = &#39;Write CSV file with time spent inside each included file, inclusive and exclusive&#39;)
+        argp.add_argument(&#39;--compress&#39;, dest = &#39;compress&#39;, action = &#39;store_true&#39;, help = &#39;Make output as small as possible&#39;)
+        argp.add_argument(&#39;--assume-input-encoding&#39;, dest = &#39;assume_input_encoding&#39;, metavar = &#39;&lt;encoding&gt;&#39;, default = None, nargs = 1, help = &#39;The text encoding to assume inputs are in&#39;)
+        argp.add_argument(&#39;--output-encoding&#39;, dest = &#39;output_encoding&#39;, metavar = &#39;&lt;encoding&gt;&#39;, default = None, nargs = 1, help = &#39;The text encoding to use when writing files&#39;)
+        argp.add_argument(&#39;--write-bom&#39;, dest = &#39;write_bom&#39;, action = &#39;store_true&#39;, help = &#39;Prefix any output with a Unicode BOM&#39;)
+        argp.add_argument(&#39;--version&#39;, action=&#39;version&#39;, version=&#39;pcpp &#39; + version)
+        args = argp.parse_known_args(argv[1:])
+        #print(args)
+        for arg in args[1]:
+            print(&#34;NOTE: Argument %s not known, ignoring!&#34; % arg, file = sys.stderr)
+
+        self.args = args[0]
+        super(CmdPreprocessor, self).__init__()
+        
+        # Override Preprocessor instance variables
+        self.define(&#34;__PCPP_VERSION__ &#34; + version)
+        self.define(&#34;__PCPP_ALWAYS_FALSE__ 0&#34;)
+        self.define(&#34;__PCPP_ALWAYS_TRUE__ 1&#34;)
+        if self.args.debug:
+            self.debugout = open(&#34;pcpp_debug.log&#34;, &#34;wt&#34;)
+        self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
+        self.line_directive = self.args.line_directive
+        if self.line_directive is not None and self.line_directive.lower() in (&#39;nothing&#39;, &#39;none&#39;, &#39;&#39;):
+            self.line_directive = None
+        if self.args.passthru_includes is not None:
+            self.passthru_includes = re.compile(self.args.passthru_includes[0])
+        self.compress = 2 if self.args.compress else 0
+        if self.args.passthru_magic_macros:
+            self.undef(&#39;__DATE__&#39;)
+            self.undef(&#39;__TIME__&#39;)
+            self.expand_linemacro = False
+            self.expand_filemacro = False
+            self.expand_countermacro = False
+        if self.args.assume_input_encoding is not None:
+            self.args.assume_input_encoding = self.args.assume_input_encoding[0]
+            self.assume_encoding = self.args.assume_input_encoding
+            if len(self.args.inputs) == 1:
+                # Reopen our input files with the appropriate encoding
+                _ = self.on_file_open(False, self.args.inputs[0].name)
+                self.args.inputs[0].close()
+                self.args.inputs[0] = _
+            if self.args.output_encoding is None:
+                self.args.output_encoding = self.args.assume_input_encoding
+        if self.args.output_encoding is not None:
+            self.args.output_encoding = self.args.output_encoding[0]
+            # Reopen our output file with the appropriate encoding
+            _ = io.open(self.args.output.name, &#39;w&#39;, encoding = self.args.output_encoding)
+            self.args.output.close()
+            self.args.output = _
+            if self.args.write_bom:
+                self.args.output.write(&#39;\ufeff&#39;)
+        
+        # My own instance variables
+        self.bypass_ifpassthru = False
+        self.potential_include_guard = None
+
+        if self.args.defines:
+            self.args.defines = [x[0] for x in self.args.defines]
+            for d in self.args.defines:
+                if &#39;=&#39; not in d:
+                    d += &#39;=1&#39;
+                d = d.replace(&#39;=&#39;, &#39; &#39;, 1)
+                self.define(d)
+        if self.args.undefines:
+            self.args.undefines = [x[0] for x in self.args.undefines]
+            for d in self.args.undefines:
+                self.undef(d)
+        if self.args.nevers:
+            self.args.nevers = [x[0] for x in self.args.nevers]
+        if self.args.includes:
+            self.args.includes = [x[0] for x in self.args.includes]
+            for d in self.args.includes:
+                self.add_path(d)
+
+        try:
+            if len(self.args.inputs) == 1:
+                self.parse(self.args.inputs[0])
+            else:
+                input = &#39;&#39;
+                for i in self.args.inputs:
+                    input += &#39;#include &#34;&#39; + i.name + &#39;&#34;\n&#39;
+                self.parse(input)
+            self.write(self.args.output)
+        except:
+            print(traceback.print_exc(10), file = sys.stderr)
+            print(&#34;\nINTERNAL PREPROCESSOR ERROR AT AROUND %s:%d, FATALLY EXITING NOW\n&#34;
+                % (self.lastdirective.source, self.lastdirective.lineno), file = sys.stderr)
+            sys.exit(-99)
+        finally:
+            for i in self.args.inputs:
+                i.close()
+            if self.args.output != sys.stdout:
+                self.args.output.close()
+        
+        if self.args.time:
+            print(&#34;\nTime report:&#34;)
+            print(&#34;============&#34;)
+            for n in range(0, len(self.include_times)):
+                if n == 0:
+                    print(&#34;top level: %f seconds&#34; % self.include_times[n].elapsed)
+                elif self.include_times[n].depth == 1:
+                    print(&#34;\n %s: %f seconds (%f%%)&#34; % (self.include_times[n].included_path, self.include_times[n].elapsed, 100 * self.include_times[n].elapsed / self.include_times[0].elapsed))
+                else:
+                    print(&#34;%s%s: %f seconds&#34; % (&#39; &#39; * self.include_times[n].depth, self.include_times[n].included_path, self.include_times[n].elapsed))
+            print(&#34;\nPragma once files (including heuristically applied):&#34;)
+            print(&#34;====================================================&#34;)
+            for i in self.include_once:
+                print(&#34; &#34;, i)
+            print()
+        if self.args.filetimes:
+            print(&#39;&#34;Total seconds&#34;,&#34;Self seconds&#34;,&#34;File size&#34;,&#34;File path&#34;&#39;, file = self.args.filetimes)
+            filetimes = {}
+            currentfiles = []
+            for n in range(0, len(self.include_times)):
+                while self.include_times[n].depth &lt; len(currentfiles):
+                    currentfiles.pop()
+                if self.include_times[n].depth &gt; len(currentfiles) - 1:
+                    currentfiles.append(self.include_times[n].included_abspath)
+                #print()
+                #for path in currentfiles:
+                #    print(&#34;currentfiles =&#34;, path)
+                path = currentfiles[-1]
+                if path in filetimes:
+                    filetimes[path][0] += self.include_times[n].elapsed
+                    filetimes[path][1] += self.include_times[n].elapsed
+                else:
+                    filetimes[path] = [self.include_times[n].elapsed, self.include_times[n].elapsed]
+                if self.include_times[n].elapsed &gt; 0 and len(currentfiles) &gt; 1:
+                    #print(&#34;Removing child %f from parent %s = %f&#34; % (self.include_times[n].elapsed, currentfiles[-2], filetimes[currentfiles[-2]]))
+                    filetimes[currentfiles[-2]][1] -= self.include_times[n].elapsed
+            filetimes = [(v[0],v[1],k) for k,v in filetimes.items()]
+            filetimes.sort(reverse=True)
+            for t,s,p in filetimes:
+                print((&#39;%f,%f,%d,&#34;%s&#34;&#39; % (t, s, os.stat(p).st_size, p)), file = self.args.filetimes)
+    def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
+        if self.args.passthru_unfound_includes:
+            raise OutputDirective(Action.IgnoreAndPassThrough)
+        return super(CmdPreprocessor, self).on_include_not_found(is_malformed,is_system_include,curdir,includepath)
+
+    def on_unknown_macro_in_defined_expr(self,tok):
+        if self.args.undefines:
+            if tok.value in self.args.undefines:
+                return False
+        if self.args.passthru_undefined_exprs:
+            return None  # Pass through as expanded as possible
+        return super(CmdPreprocessor, self).on_unknown_macro_in_defined_expr(tok)
+        
+    def on_unknown_macro_in_expr(self,ident):
+        if self.args.undefines:
+            if ident in self.args.undefines:
+                return super(CmdPreprocessor, self).on_unknown_macro_in_expr(ident)
+        if self.args.passthru_undefined_exprs:
+            return None  # Pass through as expanded as possible
+        return super(CmdPreprocessor, self).on_unknown_macro_in_expr(ident)
+        
+    def on_unknown_macro_function_in_expr(self,ident):
+        if self.args.undefines:
+            if ident in self.args.undefines:
+                return super(CmdPreprocessor, self).on_unknown_macro_function_in_expr(ident)
+        if self.args.passthru_undefined_exprs:
+            return None  # Pass through as expanded as possible
+        return super(CmdPreprocessor, self).on_unknown_macro_function_in_expr(ident)
+        
+    def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
+        if ifpassthru:
+            if directive.value == &#39;if&#39; or directive.value == &#39;elif&#39; or directive == &#39;else&#39; or directive.value == &#39;endif&#39;:
+                self.bypass_ifpassthru = len([tok for tok in toks if tok.value == &#39;__PCPP_ALWAYS_FALSE__&#39; or tok.value == &#39;__PCPP_ALWAYS_TRUE__&#39;]) &gt; 0
+            if not self.bypass_ifpassthru and (directive.value == &#39;define&#39; or directive.value == &#39;undef&#39;):
+                if toks[0].value != self.potential_include_guard:
+                    raise OutputDirective(Action.IgnoreAndPassThrough)  # Don&#39;t execute anything with effects when inside an #if expr with undefined macro
+        if (directive.value == &#39;define&#39; or directive.value == &#39;undef&#39;) and self.args.nevers:
+            if toks[0].value in self.args.nevers:
+                raise OutputDirective(Action.IgnoreAndPassThrough)
+        if self.args.passthru_defines:
+            super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru,precedingtoks)
+            return None  # Pass through where possible
+        return super(CmdPreprocessor, self).on_directive_handle(directive,toks,ifpassthru,precedingtoks)
+
+    def on_directive_unknown(self,directive,toks,ifpassthru,precedingtoks):
+        if ifpassthru:
+            return None  # Pass through
+        return super(CmdPreprocessor, self).on_directive_unknown(directive,toks,ifpassthru,precedingtoks)
+
+    def on_potential_include_guard(self,macro):
+        self.potential_include_guard = macro
+        return super(CmdPreprocessor, self).on_potential_include_guard(macro)
+
+    def on_comment(self,tok):
+        if self.args.passthru_comments:
+            return True  # Pass through
+        return super(CmdPreprocessor, self).on_comment(tok)
+
+def main():
+    p = CmdPreprocessor(sys.argv)
+    sys.exit(p.return_code)
+        
+if __name__ == &#34;__main__&#34;:
+    p = CmdPreprocessor(sys.argv)
+    sys.exit(p.return_code)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pcpp" href="index.html">pcpp</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.3</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
