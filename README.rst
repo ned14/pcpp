@@ -11,13 +11,14 @@ A C99 preprocessor written in pure Python
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
-Travis master branch all tests passing for Python v2 and v3: |travis|
+Travis master branch all tests passing for Python v2, v3 and PyPy v2, v3: |travis|
 
 A pure universal Python C (pre-)preprocessor implementation very useful for pre-preprocessing header only
 C++ libraries into single file includes and other such build or packaging stage malarky.
 The implementation can be used as a Python module (`see API reference <https://ned14.github.io/pcpp/>`_)
 or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
+Works great under PyPy, and your 
 
 Your includes can be benchmarked for heft in order to improve your build times! See
 the ``--times`` and ``--filetimes`` options.
