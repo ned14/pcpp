@@ -14,6 +14,7 @@ from pcpp.parser import STRING_TYPES, yacc, default_lexer, in_production
 INTMAXBITS = 64
 
 # Some Python 3 compatibility shims
+# Some Python 3 compatibility shims
 if sys.version_info.major < 3:
     INTBASETYPE = long
 else:
@@ -557,11 +558,11 @@ class Evaluator(object):
     >>> e('(1 ? -1 : 0U) <= 0')
     Value(0U)
     >>> e('1 && 10 / 0')         # doctest: +ELLIPSIS
-    Exception(ZeroDivisionError('division by zero'...
+    Exception(ZeroDivisionError(...
     >>> e('0 && 10 / 0')         # && must shortcut
     Value(0)
     >>> e('1 ? 10 / 0 : 0')      # doctest: +ELLIPSIS
-    Exception(ZeroDivisionError('division by zero'...
+    Exception(ZeroDivisionError(...
     >>> e('0 ? 10 / 0 : 0')      # ? must shortcut
     Value(0)
     >>> e('(3 ^ 5) != 6 || (3 | 5) != 7 || (3 & 5) != 1')
