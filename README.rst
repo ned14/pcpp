@@ -18,10 +18,12 @@ C++ libraries into single file includes and other such build or packaging stage 
 The implementation can be used as a Python module (`see API reference <https://ned14.github.io/pcpp/>`_)
 or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
-Works great under PyPy, and your 
+Works great under PyPy, and you can expect performance gains of between 0.84x and 2.62x
+(average = 2.2x, median = 2.31x).
 
 Your includes can be benchmarked for heft in order to improve your build times! See
-the ``--times`` and ``--filetimes`` options.
+the ``--times`` and ``--filetimes`` options, and you can see graphs from pcpp for the
+C++ STLs at https://github.com/ned14/stl-header-heft.
 
 A very unique facility of this C preprocessor is *partial* preprocessing so you can
 programmatically control how much preprocessing is done by ``pcpp`` and how much is
@@ -76,7 +78,7 @@ the MSVC preprocessor and ought to handle most C99 preprocessor metaprogramming.
 If you compare its output side-by-side to that of GCC or clang's preprocessor, results
 are extremely close indeed with blank line collapsing being the only difference.
 
-As of v1.23 (Oct 2020), a proper yacc based expression evaluator for :c:`#if`
+As of v1.30 (Oct 2020), a proper yacc based expression evaluator for :c:`#if`
 expressions is used which is standards conforming, and fixes a large number of
 problems found in the previous Python :c:`eval()` based expression evaluator.
 
@@ -401,6 +403,10 @@ v1.30 (???):
   macro in more than one argument, expansion in one argument evaluation caused overly
   eager expansion in later argument evaluations. This fix ought to fix pcpp's ability
   to parse Boost (untested). Thanks to joaquintides for reporting this.
+- Now that pcpp no longer ever calls ``eval()``, pcpp is PyPy compatible and is
+  probably also compatible with Pyston (untested). Typical speedup is about 2.2x-2.3x,
+  though it can also be slower occasionally for some inputs. PyPy compatibility is now
+  being tested by CI to ensure it remains working going forth.
 
 v1.22 (19th October 2020):
 --------------------------
