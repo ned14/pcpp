@@ -896,6 +896,10 @@ class Preprocessor(PreprocessorHooks):
                                     yield tok
                                 for tok in self.include(args):
                                     pass
+                                nltok = copy.copy(tok)
+                                nltok.type = self.t_NEWLINE
+                                nltok.value = '\n'
+                                yield tok
                             else:
                                 for tok in self.include(args):
                                     yield tok
