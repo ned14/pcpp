@@ -7,7 +7,7 @@ A C99 preprocessor written in pure Python
     :align: middle
     :target: https://travis-ci.org/ned14/pcpp
 
-\(C) 2018-2020 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
+\(C) 2018-2021 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
@@ -398,7 +398,8 @@ v1.30 (???):
   hook works, and there is now an added ``on_unknown_macro_function_in_expr()`` hook.
 - Add a new passthru option ``--passthru-includes`` which enables selected ``#include``
   to be passed through, in addition to being executed. Thanks to schra for suggesting
-  this, including a PR.
+  this, including a PR. The original implementation had some subtle corner case bugs,
+  thanks to trelau for reporting those.
 - Fix a token expansion ordering bug whereby if a function macro used the same
   macro in more than one argument, expansion in one argument evaluation caused overly
   eager expansion in later argument evaluations. This fix ought to fix pcpp's ability

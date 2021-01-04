@@ -845,7 +845,7 @@ class Preprocessor(PreprocessorHooks):
                     i += 1
                     while i < len(x) and x[i].type in self.t_WS:
                         precedingtoks.append(x[i])
-                        i += 1                    
+                        i += 1
                     dirtokens = self.tokenstrip(x[i:])
                     if dirtokens:
                         name = dirtokens[0].value
@@ -888,17 +888,9 @@ class Preprocessor(PreprocessorHooks):
                             oldfile = self.macros['__FILE__'] if '__FILE__' in self.macros else None
                             if args and args[0].value != '<' and args[0].type != self.t_STRING:
                                 args = self.tokenstrip(self.expand_macros(args))
-                            #print('***', ''.join([x.value for x in args]), file = sys.stderr)
-                            if self.passthru_includes is not None and self.passthru_includes.match(''.join([x.value for x in args])):
-                                for tok in precedingtoks:
-                                    yield tok
-                                for tok in dirtokens:
-                                    yield tok
-                                for tok in self.include(args):
-                                    pass
-                            else:
-                                for tok in self.include(args):
-                                    yield tok
+                            # print('***', ''.join([x.value for x in args]), file = sys.stderr)
+                            for tok in self.include(args, x):
+                                yield tok
                             if oldfile is not None:
                                 self.macros['__FILE__'] = oldfile
                             self.source = abssource
@@ -1110,7 +1102,7 @@ class Preprocessor(PreprocessorHooks):
     # Implementation of file-inclusion
     # ----------------------------------------------------------------------
 
-    def include(self,tokens):
+    def include(self,tokens,original_line):
         """Implementation of file-inclusion"""
         # Try to extract the filename and then process an include file
         if not tokens:
@@ -1160,8 +1152,14 @@ class Preprocessor(PreprocessorHooks):
                     dname = os.path.dirname(fulliname)
                     if dname:
                         self.temp_path.insert(0,dname)
-                    for tok in self.parsegen(data,filename,fulliname):
-                        yield tok
+                    if self.passthru_includes is not None and self.passthru_includes.match(''.join([x.value for x in tokens])):
+                        for tok in original_line:
+                            yield tok
+                        for tok in self.parsegen(data,filename,fulliname):
+                            pass
+                    else:
+                        for tok in self.parsegen(data,filename,fulliname):
+                            yield tok
                     if dname:
                         del self.temp_path[0]
                     return
