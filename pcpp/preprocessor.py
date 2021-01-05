@@ -1144,6 +1144,9 @@ class Preprocessor(PreprocessorHooks):
                 if fulliname in self.include_once:
                     if self.debugout is not None:
                         print("x:x:x x:x #include \"%s\" skipped as already seen" % (fulliname), file = self.debugout)
+                    if self.passthru_includes is not None and self.passthru_includes.match(''.join([x.value for x in tokens])):
+                        for tok in original_line:
+                            yield tok
                     return
                 try:
                     ih = self.on_file_open(is_system_include,fulliname)
