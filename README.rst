@@ -408,6 +408,9 @@ v1.30 (???):
   probably also compatible with Pyston (untested). Typical speedup is about 2.2x-2.3x,
   though it can also be slower occasionally for some inputs. PyPy compatibility is now
   being tested by CI to ensure it remains working going forth.
+- Fix internal preprocessor error and failure to insert newlines before ``#include``
+  caused by certain sequence of line continuations in a macro. Thanks to dslijepcevic
+  for reporting this.
 
 v1.22 (19th October 2020):
 --------------------------

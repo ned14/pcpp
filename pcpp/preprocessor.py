@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor useful for generating single include files
-# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2021 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -1337,9 +1337,10 @@ class Preprocessor(PreprocessorHooks):
             # Filter out line continuations, collapsing before and after if needs be
             for n in xrange(len(toks)-1, -1, -1):
                 if toks[n].type in self.t_LINECONT:
-                    if n > 0 and n < len(toks) - 1 and toks[n-1].type in self.t_WS and toks[n+1].type in self.t_WS:
-                        toks[n-1].value = toks[n-1].value[0]
-                        del toks[n:n+2]
+                    if n > 0 and n < len(toks) - 2 and toks[n-1].type in self.t_WS and toks[n+1].type in self.t_WS:
+                        if toks[n-1].type not in self.t_LINECONT:
+                            toks[n-1].value = toks[n-1].value[0]
+                            del toks[n:n+2]
                     else:
                         del toks[n]
             # The line in toks is not all whitespace
