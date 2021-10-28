@@ -20,6 +20,7 @@ jobs:
     - shell: bash
       run: |
          pip install -r requirements.txt
+         git submodule update --init --recursive
 
     - name: Build
       shell: bash
@@ -30,7 +31,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: [2.7, 3.8]
+        python-version: ['2.x', '3.x', 'pypy-2.x', 'pypy-3.x']
           
     steps:
     - uses: actions/checkout@v2
@@ -39,6 +40,7 @@ jobs:
     - shell: bash
       run: |
          pip install -r requirements.txt
+         git submodule update --init --recursive
 
     - name: Test
       shell: bash
@@ -49,7 +51,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: [2.7, 3.8]
+        python-version: ['2.x', '3.x', 'pypy-2.x', 'pypy-3.x']
           
     steps:
     - uses: actions/checkout@v2
@@ -58,6 +60,7 @@ jobs:
     - shell: bash
       run: |
          pip install -r requirements.txt
+         git submodule update --init --recursive
 
     - name: Install
       shell: bash
