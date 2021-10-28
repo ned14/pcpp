@@ -7,8 +7,7 @@ on:
   pull_request:
 
 jobs:
-  Linux:
-    name: Ubuntu 20.04
+  Build:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -27,8 +26,7 @@ jobs:
       run:  |
          python setup.py test
 
-  Linux:
-    name: Ubuntu 20.04
+  Test:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -47,8 +45,7 @@ jobs:
       run:  |
          python setup.py test
 
-  Linux:
-    name: Ubuntu 20.04
+  Install:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
