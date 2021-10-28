@@ -3,9 +3,9 @@ A C99 preprocessor written in pure Python
 .. role:: c(code)
    :language: c
 
-.. |travis| image:: https://travis-ci.org/ned14/pcpp.svg?branch=master
+.. |travis| image:: https://github.com/ned14/pcpp/workflows/CI/badge.svg?branch=master
     :align: middle
-    :target: https://travis-ci.org/ned14/pcpp
+    :target: https://github.com/ned14/pcpp/actions
 
 \(C) 2018-2021 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
 
@@ -383,7 +383,7 @@ You can find an example of overriding the ``on_*()`` processing hooks at https:/
 
 History:
 ========
-v1.30 (???):
+v1.30 (29th October 2021):
 --------------------------
 - Thanks to a 5km limit covid lockdown in my country, a public holiday where we were
   supposed to be away meant I was stuck at home instead. I took the full day to finish
