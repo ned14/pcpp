@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: ['2.x', '3.x', 'pypy-2.x', 'pypy-3.x']
+        python-version: ['2.x', '3.x', 'pypy-2.7', 'pypy-3.7']
           
     steps:
     - uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: ['2.x', '3.x', 'pypy-2.x', 'pypy-3.x']
+        python-version: ['2.x', '3.x', 'pypy-2.7', 'pypy-3.7']
           
     steps:
     - uses: actions/checkout@v2
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: ['2.x', '3.x', 'pypy-2.x', 'pypy-3.x']
+        python-version: ['2.x', '3.x', 'pypy-2.7', 'pypy-3.7']
           
     steps:
     - uses: actions/checkout@v2
