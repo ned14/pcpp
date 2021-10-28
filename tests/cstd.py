@@ -533,3 +533,18 @@ BOOST_WORKAROUND(BOOST_MSVC,==1916)
     output = r"""#line 8
 ((0 + 0 == 0) && (1916 != 0) && (1 % (( (1916 ==1916) ) + 1)))
 """
+
+
+class test28(unittest.TestCase, runner):
+    input = r"""
+#define TEST \
+1 + 2   \
+3 + 4
+TEST
+"""
+    output = r"""
+
+
+
+1 + 2   3 + 4
+"""
