@@ -247,10 +247,11 @@ class CmdPreprocessor(Preprocessor):
             return True  # Pass through
         return super(CmdPreprocessor, self).on_comment(tok)
 
-def main():
-    p = CmdPreprocessor(sys.argv)
-    sys.exit(p.return_code)
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    p = CmdPreprocessor(argv)
+    return p.return_code
         
 if __name__ == "__main__":
-    p = CmdPreprocessor(sys.argv)
-    sys.exit(p.return_code)
+    sys.exit(main(sys.argv))
