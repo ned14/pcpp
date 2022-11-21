@@ -1,4 +1,13 @@
 *.pyc
 build/*
 dist/*
+.tox/
 pcpp.egg-info/*
+tests/alternate_input_encodings.c
+tests/issue0017.i
+tests/issue0025.i
+tests/issue0030.c
+tests/issue0037.i
+tests/issue0044.i
+tests/issue0051.i
+tests/issue0063.i
