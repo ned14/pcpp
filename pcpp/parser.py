@@ -113,7 +113,7 @@ t_CPP_ID = r'[A-Za-z_][\w_]*'
 
 # Preprocessor number
 def PP_NUMBER(t):
-    r'\.?\d(\.|[\w_]|\'[\w_]|[eEpP][-+])*'
+    r"\.?\d(?:\.|[\w_]|'[\w_]|[eEpP][-+])*"
     return t
 
 t_PP_NUMBER = PP_NUMBER
