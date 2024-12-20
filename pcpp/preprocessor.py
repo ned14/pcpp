@@ -558,6 +558,9 @@ class Preprocessor(PreprocessorHooks):
         for tok in tokens:
             if not hasattr(tok, 'expanded_from'):
                 tok.expanded_from = []
+            # Break recursion
+            if len(expanding_from) == 1 and tok.value == expanding_from[0]:
+                return tokens
         i = 0
         #print("*** EXPAND MACROS in", "".join([t.value for t in tokens]), "expanding_from=", expanding_from)
         #print(tokens)
