@@ -1,13 +1,7 @@
-from __future__ import absolute_import, print_function
+
 import unittest, time
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-try:
-    clock = time.process_time
-except:
-    clock = time.clock
+from io import StringIO
+clock = time.process_time
 
 class runner(object):
     def runTest(self):

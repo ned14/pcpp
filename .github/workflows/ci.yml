@@ -3,73 +3,73 @@ name: CI
 on:
   push:
     branches:
-    - master
+      - master
   pull_request:
 
 jobs:
   Build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: ['2.x', '3.x', 'pypy-2.7', 'pypy-3.7']
-          
+        python-version: ['3.x', 'pypy3.11']
+        
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
-    
+  
     - shell: bash
       run: |
-         pip install -r requirements.txt
-         git submodule update --init --recursive
+        pip install -r requirements.txt
+        git submodule update --init --recursive
 
     - name: Build
       shell: bash
-      run:  |
-         python setup.py build
+      run: |
+        python setup.py build
 
   Test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: ['2.x', '3.x', 'pypy-2.7', 'pypy-3.7']
-          
+        python-version: ['3.x', 'pypy3.11']
+        
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     
     - shell: bash
       run: |
-         pip install -r requirements.txt
-         git submodule update --init --recursive
+        pip install -r requirements.txt
+        git submodule update --init --recursive
 
     - name: Test
       shell: bash
-      run:  |
-         python setup.py test
+      run: |
+        python setup.py test
 
   Install:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: ['2.x', '3.x', 'pypy-2.7', 'pypy-3.7']
-          
+        python-version: ['3.x', 'pypy3.11']
+        
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     
     - shell: bash
       run: |
-         pip install -r requirements.txt
-         git submodule update --init --recursive
+        pip install -r requirements.txt
+        git submodule update --init --recursive
 
     - name: Install
       shell: bash
-      run:  |
-         python setup.py install
-         pcpp --version
+      run: |
+        python setup.py install
+        pcpp --version

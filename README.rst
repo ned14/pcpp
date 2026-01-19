@@ -7,11 +7,11 @@ A C99 preprocessor written in pure Python
     :align: middle
     :target: https://github.com/ned14/pcpp/actions
 
-\(C) 2018-2021 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
+\(C) 2018-2026 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
 
 PyPI: https://pypi.python.org/pypi/pcpp Github: https://github.com/ned14/pcpp API reference docs: https://ned14.github.io/pcpp/
 
-Travis master branch all tests passing for Python v2, v3 and PyPy v2, v3: |travis|
+Travis master branch all tests passing for Python 3 and PyPy3: |travis|
 
 A pure universal Python C (pre-)preprocessor implementation very useful for pre-preprocessing header only
 C++ libraries into single file includes and other such build or packaging stage malarky.
@@ -85,7 +85,6 @@ problems found in the previous Python :c:`eval()` based expression evaluator.
 A full, detailed list of known non-conformance with the C99 standard is below.
 Pull requests with bug fixes and new unit tests for the fix are welcome.
 
-If you are on Python 2, files are parsed as strings, and unicode is not supported.
 On Python 3, input and output files can have your choice of encoding, and you can
 hook file open to inspect the encoding using ``chardet``.
 

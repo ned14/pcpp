@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor parser config
-# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2026 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -9,17 +9,11 @@
 # This edition substantially improves on standards conforming output,
 # getting quite close to what clang or GCC outputs.
 
-from __future__ import generators, print_function, absolute_import, division
-
 import sys, re, os
 
 in_production = 1  # Set to 0 if editing pcpp implementation!
 
-# Some Python 3 compatibility shims
-if sys.version_info.major < 3:
-    STRING_TYPES = (str, unicode)
-else:
-    STRING_TYPES = str
+STRING_TYPES = str
 
 # -----------------------------------------------------------------------------
 # Default preprocessor lexer definitions.   These tokens are enough to get
@@ -271,11 +265,7 @@ class PreprocessorHooks(object):
         examines if it starts with a BOM (if so, it removes it), and returns the file
         object opened. This raises the appropriate exception if the path was not found.
         """
-        if sys.version_info.major < 3:
-            assert self.assume_encoding is None
-            ret = open(includepath, 'r')
-        else:
-            ret = open(includepath, 'r', encoding = self.assume_encoding)
+        ret = open(includepath, 'r', encoding = self.assume_encoding)
         bom = ret.read(1)
         #print(repr(bom))
         if bom != '\ufeff':

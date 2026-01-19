@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor useful for generating single include files
-# (C) 2017-2021 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2026 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -9,23 +9,15 @@
 # This edition substantially improves on standards conforming output,
 # getting quite close to what clang or GCC outputs.
 
-from __future__ import generators, print_function, absolute_import, division
-
 import sys, os, re, codecs, time, copy, traceback
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.parser import STRING_TYPES, default_lexer, trigraph, Macro, Action, OutputDirective, PreprocessorHooks
 from pcpp.evaluator import Evaluator
 
-# Some Python 3 compatibility shims
-if sys.version_info.major < 3:
-    FILE_TYPES = file
-    clock = time.clock
-else:
-    xrange = range
-    import io
-    FILE_TYPES = io.IOBase
-    clock = time.process_time
+import io
+FILE_TYPES = io.IOBase
+clock = time.process_time
 
 __all__ = ['Preprocessor', 'PreprocessorHooks', 'OutputDirective', 'Action', 'Evaluator']
 
@@ -449,7 +441,7 @@ class Preprocessor(PreprocessorHooks):
             if argnum not in str_expansion:
                 # Strip all non-space whitespace before stringization
                 tokens = copy.copy(args[argnum])
-                for j in xrange(len(tokens)):
+                for j in range(len(tokens)):
                     if tokens[j].type in self.t_WS and tokens[j].type != self.t_LINECONT:
                         tokens[j].value = ' '
                 # Collapse all multiple whitespace too
@@ -1335,7 +1327,7 @@ class Preprocessor(PreprocessorHooks):
                 blanklines += toks[0].value.count('\n')
                 continue
             # Filter out line continuations, collapsing before and after if needs be
-            for n in xrange(len(toks)-1, -1, -1):
+            for n in range(len(toks)-1, -1, -1):
                 if toks[n].type in self.t_LINECONT:
                     if n > 0 and n < len(toks) - 2 and toks[n-1].type in self.t_WS and toks[n+1].type in self.t_WS:
                         if toks[n-1].type not in self.t_LINECONT:
@@ -1356,7 +1348,7 @@ class Preprocessor(PreprocessorHooks):
             # Replace consecutive whitespace in output with a single space except at any indent
             first_ws = None
             #print(toks)
-            for n in xrange(len(toks)-1, -1, -1):
+            for n in range(len(toks)-1, -1, -1):
                 tok = toks[n]
                 if first_ws is None:
                     if tok.type in self.t_SPACE or len(tok.value) == 0:

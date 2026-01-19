@@ -1,16 +1,14 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor command line
-# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2026 Niall Douglas http://www.nedproductions.biz/
 # Started: March 2017
-
-from __future__ import generators, print_function, absolute_import, division
 
 import sys, argparse, traceback, os, copy, io, re
 if __name__ == '__main__' and __package__ is None:
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) ) )
 from pcpp.preprocessor import Preprocessor, OutputDirective, Action
 
-version='1.30'
+version='1.31'
 
 __all__ = []
 

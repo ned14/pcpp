@@ -1,9 +1,6 @@
-from __future__ import absolute_import, print_function
+
 import unittest, time, difflib
-try:
-    clock = time.process_time
-except:
-    clock = time.clock
+clock = time.process_time
 
 class n_std(unittest.TestCase):
     def runTest(self):

@@ -1,4 +1,4 @@
-(C) 2018-2019 Niall Douglas http://www.nedproductions.biz/
+(C) 2018-2026 Niall Douglas http://www.nedproductions.biz/
 and (C) 2007-2019 David Beazley http://www.dabeaz.com/
 
 All rights reserved.

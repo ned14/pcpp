@@ -1,9 +1,7 @@
 #!/usr/bin/python
 # Python C99 conforming preprocessor expression evaluator
-# (C) 2019-2020 Niall Douglas http://www.nedproductions.biz/
+# (C) 2019-2026 Niall Douglas http://www.nedproductions.biz/
 # Started: Apr 2019
-
-from __future__ import generators, print_function, absolute_import, division
 
 import sys, os, re, codecs, copy
 if __name__ == '__main__' and __package__ is None:
@@ -13,12 +11,7 @@ from pcpp.parser import STRING_TYPES, yacc, default_lexer, in_production
 # The width of signed integer which this evaluator will use
 INTMAXBITS = 64
 
-# Some Python 3 compatibility shims
-# Some Python 3 compatibility shims
-if sys.version_info.major < 3:
-    INTBASETYPE = long
-else:
-    INTBASETYPE = int
+INTBASETYPE = int
 
 # Precompile the regular expression for correctly expanding unicode escape
 # sequences in Python 2 and 3. See https://stackoverflow.com/questions/4020539/process-escape-sequences-in-a-string-in-python
@@ -291,8 +284,6 @@ class Value(INTBASETYPE):
         else:
             return "Value(%d)" % INTBASETYPE(self)
     def __bool__(self):
-        assert False  # Do not use Python logical operations
-    def __nonzero__(self):
         assert False  # Do not use Python logical operations
     def __cmp__(self, other):
         assert False

@@ -1,4 +1,4 @@
-from __future__ import absolute_import, print_function
+
 import unittest, sys
 
 shouldbe = r'''#line 1 "tests/issue0030/source3.c"

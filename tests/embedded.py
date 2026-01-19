@@ -1,9 +1,6 @@
-from __future__ import absolute_import, print_function
+
 import unittest, sys
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 class embedded1(unittest.TestCase):
     def runTest(self):

@@ -1,30 +1,465 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.5.3" />
-<title>pcpp.parser API documentation</title>
-<meta name="description" content="" />
-<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
-<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
-<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.name small{font-weight:normal}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase;cursor:pointer}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
-<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
-<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+    <meta name="generator" content="pdoc 0.5.3" />
+    <title>pcpp.parser API documentation</title>
+    <meta name="description" content="" />
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+    <style>
+        .flex {
+            display: flex !important
+        }
+
+        body {
+            line-height: 1.5em
+        }
+
+        #content {
+            padding: 20px
+        }
+
+        #sidebar {
+            padding: 30px;
+            overflow: hidden
+        }
+
+        .http-server-breadcrumbs {
+            font-size: 130%;
+            margin: 0 0 15px 0
+        }
+
+        #footer {
+            font-size: .75em;
+            padding: 5px 30px;
+            border-top: 1px solid #ddd;
+            text-align: right
+        }
+
+        #footer p {
+            margin: 0 0 0 1em;
+            display: inline-block
+        }
+
+        #footer p:last-child {
+            margin-right: 30px
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5 {
+            font-weight: 300
+        }
+
+        h1 {
+            font-size: 2.5em;
+            line-height: 1.1em
+        }
+
+        h2 {
+            font-size: 1.75em;
+            margin: 1em 0 .50em 0
+        }
+
+        h3 {
+            font-size: 1.4em;
+            margin: 25px 0 10px 0
+        }
+
+        h4 {
+            margin: 0;
+            font-size: 105%
+        }
+
+        a {
+            color: #058;
+            text-decoration: none;
+            transition: color .3s ease-in-out
+        }
+
+        a:hover {
+            color: #e82
+        }
+
+        .title code {
+            font-weight: bold
+        }
+
+        h2[id^="header-"] {
+            margin-top: 2em
+        }
+
+        .ident {
+            color: #900
+        }
+
+        pre code {
+            background: #f8f8f8;
+            font-size: .8em;
+            line-height: 1.4em
+        }
+
+        code {
+            background: #f2f2f1;
+            padding: 1px 4px;
+            overflow-wrap: break-word
+        }
+
+        h1 code {
+            background: transparent
+        }
+
+        pre {
+            background: #f8f8f8;
+            border: 0;
+            border-top: 1px solid #ccc;
+            border-bottom: 1px solid #ccc;
+            margin: 1em 0;
+            padding: 1ex
+        }
+
+        #http-server-module-list {
+            display: flex;
+            flex-flow: column
+        }
+
+        #http-server-module-list div {
+            display: flex
+        }
+
+        #http-server-module-list dt {
+            min-width: 10%
+        }
+
+        #http-server-module-list p {
+            margin-top: 0
+        }
+
+        .toc ul,
+        #index {
+            list-style-type: none;
+            margin: 0;
+            padding: 0
+        }
+
+        #index code {
+            background: transparent
+        }
+
+        #index h3 {
+            border-bottom: 1px solid #ddd
+        }
+
+        #index ul {
+            padding: 0
+        }
+
+        #index h4 {
+            font-weight: bold
+        }
+
+        #index h4+ul {
+            margin-bottom: .6em
+        }
+
+        @media (min-width:200ex) {
+            #index .two-column {
+                column-count: 2
+            }
+        }
+
+        @media (min-width:300ex) {
+            #index .two-column {
+                column-count: 3
+            }
+        }
+
+        dl {
+            margin-bottom: 2em
+        }
+
+        dl dl:last-child {
+            margin-bottom: 4em
+        }
+
+        dd {
+            margin: 0 0 1em 3em
+        }
+
+        #header-classes+dl>dd {
+            margin-bottom: 3em
+        }
+
+        dd dd {
+            margin-left: 2em
+        }
+
+        dd p {
+            margin: 10px 0
+        }
+
+        .name {
+            background: #eee;
+            font-weight: bold;
+            font-size: .85em;
+            padding: 5px 10px;
+            display: inline-block;
+            min-width: 40%
+        }
+
+        .name:hover {
+            background: #e0e0e0
+        }
+
+        .name>span:first-child {
+            white-space: nowrap
+        }
+
+        .name.class>span:nth-child(2) {
+            margin-left: .4em
+        }
+
+        .name small {
+            font-weight: normal
+        }
+
+        .inherited {
+            color: #999;
+            border-left: 5px solid #eee;
+            padding-left: 1em
+        }
+
+        .inheritance em {
+            font-style: normal;
+            font-weight: bold
+        }
+
+        .desc h2 {
+            font-weight: 400;
+            font-size: 1.25em
+        }
+
+        .desc h3 {
+            font-size: 1em
+        }
+
+        .desc dt code {
+            background: inherit
+        }
+
+        .source summary {
+            color: #666;
+            text-align: right;
+            font-weight: 400;
+            font-size: .8em;
+            text-transform: uppercase;
+            cursor: pointer
+        }
+
+        .source pre {
+            max-height: 500px;
+            overflow: auto;
+            margin: 0
+        }
+
+        .source pre code {
+            font-size: 12px;
+            overflow: visible
+        }
+
+        .hlist {
+            list-style: none
+        }
+
+        .hlist li {
+            display: inline
+        }
+
+        .hlist li:after {
+            content: ',\2002'
+        }
+
+        .hlist li:last-child:after {
+            content: none
+        }
+
+        .hlist .hlist {
+            display: inline;
+            padding-left: 1em
+        }
+
+        img {
+            max-width: 100%
+        }
+
+        .admonition {
+            padding: .1em .5em
+        }
+
+        .admonition-title {
+            font-weight: bold
+        }
+
+        .admonition.note,
+        .admonition.info,
+        .admonition.important {
+            background: #aef
+        }
+
+        .admonition.todo,
+        .admonition.versionadded,
+        .admonition.tip,
+        .admonition.hint {
+            background: #dfd
+        }
+
+        .admonition.warning,
+        .admonition.versionchanged,
+        .admonition.deprecated {
+            background: #fd4
+        }
+
+        .admonition.error,
+        .admonition.danger,
+        .admonition.caution {
+            background: lightpink
+        }
+    </style>
+    <style media="screen and (min-width: 700px)">
+        @media screen and (min-width:700px) {
+            #sidebar {
+                width: 30%
+            }
+
+            #content {
+                width: 70%;
+                max-width: 100ch;
+                padding: 3em 4em;
+                border-left: 1px solid #ddd
+            }
+
+            pre code {
+                font-size: 1em
+            }
+
+            .item .name {
+                font-size: 1em
+            }
+
+            main {
+                display: flex;
+                flex-direction: row-reverse;
+                justify-content: flex-end
+            }
+
+            .toc ul ul,
+            #index ul {
+                padding-left: 1.5em
+            }
+
+            .toc>ul>li {
+                margin-top: .5em
+            }
+        }
+    </style>
+    <style media="print">
+        @media print {
+            #sidebar h1 {
+                page-break-before: always
+            }
+
+            .source {
+                display: none
+            }
+        }
+
+        @media print {
+            * {
+                background: transparent !important;
+                color: #000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important
+            }
+
+            a[href]:after {
+                content: " (" attr(href) ")";
+                font-size: 90%
+            }
+
+            a[href][title]:after {
+                content: none
+            }
+
+            abbr[title]:after {
+                content: " (" attr(title) ")"
+            }
+
+            .ir a:after,
+            a[href^="javascript:"]:after,
+            a[href^="#"]:after {
+                content: ""
+            }
+
+            pre,
+            blockquote {
+                border: 1px solid #999;
+                page-break-inside: avoid
+            }
+
+            thead {
+                display: table-header-group
+            }
+
+            tr,
+            img {
+                page-break-inside: avoid
+            }
+
+            img {
+                max-width: 100% !important
+            }
+
+            @page {
+                margin: 0.5cm
+            }
+
+            p,
+            h2,
+            h3 {
+                orphans: 3;
+                widows: 3
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                page-break-after: avoid
+            }
+        }
+    </style>
 </head>
+
 <body>
-<main>
-<article id="content">
-<header>
-<h1 class="title"><code>pcpp.parser</code> module</h1>
-</header>
-<section id="section-intro">
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">#!/usr/bin/python
+    <main>
+        <article id="content">
+            <header>
+                <h1 class="title"><code>pcpp.parser</code> module</h1>
+            </header>
+            <section id="section-intro">
+                <details class="source">
+                    <summary>Source code</summary>
+                    <pre><code class="python">#!/usr/bin/python
 # Python C99 conforming preprocessor parser config
-# (C) 2017-2020 Niall Douglas http://www.nedproductions.biz/
+# (C) 2017-2026 Niall Douglas http://www.nedproductions.biz/
 # and (C) 2007-2017 David Beazley http://www.dabeaz.com/
 # Started: Feb 2017
 #
@@ -415,194 +850,218 @@ class PreprocessorHooks(object):
         if the comment is a block comment, else a single new line if the comment is a line comment.
         &#34;&#34;&#34;
         return None</code></pre>
-</details>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="pcpp.parser.CPP_INTEGER"><code class="name flex">
+                </details>
+            </section>
+            <section>
+            </section>
+            <section>
+            </section>
+            <section>
+                <h2 class="section-title" id="header-functions">Functions</h2>
+                <dl>
+                    <dt id="pcpp.parser.CPP_INTEGER"><code class="name flex">
 <span>def <span class="ident">CPP_INTEGER</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def CPP_INTEGER(t):
+                    <dd>
+                        <section class="desc">
+                            <p>(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def CPP_INTEGER(t):
     r&#39;(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)&#39;
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.default_lexer"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.default_lexer"><code class="name flex">
 <span>def <span class="ident">default_lexer</span></span>(<span>)</span>
 </code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def default_lexer():
+                    <dd>
+                        <section class="desc"></section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def default_lexer():
     return lex.lex(optimize=in_production)</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_CHAR"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_CHAR"><code class="name flex">
 <span>def <span class="ident">t_CPP_CHAR</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>(L)?'([^\\n]|(\(.|\n)))*?'</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_CPP_CHAR(t):
+                    <dd>
+                        <section class="desc">
+                            <p>(L)?'([^\\n]|(\(.|\n)))*?'</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_CPP_CHAR(t):
     r&#39;(L)?\&#39;([^\\\n]|(\\(.|\n)))*?\&#39;&#39;
     t.lexer.lineno += t.value.count(&#34;\n&#34;)
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_COMMENT1"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_COMMENT1"><code class="name flex">
 <span>def <span class="ident">t_CPP_COMMENT1</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>(/*(.|\n)*?*/)</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_CPP_COMMENT1(t):
+                    <dd>
+                        <section class="desc">
+                            <p>(/*(.|\n)*?*/)</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_CPP_COMMENT1(t):
     r&#39;(/\*(.|\n)*?\*/)&#39;
     ncr = t.value.count(&#34;\n&#34;)
     t.lexer.lineno += ncr
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_COMMENT2"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_COMMENT2"><code class="name flex">
 <span>def <span class="ident">t_CPP_COMMENT2</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>(//[^\n]*)</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_CPP_COMMENT2(t):
+                    <dd>
+                        <section class="desc">
+                            <p>(//[^\n]*)</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_CPP_COMMENT2(t):
     r&#39;(//[^\n]*)&#39;
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_INTEGER"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_INTEGER"><code class="name flex">
 <span>def <span class="ident">t_CPP_INTEGER</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def CPP_INTEGER(t):
+                    <dd>
+                        <section class="desc">
+                            <p>(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def CPP_INTEGER(t):
     r&#39;(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)&#39;
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_LINECONT"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_LINECONT"><code class="name flex">
 <span>def <span class="ident">t_CPP_LINECONT</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>\[ \t]*\n</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_CPP_LINECONT(t):
+                    <dd>
+                        <section class="desc">
+                            <p>\[ \t]*\n</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_CPP_LINECONT(t):
     r&#39;\\[ \t]*\n&#39;
     t.value = t.value[1:-1]
     t.lexer.lineno += 1
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_STRING"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_STRING"><code class="name flex">
 <span>def <span class="ident">t_CPP_STRING</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>"([^\\n]|(\(.|\n)))*?"</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_CPP_STRING(t):
+                    <dd>
+                        <section class="desc">
+                            <p>"([^\\n]|(\(.|\n)))*?"</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_CPP_STRING(t):
     r&#39;\&#34;([^\\\n]|(\\(.|\n)))*?\&#34;&#39;
     t.value, subs_made = _string_literal_linecont_pat.subn(&#39;&#39;, t.value)
     t.lexer.lineno += subs_made + t.value.count(&#34;\n&#34;)
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_CPP_WS"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_CPP_WS"><code class="name flex">
 <span>def <span class="ident">t_CPP_WS</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>([ \t]+|\n)</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_CPP_WS(t):
+                    <dd>
+                        <section class="desc">
+                            <p>([ \t]+|\n)</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_CPP_WS(t):
     r&#39;([ \t]+|\n)&#39;
     t.lexer.lineno += t.value.count(&#34;\n&#34;)
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.t_error"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.t_error"><code class="name flex">
 <span>def <span class="ident">t_error</span></span>(<span>t)</span>
 </code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def t_error(t):
+                    <dd>
+                        <section class="desc"></section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def t_error(t):
     t.type = t.value[0]
     t.value = t.value[0]
     t.lexer.skip(1)
     return t</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.trigraph"><code class="name flex">
+                        </details>
+                    </dd>
+                    <dt id="pcpp.parser.trigraph"><code class="name flex">
 <span>def <span class="ident">trigraph</span></span>(<span>input)</span>
 </code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def trigraph(input):
+                    <dd>
+                        <section class="desc"></section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">def trigraph(input):
     return _trigraph_pat.sub(lambda g: _trigraph_rep[g.group()[-1]],input)</code></pre>
-</details>
-</dd>
-</dl>
-</section>
-<section>
-<h2 class="section-title" id="header-classes">Classes</h2>
-<dl>
-<dt id="pcpp.parser.Action"><code class="flex name class">
+                        </details>
+                    </dd>
+                </dl>
+            </section>
+            <section>
+                <h2 class="section-title" id="header-classes">Classes</h2>
+                <dl>
+                    <dt id="pcpp.parser.Action"><code class="flex name class">
 <span>class <span class="ident">Action</span></span>
 </code></dt>
-<dd>
-<section class="desc"><p>What kind of abort processing to do in OutputDirective</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">class Action(object):
+                    <dd>
+                        <section class="desc">
+                            <p>What kind of abort processing to do in OutputDirective</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">class Action(object):
     &#34;&#34;&#34;What kind of abort processing to do in OutputDirective&#34;&#34;&#34;
     IgnoreAndPassThrough = 0
     &#34;&#34;&#34;Abort processing (don&#39;t execute), but pass the directive through to output&#34;&#34;&#34;
     IgnoreAndRemove = 1
     &#34;&#34;&#34;Abort processing (don&#39;t execute), and remove from output&#34;&#34;&#34;</code></pre>
-</details>
-<h3>Class variables</h3>
-<dl>
-<dt id="pcpp.parser.Action.IgnoreAndPassThrough"><code class="name">var <span class="ident">IgnoreAndPassThrough</span></code></dt>
-<dd>
-<section class="desc"><p>Abort processing (don't execute), but pass the directive through to output</p></section>
-</dd>
-<dt id="pcpp.parser.Action.IgnoreAndRemove"><code class="name">var <span class="ident">IgnoreAndRemove</span></code></dt>
-<dd>
-<section class="desc"><p>Abort processing (don't execute), and remove from output</p></section>
-</dd>
-</dl>
-</dd>
-<dt id="pcpp.parser.Macro"><code class="flex name class">
+                        </details>
+                        <h3>Class variables</h3>
+                        <dl>
+                            <dt id="pcpp.parser.Action.IgnoreAndPassThrough"><code
+                                    class="name">var <span class="ident">IgnoreAndPassThrough</span></code></dt>
+                            <dd>
+                                <section class="desc">
+                                    <p>Abort processing (don't execute), but pass the directive through to output</p>
+                                </section>
+                            </dd>
+                            <dt id="pcpp.parser.Action.IgnoreAndRemove"><code
+                                    class="name">var <span class="ident">IgnoreAndRemove</span></code></dt>
+                            <dd>
+                                <section class="desc">
+                                    <p>Abort processing (don't execute), and remove from output</p>
+                                </section>
+                            </dd>
+                        </dl>
+                    </dd>
+                    <dt id="pcpp.parser.Macro"><code class="flex name class">
 <span>class <span class="ident">Macro</span></span>
 </code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">class Macro(object):
+                    <dd>
+                        <section class="desc"></section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">class Macro(object):
     def __init__(self,name,value,arglist=None,variadic=False):
         self.name = name
         self.value = value
@@ -614,18 +1073,20 @@ class PreprocessorHooks(object):
         self.lineno = None
     def __repr__(self):
         return &#34;%s(%s)=%s&#34; % (self.name, self.arglist, self.value)</code></pre>
-</details>
-<h3>Methods</h3>
-<dl>
-<dt id="pcpp.parser.Macro.__init__"><code class="name flex">
+                        </details>
+                        <h3>Methods</h3>
+                        <dl>
+                            <dt id="pcpp.parser.Macro.__init__"><code class="name flex">
 <span>def <span class="ident">__init__</span></span>(<span>self, name, value, arglist=None, variadic=False)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Initialize self.
-See help(type(self)) for accurate signature.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def __init__(self,name,value,arglist=None,variadic=False):
+                            <dd>
+                                <section class="desc">
+                                    <p>Initialize self.
+                                        See help(type(self)) for accurate signature.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def __init__(self,name,value,arglist=None,variadic=False):
     self.name = name
     self.value = value
     self.arglist = arglist
@@ -634,49 +1095,55 @@ See help(type(self)) for accurate signature.</p></section>
         self.vararg = arglist[-1]
     self.source = None
     self.lineno = None</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
-<dt id="pcpp.parser.OutputDirective"><code class="flex name class">
+                                </details>
+                            </dd>
+                        </dl>
+                    </dd>
+                    <dt id="pcpp.parser.OutputDirective"><code class="flex name class">
 <span>class <span class="ident">OutputDirective</span></span>
 <span>(</span><span><small>ancestors:</small> builtins.Exception, builtins.BaseException)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Raise this exception to abort processing of a preprocessor directive and
-to instead output it as is into the output</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">class OutputDirective(Exception):
+                    <dd>
+                        <section class="desc">
+                            <p>Raise this exception to abort processing of a preprocessor directive and
+                                to instead output it as is into the output</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">class OutputDirective(Exception):
     &#34;&#34;&#34;Raise this exception to abort processing of a preprocessor directive and
     to instead output it as is into the output&#34;&#34;&#34;
     def __init__(self, action):
         self.action = action</code></pre>
-</details>
-<h3>Methods</h3>
-<dl>
-<dt id="pcpp.parser.OutputDirective.__init__"><code class="name flex">
+                        </details>
+                        <h3>Methods</h3>
+                        <dl>
+                            <dt id="pcpp.parser.OutputDirective.__init__"><code class="name flex">
 <span>def <span class="ident">__init__</span></span>(<span>self, action)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Initialize self.
-See help(type(self)) for accurate signature.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def __init__(self, action):
+                            <dd>
+                                <section class="desc">
+                                    <p>Initialize self.
+                                        See help(type(self)) for accurate signature.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def __init__(self, action):
     self.action = action</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks"><code class="flex name class">
+                                </details>
+                            </dd>
+                        </dl>
+                    </dd>
+                    <dt id="pcpp.parser.PreprocessorHooks"><code class="flex name class">
 <span>class <span class="ident">PreprocessorHooks</span></span>
 </code></dt>
-<dd>
-<section class="desc"><p>Override these in your subclass of Preprocessor to customise preprocessing</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">class PreprocessorHooks(object):
+                    <dd>
+                        <section class="desc">
+                            <p>Override these in your subclass of Preprocessor to customise preprocessing</p>
+                        </section>
+                        <details class="source">
+                            <summary>Source code</summary>
+                            <pre><code class="python">class PreprocessorHooks(object):
     &#34;&#34;&#34;Override these in your subclass of Preprocessor to customise preprocessing&#34;&#34;&#34;
     def __init__(self):
         self.lastdirective = None
@@ -822,36 +1289,44 @@ See help(type(self)) for accurate signature.</p></section>
         if the comment is a block comment, else a single new line if the comment is a line comment.
         &#34;&#34;&#34;
         return None</code></pre>
-</details>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pcpp.preprocessor.Preprocessor" href="preprocessor.html#pcpp.preprocessor.Preprocessor">Preprocessor</a></li>
-</ul>
-<h3>Methods</h3>
-<dl>
-<dt id="pcpp.parser.PreprocessorHooks.__init__"><code class="name flex">
+                        </details>
+                        <h3>Subclasses</h3>
+                        <ul class="hlist">
+                            <li><a title="pcpp.preprocessor.Preprocessor"
+                                    href="preprocessor.html#pcpp.preprocessor.Preprocessor">Preprocessor</a></li>
+                        </ul>
+                        <h3>Methods</h3>
+                        <dl>
+                            <dt id="pcpp.parser.PreprocessorHooks.__init__"><code class="name flex">
 <span>def <span class="ident">__init__</span></span>(<span>self)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Initialize self.
-See help(type(self)) for accurate signature.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def __init__(self):
+                            <dd>
+                                <section class="desc">
+                                    <p>Initialize self.
+                                        See help(type(self)) for accurate signature.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def __init__(self):
     self.lastdirective = None</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_comment"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_comment"><code class="name flex">
 <span>def <span class="ident">on_comment</span></span>(<span>self, tok)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when the preprocessor encounters a comment token. You can modify the token
-in place. You must return True to let the comment pass through, else it will be removed.</p>
-<p>Returning False or None modifies the token to become whitespace, becoming a single space
-if the comment is a block comment, else a single new line if the comment is a line comment.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_comment(self,tok):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when the preprocessor encounters a comment token. You can modify the token
+                                        in place. You must return True to let the comment pass through, else it will be
+                                        removed.</p>
+                                    <p>Returning False or None modifies the token to become whitespace, becoming a
+                                        single space
+                                        if the comment is a block comment, else a single new line if the comment is a
+                                        line comment.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_comment(self,tok):
     &#34;&#34;&#34;Called when the preprocessor encounters a comment token. You can modify the token
     in place. You must return True to let the comment pass through, else it will be removed.
     
@@ -859,24 +1334,26 @@ if the comment is a block comment, else a single new line if the comment is a li
     if the comment is a block comment, else a single new line if the comment is a line comment.
     &#34;&#34;&#34;
     return None</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_directive_handle"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_directive_handle"><code class="name flex">
 <span>def <span class="ident">on_directive_handle</span></span>(<span>self, directive, toks, ifpassthru, precedingtoks)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when there is one of</p>
-<p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
-<p>Return True to execute and remove from the output, raise OutputDirective
-to pass through or remove without execution, or return None to execute
-AND pass through to the output (this only works for #define, #undef).</p>
-<p>The default returns True (execute and remove from the output).</p>
-<p>directive is the directive, toks is the tokens after the directive,
-ifpassthru is whether we are in passthru mode, precedingtoks is the
-tokens preceding the directive from the # token until the directive.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when there is one of</p>
+                                    <p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
+                                    <p>Return True to execute and remove from the output, raise OutputDirective
+                                        to pass through or remove without execution, or return None to execute
+                                        AND pass through to the output (this only works for #define, #undef).</p>
+                                    <p>The default returns True (execute and remove from the output).</p>
+                                    <p>directive is the directive, toks is the tokens after the directive,
+                                        ifpassthru is whether we are in passthru mode, precedingtoks is the
+                                        tokens preceding the directive from the # token until the directive.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_directive_handle(self,directive,toks,ifpassthru,precedingtoks):
     &#34;&#34;&#34;Called when there is one of
     
     define, include, undef, ifdef, ifndef, if, elif, else, endif
@@ -893,26 +1370,29 @@ tokens preceding the directive from the # token until the directive.</p></sectio
     &#34;&#34;&#34;
     self.lastdirective = directive
     return True</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_directive_unknown"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_directive_unknown"><code class="name flex">
 <span>def <span class="ident">on_directive_unknown</span></span>(<span>self, directive, toks, ifpassthru, precedingtoks)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when the preprocessor encounters a #directive it doesn't understand.
-This is actually quite an extensive list as it currently only understands:</p>
-<p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
-<p>Return True to remove from the output, raise OutputDirective
-to pass through or remove, or return None to
-pass through into the output.</p>
-<p>The default handles #error and #warning by printing to stderr and returning True
-(remove from output). For everything else it returns None (pass through into output).</p>
-<p>directive is the directive, toks is the tokens after the directive,
-ifpassthru is whether we are in passthru mode, precedingtoks is the
-tokens preceding the directive from the # token until the directive.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_directive_unknown(self,directive,toks,ifpassthru,precedingtoks):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when the preprocessor encounters a #directive it doesn't understand.
+                                        This is actually quite an extensive list as it currently only understands:</p>
+                                    <p>define, include, undef, ifdef, ifndef, if, elif, else, endif</p>
+                                    <p>Return True to remove from the output, raise OutputDirective
+                                        to pass through or remove, or return None to
+                                        pass through into the output.</p>
+                                    <p>The default handles #error and #warning by printing to stderr and returning True
+                                        (remove from output). For everything else it returns None (pass through into
+                                        output).</p>
+                                    <p>directive is the directive, toks is the tokens after the directive,
+                                        ifpassthru is whether we are in passthru mode, precedingtoks is the
+                                        tokens preceding the directive from the # token until the directive.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_directive_unknown(self,directive,toks,ifpassthru,precedingtoks):
     &#34;&#34;&#34;Called when the preprocessor encounters a #directive it doesn&#39;t understand.
     This is actually quite an extensive list as it currently only understands:
     
@@ -937,41 +1417,49 @@ tokens preceding the directive from the # token until the directive.</p></sectio
         print(&#34;%s:%d warning: %s&#34; % (directive.source,directive.lineno,&#39;&#39;.join(tok.value for tok in toks)), file = sys.stderr)
         return True
     return None</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_error"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_error"><code class="name flex">
 <span>def <span class="ident">on_error</span></span>(<span>self, file, line, msg)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when the preprocessor has encountered an error, e.g. malformed input.</p>
-<p>The default simply prints to stderr and increments the return code.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_error(self,file,line,msg):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when the preprocessor has encountered an error, e.g. malformed input.</p>
+                                    <p>The default simply prints to stderr and increments the return code.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_error(self,file,line,msg):
     &#34;&#34;&#34;Called when the preprocessor has encountered an error, e.g. malformed input.
     
     The default simply prints to stderr and increments the return code.
     &#34;&#34;&#34;
     print(&#34;%s:%d error: %s&#34; % (file,line,msg), file = sys.stderr)
     self.return_code += 1</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_file_open"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_file_open"><code class="name flex">
 <span>def <span class="ident">on_file_open</span></span>(<span>self, is_system_include, includepath)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called to open a file for reading.</p>
-<p>This hook provides the ability to use <code>chardet</code>, or any other mechanism,
-to inspect a file for its text encoding, and open it appropriately. Be
-aware that this function is used to probe for possible include file locations,
-so <code>includepath</code> may not exist. If it does not, raise the appropriate
-<code>IOError</code> exception.</p>
-<p>The default calls <code>io.open(includepath, 'r', encoding = self.assume_encoding)</code>,
-examines if it starts with a BOM (if so, it removes it), and returns the file
-object opened. This raises the appropriate exception if the path was not found.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_file_open(self,is_system_include,includepath):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called to open a file for reading.</p>
+                                    <p>This hook provides the ability to use <code>chardet</code>, or any other
+                                        mechanism,
+                                        to inspect a file for its text encoding, and open it appropriately. Be
+                                        aware that this function is used to probe for possible include file locations,
+                                        so <code>includepath</code> may not exist. If it does not, raise the appropriate
+                                        <code>IOError</code> exception.
+                                    </p>
+                                    <p>The default calls
+                                        <code>io.open(includepath, 'r', encoding = self.assume_encoding)</code>,
+                                        examines if it starts with a BOM (if so, it removes it), and returns the file
+                                        object opened. This raises the appropriate exception if the path was not found.
+                                    </p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_file_open(self,is_system_include,includepath):
     &#34;&#34;&#34;Called to open a file for reading.
     
     This hook provides the ability to use ``chardet``, or any other mechanism,
@@ -994,22 +1482,27 @@ object opened. This raises the appropriate exception if the path was not found.<
     if bom != &#39;\ufeff&#39;:
         ret.seek(0)
     return ret</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_include_not_found"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_include_not_found"><code class="name flex">
 <span>def <span class="ident">on_include_not_found</span></span>(<span>self, is_malformed, is_system_include, curdir, includepath)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when a #include wasn't found.</p>
-<p>Raise OutputDirective to pass through or remove, else return
-a suitable path. Remember that Preprocessor.add_path() lets you add search paths.</p>
-<p>The default calls <code>self.on_error()</code> with a suitable error message about the
-include file not found if <code>is_malformed</code> is False, else a suitable error
-message about a malformed #include, and in both cases raises OutputDirective
-(pass through).</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when a #include wasn't found.</p>
+                                    <p>Raise OutputDirective to pass through or remove, else return
+                                        a suitable path. Remember that Preprocessor.add_path() lets you add search
+                                        paths.</p>
+                                    <p>The default calls <code>self.on_error()</code> with a suitable error message
+                                        about the
+                                        include file not found if <code>is_malformed</code> is False, else a suitable
+                                        error
+                                        message about a malformed #include, and in both cases raises OutputDirective
+                                        (pass through).</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_include_not_found(self,is_malformed,is_system_include,curdir,includepath):
     &#34;&#34;&#34;Called when a #include wasn&#39;t found.
     
     Raise OutputDirective to pass through or remove, else return
@@ -1025,37 +1518,44 @@ message about a malformed #include, and in both cases raises OutputDirective
     else:
         self.on_error(self.lastdirective.source,self.lastdirective.lineno, &#34;Include file &#39;%s&#39; not found&#34; % includepath)
     raise OutputDirective(Action.IgnoreAndPassThrough)</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_potential_include_guard"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_potential_include_guard"><code class="name flex">
 <span>def <span class="ident">on_potential_include_guard</span></span>(<span>self, macro)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when the preprocessor encounters an #ifndef macro or an #if !defined(macro)
-as the first non-whitespace thing in a file. Unlike the other hooks, macro is a string,
-not a token.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_potential_include_guard(self,macro):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when the preprocessor encounters an #ifndef macro or an #if
+                                        !defined(macro)
+                                        as the first non-whitespace thing in a file. Unlike the other hooks, macro is a
+                                        string,
+                                        not a token.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_potential_include_guard(self,macro):
     &#34;&#34;&#34;Called when the preprocessor encounters an #ifndef macro or an #if !defined(macro)
     as the first non-whitespace thing in a file. Unlike the other hooks, macro is a string,
     not a token.
     &#34;&#34;&#34;
     pass</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_unknown_macro_function_in_expr"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_unknown_macro_function_in_expr"><code
+                                    class="name flex">
 <span>def <span class="ident">on_unknown_macro_function_in_expr</span></span>(<span>self, ident)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when an expression passed to an #if contained an unknown function.</p>
-<p>Return a callable which will be invoked by the expression evaluator to
-evaluate the input to the function, or return None to pass through the
-mostly expanded #if expression.</p>
-<p>The default returns a lambda which returns integer 0, as per the C standard.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_unknown_macro_function_in_expr(self,ident):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when an expression passed to an #if contained an unknown function.</p>
+                                    <p>Return a callable which will be invoked by the expression evaluator to
+                                        evaluate the input to the function, or return None to pass through the
+                                        mostly expanded #if expression.</p>
+                                    <p>The default returns a lambda which returns integer 0, as per the C standard.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_unknown_macro_function_in_expr(self,ident):
     &#34;&#34;&#34;Called when an expression passed to an #if contained an unknown function.
     
     Return a callable which will be invoked by the expression evaluator to
@@ -1065,21 +1565,25 @@ mostly expanded #if expression.</p>
     The default returns a lambda which returns integer 0, as per the C standard.
     &#34;&#34;&#34;
     return lambda x : 0</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_defined_expr"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_defined_expr"><code
+                                    class="name flex">
 <span>def <span class="ident">on_unknown_macro_in_defined_expr</span></span>(<span>self, tok)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when an expression passed to an #if contained a defined operator
-performed on something unknown.</p>
-<p>Return True if to treat it as defined, False if to treat it as undefined,
-raise OutputDirective to pass through without execution, or return None to
-pass through the mostly expanded #if expression apart from the unknown defined.</p>
-<p>The default returns False, as per the C standard.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_unknown_macro_in_defined_expr(self,tok):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when an expression passed to an #if contained a defined operator
+                                        performed on something unknown.</p>
+                                    <p>Return True if to treat it as defined, False if to treat it as undefined,
+                                        raise OutputDirective to pass through without execution, or return None to
+                                        pass through the mostly expanded #if expression apart from the unknown defined.
+                                    </p>
+                                    <p>The default returns False, as per the C standard.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_unknown_macro_in_defined_expr(self,tok):
     &#34;&#34;&#34;Called when an expression passed to an #if contained a defined operator
     performed on something unknown.
     
@@ -1090,19 +1594,21 @@ pass through the mostly expanded #if expression apart from the unknown defined.<
     The default returns False, as per the C standard.
     &#34;&#34;&#34;
     return False</code></pre>
-</details>
-</dd>
-<dt id="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_expr"><code class="name flex">
+                                </details>
+                            </dd>
+                            <dt id="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_expr"><code class="name flex">
 <span>def <span class="ident">on_unknown_macro_in_expr</span></span>(<span>self, ident)</span>
 </code></dt>
-<dd>
-<section class="desc"><p>Called when an expression passed to an #if contained an unknown identifier.</p>
-<p>Return what value the expression evaluator ought to use, or return None to
-pass through the mostly expanded #if expression.</p>
-<p>The default returns an integer 0, as per the C standard.</p></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def on_unknown_macro_in_expr(self,ident):
+                            <dd>
+                                <section class="desc">
+                                    <p>Called when an expression passed to an #if contained an unknown identifier.</p>
+                                    <p>Return what value the expression evaluator ought to use, or return None to
+                                        pass through the mostly expanded #if expression.</p>
+                                    <p>The default returns an integer 0, as per the C standard.</p>
+                                </section>
+                                <details class="source">
+                                    <summary>Source code</summary>
+                                    <pre><code class="python">def on_unknown_macro_in_expr(self,ident):
     &#34;&#34;&#34;Called when an expression passed to an #if contained an unknown identifier.
     
     Return what value the expression evaluator ought to use, or return None to
@@ -1111,85 +1617,114 @@ pass through the mostly expanded #if expression.</p>
     The default returns an integer 0, as per the C standard.
     &#34;&#34;&#34;
     return 0</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
-</dl>
-</section>
-</article>
-<nav id="sidebar">
-<h1>Index</h1>
-<div class="toc">
-<ul></ul>
-</div>
-<ul id="index">
-<li><h3>Super-module</h3>
-<ul>
-<li><code><a title="pcpp" href="index.html">pcpp</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="two-column">
-<li><code><a title="pcpp.parser.CPP_INTEGER" href="#pcpp.parser.CPP_INTEGER">CPP_INTEGER</a></code></li>
-<li><code><a title="pcpp.parser.default_lexer" href="#pcpp.parser.default_lexer">default_lexer</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_CHAR" href="#pcpp.parser.t_CPP_CHAR">t_CPP_CHAR</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_COMMENT1" href="#pcpp.parser.t_CPP_COMMENT1">t_CPP_COMMENT1</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_COMMENT2" href="#pcpp.parser.t_CPP_COMMENT2">t_CPP_COMMENT2</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_INTEGER" href="#pcpp.parser.t_CPP_INTEGER">t_CPP_INTEGER</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_LINECONT" href="#pcpp.parser.t_CPP_LINECONT">t_CPP_LINECONT</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_STRING" href="#pcpp.parser.t_CPP_STRING">t_CPP_STRING</a></code></li>
-<li><code><a title="pcpp.parser.t_CPP_WS" href="#pcpp.parser.t_CPP_WS">t_CPP_WS</a></code></li>
-<li><code><a title="pcpp.parser.t_error" href="#pcpp.parser.t_error">t_error</a></code></li>
-<li><code><a title="pcpp.parser.trigraph" href="#pcpp.parser.trigraph">trigraph</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-classes">Classes</a></h3>
-<ul>
-<li>
-<h4><code><a title="pcpp.parser.Action" href="#pcpp.parser.Action">Action</a></code></h4>
-<ul class="">
-<li><code><a title="pcpp.parser.Action.IgnoreAndPassThrough" href="#pcpp.parser.Action.IgnoreAndPassThrough">IgnoreAndPassThrough</a></code></li>
-<li><code><a title="pcpp.parser.Action.IgnoreAndRemove" href="#pcpp.parser.Action.IgnoreAndRemove">IgnoreAndRemove</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pcpp.parser.Macro" href="#pcpp.parser.Macro">Macro</a></code></h4>
-<ul class="">
-<li><code><a title="pcpp.parser.Macro.__init__" href="#pcpp.parser.Macro.__init__">__init__</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pcpp.parser.OutputDirective" href="#pcpp.parser.OutputDirective">OutputDirective</a></code></h4>
-<ul class="">
-<li><code><a title="pcpp.parser.OutputDirective.__init__" href="#pcpp.parser.OutputDirective.__init__">__init__</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pcpp.parser.PreprocessorHooks" href="#pcpp.parser.PreprocessorHooks">PreprocessorHooks</a></code></h4>
-<ul class="">
-<li><code><a title="pcpp.parser.PreprocessorHooks.__init__" href="#pcpp.parser.PreprocessorHooks.__init__">__init__</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_comment" href="#pcpp.parser.PreprocessorHooks.on_comment">on_comment</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_directive_handle" href="#pcpp.parser.PreprocessorHooks.on_directive_handle">on_directive_handle</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_directive_unknown" href="#pcpp.parser.PreprocessorHooks.on_directive_unknown">on_directive_unknown</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_error" href="#pcpp.parser.PreprocessorHooks.on_error">on_error</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_file_open" href="#pcpp.parser.PreprocessorHooks.on_file_open">on_file_open</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_include_not_found" href="#pcpp.parser.PreprocessorHooks.on_include_not_found">on_include_not_found</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_potential_include_guard" href="#pcpp.parser.PreprocessorHooks.on_potential_include_guard">on_potential_include_guard</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_unknown_macro_function_in_expr" href="#pcpp.parser.PreprocessorHooks.on_unknown_macro_function_in_expr">on_unknown_macro_function_in_expr</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_defined_expr" href="#pcpp.parser.PreprocessorHooks.on_unknown_macro_in_defined_expr">on_unknown_macro_in_defined_expr</a></code></li>
-<li><code><a title="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_expr" href="#pcpp.parser.PreprocessorHooks.on_unknown_macro_in_expr">on_unknown_macro_in_expr</a></code></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</nav>
-</main>
-<footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.3</a>.</p>
-</footer>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-<script>hljs.initHighlightingOnLoad()</script>
+                                </details>
+                            </dd>
+                        </dl>
+                    </dd>
+                </dl>
+            </section>
+        </article>
+        <nav id="sidebar">
+            <h1>Index</h1>
+            <div class="toc">
+                <ul></ul>
+            </div>
+            <ul id="index">
+                <li>
+                    <h3>Super-module</h3>
+                    <ul>
+                        <li><code><a title="pcpp" href="index.html">pcpp</a></code></li>
+                    </ul>
+                </li>
+                <li>
+                    <h3><a href="#header-functions">Functions</a></h3>
+                    <ul class="two-column">
+                        <li><code><a title="pcpp.parser.CPP_INTEGER" href="#pcpp.parser.CPP_INTEGER">CPP_INTEGER</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.default_lexer" href="#pcpp.parser.default_lexer">default_lexer</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_CHAR" href="#pcpp.parser.t_CPP_CHAR">t_CPP_CHAR</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_COMMENT1" href="#pcpp.parser.t_CPP_COMMENT1">t_CPP_COMMENT1</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_COMMENT2" href="#pcpp.parser.t_CPP_COMMENT2">t_CPP_COMMENT2</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_INTEGER" href="#pcpp.parser.t_CPP_INTEGER">t_CPP_INTEGER</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_LINECONT" href="#pcpp.parser.t_CPP_LINECONT">t_CPP_LINECONT</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_STRING" href="#pcpp.parser.t_CPP_STRING">t_CPP_STRING</a></code>
+                        </li>
+                        <li><code><a title="pcpp.parser.t_CPP_WS" href="#pcpp.parser.t_CPP_WS">t_CPP_WS</a></code></li>
+                        <li><code><a title="pcpp.parser.t_error" href="#pcpp.parser.t_error">t_error</a></code></li>
+                        <li><code><a title="pcpp.parser.trigraph" href="#pcpp.parser.trigraph">trigraph</a></code></li>
+                    </ul>
+                </li>
+                <li>
+                    <h3><a href="#header-classes">Classes</a></h3>
+                    <ul>
+                        <li>
+                            <h4><code><a title="pcpp.parser.Action" href="#pcpp.parser.Action">Action</a></code></h4>
+                            <ul class="">
+                                <li><code><a title="pcpp.parser.Action.IgnoreAndPassThrough" href="#pcpp.parser.Action.IgnoreAndPassThrough">IgnoreAndPassThrough</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.Action.IgnoreAndRemove" href="#pcpp.parser.Action.IgnoreAndRemove">IgnoreAndRemove</a></code>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <h4><code><a title="pcpp.parser.Macro" href="#pcpp.parser.Macro">Macro</a></code></h4>
+                            <ul class="">
+                                <li><code><a title="pcpp.parser.Macro.__init__" href="#pcpp.parser.Macro.__init__">__init__</a></code>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <h4><code><a title="pcpp.parser.OutputDirective" href="#pcpp.parser.OutputDirective">OutputDirective</a></code>
+                            </h4>
+                            <ul class="">
+                                <li><code><a title="pcpp.parser.OutputDirective.__init__" href="#pcpp.parser.OutputDirective.__init__">__init__</a></code>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <h4><code><a title="pcpp.parser.PreprocessorHooks" href="#pcpp.parser.PreprocessorHooks">PreprocessorHooks</a></code>
+                            </h4>
+                            <ul class="">
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.__init__" href="#pcpp.parser.PreprocessorHooks.__init__">__init__</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_comment" href="#pcpp.parser.PreprocessorHooks.on_comment">on_comment</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_directive_handle" href="#pcpp.parser.PreprocessorHooks.on_directive_handle">on_directive_handle</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_directive_unknown" href="#pcpp.parser.PreprocessorHooks.on_directive_unknown">on_directive_unknown</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_error" href="#pcpp.parser.PreprocessorHooks.on_error">on_error</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_file_open" href="#pcpp.parser.PreprocessorHooks.on_file_open">on_file_open</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_include_not_found" href="#pcpp.parser.PreprocessorHooks.on_include_not_found">on_include_not_found</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_potential_include_guard" href="#pcpp.parser.PreprocessorHooks.on_potential_include_guard">on_potential_include_guard</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_unknown_macro_function_in_expr" href="#pcpp.parser.PreprocessorHooks.on_unknown_macro_function_in_expr">on_unknown_macro_function_in_expr</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_defined_expr" href="#pcpp.parser.PreprocessorHooks.on_unknown_macro_in_defined_expr">on_unknown_macro_in_defined_expr</a></code>
+                                </li>
+                                <li><code><a title="pcpp.parser.PreprocessorHooks.on_unknown_macro_in_expr" href="#pcpp.parser.PreprocessorHooks.on_unknown_macro_in_expr">on_unknown_macro_in_expr</a></code>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </main>
+    <footer id="footer">
+        <p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.3</a>.</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad()</script>
 </body>
+
 </html>
