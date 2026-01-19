@@ -7,7 +7,7 @@ name = "pcpp"
 version = "1.31"
 description = "A C99 preprocessor written in pure Python"
 readme = "README.rst"
-license = {text = "BSD"}
+license = {file = "LICENSE.txt"}
 authors = [
     {name = "Niall Douglas and David Beazley"}
 ]
@@ -35,3 +35,8 @@ packages = ["pcpp", "pcpp.ply.ply"]
 
 [tool.setuptools.package-data]
 pcpp = ["../LICENSE.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "tests/*.py"]
+addopts = ["-v"]

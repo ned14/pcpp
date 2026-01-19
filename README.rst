@@ -393,6 +393,24 @@ See the API reference docs at https://ned14.github.io/pcpp/
 
 You can find an example of overriding the ``on_*()`` processing hooks at https://github.com/ned14/pcpp/blob/master/pcpp/pcmd.py
 
+Running Tests
+=============
+To run the test suite for ``pcpp``, you can use either of these methods:
+
+1. Using pytest directly (recommended):
+   ::
+
+       python -m pytest tests/ -v
+
+2. Using the setup.py test command (deprecated but still functional):
+   ::
+
+       python setup.py test
+
+The test suite includes various test cases covering C99 preprocessor functionality,
+edge cases, and compatibility with the C11 standard preprocessor torture samples.
+
+
 History:
 ========
 v1.30 (29th October 2021):
