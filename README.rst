@@ -3,7 +3,7 @@ A C99 preprocessor written in pure Python
 .. role:: c(code)
    :language: c
 
-.. |travis| image:: https://github.com/ned14/pcpp/workflows/CI/badge.svg?branch=master
+.. |travis| image:: https://github.com/ned14/pcpp/actions/workflows/ci.yml/badge.svg?branch=master
      :align: middle
      :target: https://github.com/ned14/pcpp/actions
 
