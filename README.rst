@@ -4,8 +4,8 @@ A C99 preprocessor written in pure Python
    :language: c
 
 .. |travis| image:: https://github.com/ned14/pcpp/workflows/CI/badge.svg?branch=master
-    :align: middle
-    :target: https://github.com/ned14/pcpp/actions
+     :align: middle
+     :target: https://github.com/ned14/pcpp/actions
 
 \(C) 2018-2026 Niall Douglas http://www.nedproductions.biz/ and (C) 2007-2020 David Beazley http://www.dabeaz.com/
 
@@ -20,6 +20,19 @@ or as a command line tool ``pcpp`` which
 can stand in for a conventional C preprocessor (i.e. it'll accept similar arguments).
 Works great under PyPy, and you can expect performance gains of between 0.84x and 2.62x
 (average = 2.2x, median = 2.31x).
+
+To install pcpp, you can use either pip or uv:
+
+Using pip:
+::
+
+    pip install pcpp
+
+Using uv (faster installation):
+::
+
+    uv install pcpp
+
 
 Your includes can be benchmarked for heft in order to improve your build times! See
 the ``--times`` and ``--filetimes`` options, and you can see graphs from pcpp for the

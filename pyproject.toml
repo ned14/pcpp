@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcpp"
+version = "1.31"
+description = "A C99 preprocessor written in pure Python"
+readme = "README.rst"
+license = {text = "BSD"}
+authors = [
+    {name = "Niall Douglas and David Beazley"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
+requires-python = ">=3.6"
+
+[project.scripts]
+pcpp = "pcpp:main"
+
+[tool.setuptools]
+packages = ["pcpp", "pcpp.ply.ply"]
+
+[tool.setuptools.package-data]
+pcpp = ["../LICENSE.txt"]
