@@ -415,17 +415,20 @@ History:
 ========
 v1.31 (?):
 ----------
+- Remove Python 2 support completely; pcpp is now Python 3 only
+  (issue #87).
+- Replace setuptools test suite with pytest as the test runner.
+- Add ``uv`` support for faster dependency installation.
+- Rearrange ``main()`` function logic to avoid code duplication and make the
+  entry point cleaner (PR #73). Thanks to assarbad for this improvement.
 - Fix issue #79 by replacing ``CPP_INTEGER`` and ``CPP_FLOAT`` tokens with a
   ``PP_NUMBER`` token for better preprocessing compliance. Update ``PP_NUMBER``
   regex definition to properly handle digit separators in numeric literals.
   Add new test file for issue0079. Thanks to willwray for the PR implementing
   these features.
-- Rearrange ``main()`` function logic to avoid code duplication and make the
-  entry point cleaner (PR #73). Thanks to assarbad for this improvement.
-- Remove Python 2 support completely; pcpp is now Python 3 only
-  (issue #87).
-- Replace setuptools test suite with pytest as the test runner.
-- Add ``uv`` support for faster dependency installation.
+- Add support for ``#include_next``, though note it is gated behind the
+``--enable-include-next`` command line option. Thanks to Dudeldu for the original
+PR #98.
 
 v1.30 (29th October 2021):
 --------------------------

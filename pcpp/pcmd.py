@@ -50,6 +50,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru-magic-macros', dest = 'passthru_magic_macros', action = 'store_true', help = 'Pass through double underscore magic macros unmodified')
         argp.add_argument('--passthru-includes', dest = 'passthru_includes', metavar = '<regex>', default = None, nargs = 1, help = "Regular expression for which #includes to not expand. #includes, if found, are always executed")
         argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
+        argp.add_argument('--enable-include-next', dest = 'include_next_enabled', action = 'store_true', default = False, help = 'Enable #include_next support, which you should try to avoid using')
         argp.add_argument('--line-directive', dest = 'line_directive', metavar = 'form', default = '#line', nargs = '?', help = "Form of line directive to use, defaults to #line, specify nothing to disable output of line directives")
         argp.add_argument('--debug', dest = 'debug', action = 'store_true', help = 'Generate a pcpp_debug.log file logging execution')
         argp.add_argument('--time', dest = 'time', action = 'store_true', help = 'Print the time it took to #include each file')
@@ -74,6 +75,7 @@ class CmdPreprocessor(Preprocessor):
         if self.args.debug:
             self.debugout = open("pcpp_debug.log", "wt")
         self.auto_pragma_once_enabled = not self.args.auto_pragma_once_disabled
+        self.include_next_enabled = self.args.include_next_enabled
         self.line_directive = self.args.line_directive
         if self.line_directive is not None and self.line_directive.lower() in ('nothing', 'none', ''):
             self.line_directive = None

@@ -61,6 +61,7 @@ class Preprocessor(PreprocessorHooks):
         self.return_code = 0
         self.debugout = None
         self.auto_pragma_once_enabled = True
+        self.include_next_enabled = False
         self.line_directive = '#line'
         self.compress = False
         self.assume_encoding = None
@@ -78,8 +79,14 @@ class Preprocessor(PreprocessorHooks):
         self.linemacro = 0
         self.linemacrodepth = 0
         self.countermacro = 0
+        self.current_include_next_unique_ids = []
         self.parser = None
 
+    @staticmethod
+    def __file_unique_id(fh):
+        s = os.stat(fh.fileno())
+        return s.st_ino ^ s.st_size
+    
     # -----------------------------------------------------------------------------
     # tokenize()
     #
@@ -872,8 +879,7 @@ class Preprocessor(PreprocessorHooks):
                             if handling is None:
                                 for tok in x:
                                     yield tok
-                    elif name == 'include'\
-                      or name == 'include_next':
+                    elif name == 'include' or (self.include_next_enabled and name == 'include_next'):
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
@@ -882,7 +888,7 @@ class Preprocessor(PreprocessorHooks):
                             if args and args[0].value != '<' and args[0].type != self.t_STRING:
                                 args = self.tokenstrip(self.expand_macros(args))
                             # print('***', ''.join([x.value for x in args]), file = sys.stderr)
-                            for tok in self.include(args, x, None if name == 'include' else os.path.dirname(abssource)):
+                            for tok in self.include(args, x, name == 'include_next' and abssource is not None):
                                 yield tok
                             if oldfile is not None:
                                 self.macros['__FILE__'] = oldfile
@@ -1095,7 +1101,7 @@ class Preprocessor(PreprocessorHooks):
     # Implementation of file-inclusion
     # ----------------------------------------------------------------------
 
-    def include(self,tokens,original_line,search_after=None):
+    def include(self,tokens,original_line,include_next_is_active):
         """Implementation of file-inclusion"""
         # Try to extract the filename and then process an include file
         if not tokens:
@@ -1117,8 +1123,12 @@ class Preprocessor(PreprocessorHooks):
                     self.on_error(tokens[0].source,tokens[0].lineno,"Malformed #include <...>")
                     return
                 filename = "".join([x.value for x in tokens[1:i]])
-                # Search only formally specified paths
-                path = self.path
+                if not include_next_is_active:
+                    # Search only formally specified paths
+                    path = self.path
+                else:
+                    # include_next triggered this, must not differentiate
+                    path = self.temp_path + self.path
             elif tokens[0].type == self.t_STRING:
                 filename = tokens[0].value[1:-1]
                 # Search from each nested include file, as well as formally specified paths
@@ -1129,9 +1139,6 @@ class Preprocessor(PreprocessorHooks):
                 return
         if not path:
             path = ['']
-        if search_after is not None:
-            # support for include_next requires to be able to continue searching from the current path
-            path = path[path.index(search_after)+1:]
         while True:
             #print path
             for p in path:
@@ -1146,11 +1153,16 @@ class Preprocessor(PreprocessorHooks):
                     return
                 try:
                     ih = self.on_file_open(is_system_include,fulliname)
+                    unique_id = self.__file_unique_id(ih)
+                    if include_next_is_active and unique_id in self.current_include_next_unique_ids:
+                        ih.close()
+                        continue
                     data = ih.read()
                     ih.close()
                     dname = os.path.dirname(fulliname)
                     if dname:
                         self.temp_path.insert(0,dname)
+                    self.current_include_next_unique_ids.append(unique_id)
                     if self.passthru_includes is not None and self.passthru_includes.match(''.join([x.value for x in tokens])):
                         for tok in original_line:
                             yield tok
@@ -1159,6 +1171,7 @@ class Preprocessor(PreprocessorHooks):
                     else:
                         for tok in self.parsegen(data,filename,fulliname):
                             yield tok
+                    self.current_include_next_unique_ids.remove(unique_id)
                     if dname:
                         del self.temp_path[0]
                     return
