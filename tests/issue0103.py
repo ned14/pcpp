@@ -6,14 +6,6 @@ class runner(object):
     def runTest(self):
         from pcpp import Preprocessor
         p = Preprocessor()
-        p.include_next_enabled = True
-        
-        # Add the test directories to the search path
-        p.add_path('tests/issue0098/dir1')
-        p.add_path('tests/issue0098/dir2')
-        p.add_path('tests/issue0098/dir3')
-        p.add_path('tests/issue0098/dir4')
-
         p.parse(self.input)        
         output = StringIO()
         p.write(output)
@@ -24,17 +16,38 @@ class runner(object):
         self.assertEqual(output.getvalue(), self.shouldbe)
 
 
-class include_next_works(unittest.TestCase, runner):
-    input = r'''#include_next "header.h"
+class multiline_char_literals1(unittest.TestCase, runner):
+    input = r'''#if 'N\
+\
+\
+\
+\
+\
+\
+\
+' == 78
+FOO
+#endif
 '''
-    shouldbe = r'''#line 1 "tests/issue0098/dir1/header.h"
-header1
-#line 1 "tests/issue0098/dir2/header.h"
-header2
-#line 1 "tests/issue0098/dir3/header.h"
-header3
-#line 1 "tests/issue0098/dir4/header.h"
-header4
+    shouldbe = r'''#line 10
+FOO
+'''
+
+class multiline_char_literals2(unittest.TestCase, runner):
+    input = r'''#if '\
+\
+\
+\
+\
+\
+\
+\
+N' == 78
+FOO
+#endif
+'''
+    shouldbe = r'''#line 10
+FOO
 '''
 
 if __name__ == '__main__':

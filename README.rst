@@ -429,6 +429,8 @@ v1.31 (?):
 - Add support for ``#include_next``, though note it is gated behind the
 ``--enable-include-next`` command line option. Thanks to Dudeldu for the original
 PR #98.
+- Multi line and unicode character literals were not working by pure oversight.
+Fixed and thanks to geky for showing the issue in PR #103.
 
 v1.30 (29th October 2021):
 --------------------------

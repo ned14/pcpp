@@ -119,9 +119,9 @@ def t_CPP_STRING(t):
     t.lexer.lineno += subs_made + t.value.count("\n")
     return t
 
-# Character constant 'c' or L'c'
+# Character constant 'c' or L'c' or unicode editions thereof
 def t_CPP_CHAR(t):
-    r'(L)?\'([^\\\n]|(\\(.|\n)))*?\''
+    r'(u8|u|U|L)?\'([^\\\n]|(\\(.|\n)))*?\''
     t.lexer.lineno += t.value.count("\n")
     return t
 

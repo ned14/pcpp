@@ -102,6 +102,18 @@ class Value(INTBASETYPE):
     Value(78)
     >>> Value("L'N'")
     Value(78)
+    >>> Value("u8'N'")
+    Value(78)
+    >>> Value("u'N'")
+    Value(78)
+    >>> Value("U'N'")
+    Value(78)
+    >>> Value("u'猫'")
+    Value(29483)
+    >>> Value("U'猫'")
+    Value(29483)
+    >>> Value("U'🍌'")
+    Value(127820)
     >>> Value("'\\n'")
     Value(10)
     >>> Value("'\\\\n'")
@@ -133,10 +145,14 @@ class Value(INTBASETYPE):
         elif isinstance(value, INTBASETYPE) or isinstance(value, int) or isinstance(value, float):
             value = cls.__uclamp(value) if unsigned else cls.__sclamp(value)
         elif isinstance(value, STRING_TYPES):
-            if (value.startswith("L'") or value[0] == "'") and value[-1] == "'":
-                startidx = 2 if value.startswith("L'") else 1
+            if (value.startswith("L'") or 
+                value.startswith("u8'") or 
+                value.startswith("u'") or 
+                value.startswith("U'") or 
+                value[0] == "'") and value[-1] == "'":
+                startidx = 3 if value.startswith("u8") else 2 if value[0] != "'" else 1
                 #print("1. ***", value, file = sys.stderr)
-                value = value[startidx:-1]
+                value = value[startidx:-1].replace("\\\n", '')
                 if len(value) == 0:
                     raise SyntaxError('Empty character escape sequence')
                 #print("2. ***", value, file = sys.stderr)
