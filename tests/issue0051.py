@@ -1,6 +1,6 @@
 
 import unittest
-import sys
+import sys, os
 
 class runner(object):
     def runTest(self):
@@ -10,6 +10,7 @@ class runner(object):
                              'tests/issue0051.c'])
         with open('tests/issue0051.i', 'rt') as ih:
             output = ih.read()
+        os.remove('tests/issue0051.i')
         if output != self.shouldbe:
             print("Should be:\n" + self.shouldbe + "EOF\n", file=sys.stderr)
             print("\nWas:\n" + output + "EOF\n", file=sys.stderr)

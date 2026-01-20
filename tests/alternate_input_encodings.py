@@ -1,4 +1,4 @@
-﻿import unittest, sys, io
+﻿import unittest, sys, io, os
 
 shouldbe1 = r'''#line 1 "tests/alternate_input_encodings1_ucs16le.c"
 语言处理
@@ -26,6 +26,7 @@ class runner(object):
                                  'tests/alternate_input_encodings1_ucs16le.c'])
         with io.open('tests/alternate_input_encodings.c', 'rt', encoding='utf-8') as ih:
             output = ih.read()
+        os.remove('tests/alternate_input_encodings.c')
         if output != self.shouldbe:
             print("Should be:\n" + repr(self.shouldbe) + "EOF\n", file = sys.stderr)
             print("\nWas:\n" + repr(output) + "EOF\n", file = sys.stderr)

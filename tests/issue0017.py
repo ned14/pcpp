@@ -1,5 +1,5 @@
 
-import unittest
+import unittest, os
 
 class issue0017(unittest.TestCase):
     def runTest(self):
@@ -14,6 +14,7 @@ class issue0017(unittest.TestCase):
             p.write(oh)
         with open('tests/issue0017.i', 'r') as ih:
             was = ih.read()
+        os.remove('tests/issue0017.i')
         with open('tests/issue0017-ref.i', 'r') as ih:
             shouldbe = ih.read()
         if was != shouldbe:
