@@ -872,7 +872,8 @@ class Preprocessor(PreprocessorHooks):
                             if handling is None:
                                 for tok in x:
                                     yield tok
-                    elif name == 'include':
+                    elif name == 'include'\
+                      or name == 'include_next':
                         if enable:
                             for tok in self.expand_macros(chunk):
                                 yield tok
@@ -881,7 +882,7 @@ class Preprocessor(PreprocessorHooks):
                             if args and args[0].value != '<' and args[0].type != self.t_STRING:
                                 args = self.tokenstrip(self.expand_macros(args))
                             # print('***', ''.join([x.value for x in args]), file = sys.stderr)
-                            for tok in self.include(args, x):
+                            for tok in self.include(args, x, None if name == 'include' else os.path.dirname(abssource)):
                                 yield tok
                             if oldfile is not None:
                                 self.macros['__FILE__'] = oldfile
@@ -1094,7 +1095,7 @@ class Preprocessor(PreprocessorHooks):
     # Implementation of file-inclusion
     # ----------------------------------------------------------------------
 
-    def include(self,tokens,original_line):
+    def include(self,tokens,original_line,search_after=None):
         """Implementation of file-inclusion"""
         # Try to extract the filename and then process an include file
         if not tokens:
@@ -1128,6 +1129,9 @@ class Preprocessor(PreprocessorHooks):
                 return
         if not path:
             path = ['']
+        if search_after is not None:
+            # support for include_next requires to be able to continue searching from the current path
+            path = path[path.index(search_after)+1:]
         while True:
             #print path
             for p in path:
