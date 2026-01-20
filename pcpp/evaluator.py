@@ -348,7 +348,7 @@ class Value(INTBASETYPE):
 
 # The subset of tokens from Preprocessor used in preprocessor expressions
 tokens = (
-   'CPP_ID', 'CPP_INTEGER', 'CPP_CHAR', 'CPP_STRING',
+   'CPP_ID', 'PP_NUMBER', 'CPP_CHAR', 'CPP_STRING',
    'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
    'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN',
@@ -385,8 +385,12 @@ def p_error(p):
         raise SyntaxError("at EOF")
 
 def p_expression_number(p):
-    'expression : CPP_INTEGER'
-    p[0] = Value(p[1])
+    'expression : PP_NUMBER'
+    try:
+        p[0] = Value(p[1])
+    except:
+        p[0] = p[1]
+
 
 def p_expression_character(p):
     'expression : CPP_CHAR'

@@ -21,7 +21,7 @@ STRING_TYPES = str
 # -----------------------------------------------------------------------------
 
 tokens = (
-   'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_LINECONT', 'CPP_COMMENT1', 'CPP_COMMENT2',
+   'CPP_ID', 'PP_NUMBER', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_LINECONT', 'CPP_COMMENT1', 'CPP_COMMENT2',
    'CPP_POUND','CPP_DPOUND', 'CPP_PLUS', 'CPP_MINUS', 'CPP_STAR', 'CPP_FSLASH', 'CPP_PERCENT', 'CPP_BAR',
    'CPP_AMPERSAND', 'CPP_TILDE', 'CPP_HAT', 'CPP_LESS', 'CPP_GREATER', 'CPP_EQUAL', 'CPP_EXCLAMATION',
    'CPP_QUESTION', 'CPP_LPAREN', 'CPP_RPAREN', 'CPP_LBRACKET', 'CPP_RBRACKET', 'CPP_LCURLY', 'CPP_RCURLY',
@@ -105,15 +105,12 @@ t_CPP_RSHIFTEQUAL = r'>>='
 # Identifier
 t_CPP_ID = r'[A-Za-z_][\w_]*'
 
-# Integer literal
-def CPP_INTEGER(t):
-    r'(((((0x)|(0X))[0-9a-fA-F]+)|(\d+))([uU][lL]|[lL][uU]|[uU]|[lL])?)'
+# Preprocessor number
+def PP_NUMBER(t):
+    r"\.?\d(?:\.|[\w_]|'[\w_]|[eEpP][-+])*"
     return t
 
-t_CPP_INTEGER = CPP_INTEGER
-
-# Floating literal
-t_CPP_FLOAT = r'((\d+)(\.\d+)(e(\+|-)?(\d+))?|(\d+)e(\+|-)?(\d+))([lL]|[fF])?'
+t_PP_NUMBER = PP_NUMBER
 
 # String literal
 def t_CPP_STRING(t):
