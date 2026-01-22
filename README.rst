@@ -431,6 +431,8 @@ v1.31 (?):
 PR #98.
 - Multi line and unicode character literals were not working by pure oversight.
 Fixed and thanks to geky for showing the issue in PR #103.
+- Add support for ``__has_include``, a long requested and oft requested
+feature (#53, #77, #97).
 
 v1.30 (29th October 2021):
 --------------------------

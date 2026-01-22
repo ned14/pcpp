@@ -37,5 +37,32 @@ header3
 header4
 '''
 
+class has_include_works(unittest.TestCase, runner):
+    input = r'''#ifdef __has_include
+ifdef
+#endif
+#ifndef __has_include
+ifndef
+#endif
+#if defined(__has_include)
+defined
+#endif
+#if __has_include("header.h")
+header
+#endif
+'''
+    shouldbe = r'''
+ifdef
+
+
+
+
+
+defined
+
+
+header
+'''
+
 if __name__ == '__main__':
     unittest.main()

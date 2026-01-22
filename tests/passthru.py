@@ -37,6 +37,7 @@ class runner(object):
 
         start = clock()
         p = PassThruPreprocessor()
+        p.passthru_expr_has_include = True
         p.parse(self.input)
         oh = StringIO()
         p.write(oh)
@@ -372,3 +373,8 @@ hi
 #endif
 """
     output = r""""""
+
+
+if __name__ == '__main__':
+    unittest.main()
+    

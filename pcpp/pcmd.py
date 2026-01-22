@@ -48,6 +48,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--passthru-unknown-exprs', dest = 'passthru_undefined_exprs', action = 'store_true', help = 'Unknown macros in expressions cause preprocessor logic to be passed through instead of executed by treating unknown macros as 0L')
         argp.add_argument('--passthru-comments', dest = 'passthru_comments', action = 'store_true', help = 'Pass through comments unmodified')
         argp.add_argument('--passthru-magic-macros', dest = 'passthru_magic_macros', action = 'store_true', help = 'Pass through double underscore magic macros unmodified')
+        argp.add_argument('--passthru-has-include', dest = 'passthru_has_include', action = 'store_true', help = 'Pass through __has_include expressions unmodified')
         argp.add_argument('--passthru-includes', dest = 'passthru_includes', metavar = '<regex>', default = None, nargs = 1, help = "Regular expression for which #includes to not expand. #includes, if found, are always executed")
         argp.add_argument('--disable-auto-pragma-once', dest = 'auto_pragma_once_disabled', action = 'store_true', default = False, help = 'Disable the heuristics which auto apply #pragma once to #include files wholly wrapped in an obvious include guard macro')
         argp.add_argument('--enable-include-next', dest = 'include_next_enabled', action = 'store_true', default = False, help = 'Enable #include_next support, which you should try to avoid using')
@@ -88,6 +89,7 @@ class CmdPreprocessor(Preprocessor):
             self.expand_linemacro = False
             self.expand_filemacro = False
             self.expand_countermacro = False
+        self.passthru_expr_has_include = self.args.passthru_has_include
         if self.args.assume_input_encoding is not None:
             self.args.assume_input_encoding = self.args.assume_input_encoding[0]
             self.assume_encoding = self.args.assume_input_encoding
