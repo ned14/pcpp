@@ -66,6 +66,7 @@ class Preprocessor(PreprocessorHooks):
         self.line_directive = '#line'
         self.compress = False
         self.assume_encoding = None
+        self.enable_trigraphs = False
 
         # Probe the lexer for selected tokens
         self.__lexprobe()
@@ -836,7 +837,7 @@ class Preprocessor(PreprocessorHooks):
                     break
 
         # Replace trigraph sequences
-        t = trigraph(input)
+        t = trigraph(input) if self.enable_trigraphs else input
         lines = self.group_lines(t, rewritten_source)
 
         if not source:

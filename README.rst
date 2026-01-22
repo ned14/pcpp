@@ -433,6 +433,8 @@ PR #98.
 Fixed and thanks to geky for showing the issue in PR #103.
 - Add support for ``__has_include``, a long requested and oft requested
 feature (#53, #77, #97).
+- Disable the processing of trigraphs by default to match other C preprocessors.
+Now pass ``--trigraphs`` to enable them. Thanks to pmp-p for suggesting this #100.
 
 v1.30 (29th October 2021):
 --------------------------

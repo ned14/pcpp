@@ -60,6 +60,7 @@ class CmdPreprocessor(Preprocessor):
         argp.add_argument('--assume-input-encoding', dest = 'assume_input_encoding', metavar = '<encoding>', default = None, nargs = 1, help = 'The text encoding to assume inputs are in')
         argp.add_argument('--output-encoding', dest = 'output_encoding', metavar = '<encoding>', default = None, nargs = 1, help = 'The text encoding to use when writing files')
         argp.add_argument('--write-bom', dest = 'write_bom', action = 'store_true', help = 'Prefix any output with a Unicode BOM')
+        argp.add_argument('--trigraphs', dest = 'enable_trigraphs', action = 'store_true', help = 'Enable processing trigraphs')
         argp.add_argument('--version', action='version', version='pcpp ' + version)
         args = argp.parse_known_args(argv[1:])
         #print(args)
@@ -108,6 +109,7 @@ class CmdPreprocessor(Preprocessor):
             self.args.output = _
             if self.args.write_bom:
                 self.args.output.write('\ufeff')
+        self.enable_trigraphs = self.args.enable_trigraphs
         
         # My own instance variables
         self.bypass_ifpassthru = False
