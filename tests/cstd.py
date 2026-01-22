@@ -542,3 +542,79 @@ TEST
 
 1 + 2   3 + 4
 """
+
+class test29(unittest.TestCase, runner):
+    input = r"""
+#define fCAST4_8s(A) ((int64_t)((int32_t)(A)))
+#define fBIDIR_SHIFTR(SRC, SHAMT, REGSTYPE)    (((SHAMT) < 0) ? ((fCAST##REGSTYPE(SRC) << ((-(SHAMT)) - 1)) << 1)                   : (fCAST##REGSTYPE(SRC) >> (SHAMT)))
+#define fBIDIR_ASHIFTR(SRC, SHAMT, REGSTYPE)    fBIDIR_SHIFTR(SRC, SHAMT, REGSTYPE##s)
+#define fSXTN(N, M, VAL) (((N) != 0) ? sextract64((VAL), 0, (N)) : 0LL)
+#define fHIDE(A) A
+#define fECHO(A) (A)
+#define DEF_SHORTCODE(TAG,SHORTCODE)    insn(TAG, SHORTCODE)
+
+DEF_SHORTCODE(S2_asr_r_r_acc, { fHIDE(size4s_t) shamt=fSXTN(7,32,RtV); RxV = fECHO(RxV + fBIDIR_ASHIFTR(RsV,shamt,4_8)); })
+"""
+    output = r"""#line 10
+insn(S2_asr_r_r_acc, { size4s_t shamt=(((7) != 0) ? sextract64((RtV), 0, (7)) : 0LL); RxV = (RxV + (((shamt) < 0) ? ((((int64_t)((int32_t)(RsV))) << ((-(shamt)) - 1)) << 1)                   : (((int64_t)((int32_t)(RsV))) >> (shamt)))); })
+"""
+
+class test30(unittest.TestCase, runner):
+    input = r"""
+#define FOO(x) x
+#define BAR FOO(BAR)
+BAR
+"""
+    output = r"""
+
+
+BAR
+"""
+
+class test31(unittest.TestCase, runner):
+    input = r"""
+#define PCRE2_SIZE            size_t
+
+#define PCRE2_COMPILE_FUNCTIONS \
+pcre2_code *pcre2_compile(PCRE2_SPTR, PCRE2_SIZE, uint32_t, int *, PCRE2_SIZE *, \
+    pcre2_compile_context *);
+
+#define PCRE2_JOIN(a,b) a ## b
+#define PCRE2_GLUE(a,b) PCRE2_JOIN(a,b)
+#define PCRE2_SUFFIX(a) PCRE2_GLUE(a,PCRE2_LOCAL_WIDTH)
+
+#define PCRE2_SPTR                  PCRE2_SUFFIX(PCRE2_SPTR)
+#define pcre2_code                  PCRE2_SUFFIX(pcre2_code_)
+#define pcre2_compile_context          PCRE2_SUFFIX(pcre2_compile_context_)
+#define pcre2_compile                         PCRE2_SUFFIX(pcre2_compile_)
+
+#define PCRE2_TYPES_STRUCTURES_AND_FUNCTIONS \
+PCRE2_COMPILE_FUNCTIONS
+
+#define PCRE2_LOCAL_WIDTH 8
+PCRE2_TYPES_STRUCTURES_AND_FUNCTIONS
+#undef PCRE2_LOCAL_WIDTH
+
+#define PCRE2_LOCAL_WIDTH 16
+PCRE2_TYPES_STRUCTURES_AND_FUNCTIONS
+#undef PCRE2_LOCAL_WIDTH
+
+#define PCRE2_LOCAL_WIDTH 32
+PCRE2_TYPES_STRUCTURES_AND_FUNCTIONS
+#undef PCRE2_LOCAL_WIDTH
+"""
+    output = r"""#line 21
+pcre2_code_8 *pcre2_compile_8(PCRE2_SPTR8, size_t, uint32_t, int *, size_t *, pcre2_compile_context_8 *);
+
+
+
+pcre2_code_16 *pcre2_compile_16(PCRE2_SPTR16, size_t, uint32_t, int *, size_t *, pcre2_compile_context_16 *);
+
+
+
+pcre2_code_32 *pcre2_compile_32(PCRE2_SPTR32, size_t, uint32_t, int *, size_t *, pcre2_compile_context_32 *);
+"""
+
+
+if __name__ == '__main__':
+    unittest.main()

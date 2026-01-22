@@ -10,7 +10,6 @@ class runner(object):
         p.parse(self.input)
         oh = StringIO()
         p.write(oh)
-        print("ok")
         if oh.getvalue() != self.output:
             print("Should be:\n" + self.output + "EOF\n", file = sys.stderr)
             print("\nWas:\n" + oh.getvalue()+"EOF\n", file = sys.stderr)

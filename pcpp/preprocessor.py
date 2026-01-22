@@ -437,7 +437,7 @@ class Preprocessor(PreprocessorHooks):
     # representing the replacement macro tokens
     # ----------------------------------------------------------------------
 
-    def macro_expand_args(self,macro,args):
+    def macro_expand_args(self,macro,args,expanding_from):
         """Given a Macro and list of arguments (each a token list), this method
         returns an expanded version of a macro.  The return value is a token sequence
         representing the replacement macro tokens"""
@@ -489,7 +489,7 @@ class Preprocessor(PreprocessorHooks):
             elif ptype == 'e':
                 #print('*** Function macro arg', rep[i], 'replace with', args[argnum], 'which expands into', self.expand_macros(copy.copy(args[argnum])))
                 if argnum not in expanded:
-                    expanded[argnum] = self.expand_macros(copy.copy(args[argnum]))
+                    expanded[argnum] = self.expand_macros(copy.copy(args[argnum]), expanding_from)
                 rep[i:i+1] = expanded[argnum]
 
         # Get rid of removed comma if necessary
@@ -622,7 +622,7 @@ class Preprocessor(PreprocessorHooks):
                                         args.append([])
                                         
                                 # Get macro replacement text
-                                rep = self.macro_expand_args(m,args)
+                                rep = self.macro_expand_args(m, args, expanding_from)
                                 ex = self.expand_macros(rep, expanding_from + [t.value])
                                 for e in ex:
                                     e.source = t.source

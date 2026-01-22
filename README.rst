@@ -435,6 +435,16 @@ Fixed and thanks to geky for showing the issue in PR #103.
 feature (#53, #77, #97).
 - Disable the processing of trigraphs by default to match other C preprocessors.
 Now pass ``--trigraphs`` to enable them. Thanks to pmp-p for suggesting this #100.
+- Believe it or not, until now this caused an infinite loop:
+
+```
+#define FOO(x) x
+#define BAR FOO(BAR)
+BAR
+```
+
+This is fixed, which closes #72, #101 and possibly quite a few more open issues.
+Thanks to MatthewShao for originally reporting this.
 
 v1.30 (29th October 2021):
 --------------------------
