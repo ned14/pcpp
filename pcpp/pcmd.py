@@ -12,6 +12,15 @@ version='1.31'
 
 __all__ = []
 
+class MacroAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = copy.copy(getattr(namespace, self.dest) or [])
+        items.append(values)
+        setattr(namespace, self.dest, items)
+        actions = copy.copy(getattr(namespace, 'macro_actions', []))
+        actions.append((option_string, values[0]))
+        namespace.macro_actions = actions
+
 class FileAction(argparse.Action):
     def __init__(self, option_strings, dest, **kwargs):
         super(FileAction, self).__init__(option_strings, dest, **kwargs)
@@ -38,8 +47,8 @@ class CmdPreprocessor(Preprocessor):
     ignores any arguments it does not understand.''')
         argp.add_argument('inputs', metavar = 'input', default = [sys.stdin], nargs = '*', action = FileAction, help = 'Files to preprocess (use \'-\' for stdin)')
         argp.add_argument('-o', dest = 'output', metavar = 'path', type = argparse.FileType('wt'), default=sys.stdout, nargs = '?', help = 'Output to a file instead of stdout')
-        argp.add_argument('-D', dest = 'defines', metavar = 'macro[=val]', nargs = 1, action = 'append', help = 'Predefine name as a macro [with value]')
-        argp.add_argument('-U', dest = 'undefines', metavar = 'macro', nargs = 1, action = 'append', help = 'Pre-undefine name as a macro')
+        argp.add_argument('-D', dest = 'defines', metavar = 'macro[=val]', nargs = 1, action = MacroAction, help = 'Predefine name as a macro [with value]')
+        argp.add_argument('-U', dest = 'undefines', metavar = 'macro', nargs = 1, action = MacroAction, help = 'Pre-undefine name as a macro')
         argp.add_argument('-N', dest = 'nevers', metavar = 'macro', nargs = 1, action = 'append', help = 'Never define name as a macro, even if defined during the preprocessing.')
         argp.add_argument('-I', dest = 'includes', metavar = 'path', nargs = 1, action = 'append', help = "Path to search for unfound #include's")
         #argp.add_argument('--passthru', dest = 'passthru', action = 'store_true', help = 'Pass through everything unexecuted except for #include and include guards (which need to be the first thing in an include file')
@@ -117,14 +126,15 @@ class CmdPreprocessor(Preprocessor):
 
         if self.args.defines:
             self.args.defines = [x[0] for x in self.args.defines]
-            for d in self.args.defines:
+        if self.args.undefines:
+            self.args.undefines = [x[0] for x in self.args.undefines]
+        for option, d in getattr(self.args, 'macro_actions', []):
+            if option == '-D':
                 if '=' not in d:
                     d += '=1'
                 d = d.replace('=', ' ', 1)
                 self.define(d)
-        if self.args.undefines:
-            self.args.undefines = [x[0] for x in self.args.undefines]
-            for d in self.args.undefines:
+            else:
                 self.undef(d)
         if self.args.nevers:
             self.args.nevers = [x[0] for x in self.args.nevers]
