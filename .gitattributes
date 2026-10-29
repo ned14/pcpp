@@ -95,3 +95,6 @@ TODO         text svneol=native#text/plain
 *.tpp        text svneol=native#text/plain
 *.jam        text svneol=native#text/plain
 *.java       text svneol=native#text/plain
+
+# UTF-16 test fixtures must not have line endings converted
+*_ucs16le.c  binary

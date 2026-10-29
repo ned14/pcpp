@@ -1,21 +1,25 @@
 #!/usr/bin/env python
 
-from setuptools import setup
-from setuptools.command.test import test as TestCommand
+from setuptools import setup, Command
 import os
 import re
 import sys
 
 
-class PyTest(TestCommand):
+# setuptools.command.test was removed in setuptools 72, so implement the
+# test command directly on top of Command
+class PyTest(Command):
     """Custom test command that uses pytest"""
     user_options = [('pytest-args=', 'a', "Arguments to pass to pytest")]
 
     def initialize_options(self):
-        TestCommand.initialize_options(self)
         self.pytest_args = []
 
-    def run_tests(self):
+    def finalize_options(self):
+        if isinstance(self.pytest_args, str):
+            self.pytest_args = self.pytest_args.split()
+
+    def run(self):
         import subprocess
         import sys
         
@@ -73,6 +77,9 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15',
     ],
     cmdclass={'test': PyTest},
 )
